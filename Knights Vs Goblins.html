@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Castle Conquest Tactics</title>
+    <style>
+        /* --- Styles (Same as previous working version + Spell Area) --- */
+        body { display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #3a4a3a; font-family: 'Courier New', Courier, monospace; margin: 0; color: #eee; }
+        #game-container { display: flex; border: 5px solid #1e281e; background-color: #5a6a5a; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+        #game-board { display: grid; border: 2px solid #1e281e; position: relative; }
+        #game-board.spell-targeting { cursor: crosshair; }
+        #game-board.spell-targeting .grid-cell:hover { background-color: rgba(255, 100, 100, 0.3); }
+        .grid-cell { border: 1px solid #7a8a7a; background-color: #6a7a6a; position: relative; display: flex; justify-content: center; align-items: center; font-size: 1.5em; cursor: pointer; transition: background-color 0.2s; box-sizing: border-box; image-rendering: pixelated; }
+        .grid-cell.valid-move { background-color: #aaeaaa; opacity: 0.8; }
+        .grid-cell.valid-attack { background-color: #ffaaaa; opacity: 0.8; }
+        .unit { position: absolute; border-radius: 3px; display: flex; justify-content: center; align-items: center; font-weight: bold; z-index: 10; transition: top 0.2s ease-out, left 0.2s ease-out, filter 0.2s, box-shadow 0.2s; box-sizing: border-box; background-color: transparent; }
+        .unit.selected { box-shadow: 0 0 0 3px yellow; z-index: 11; }
+        #ui-panel { width: 200px; padding: 15px; background-color: #4a5a4a; border-left: 3px solid #1e281e; display: flex; flex-direction: column; justify-content: space-between; }
+        #level-display { text-align: center; margin-bottom: 10px; font-weight: bold; color: #ffd700; background-color:#5a6a5a; padding: 5px; border: 1px solid #1e281e; border-radius: 3px; }
+        #unit-info, #turn-info { background-color: #5a6a5a; padding: 10px; margin-bottom: 15px; border: 1px solid #1e281e; border-radius: 3px; min-height: 70px; }
+        #unit-info h3, #turn-info h3 { margin-top: 0; margin-bottom: 8px; border-bottom: 1px solid #7a8a7a; padding-bottom: 5px; color: #eee; }
+        #unit-info p, #turn-info p { margin: 4px 0; font-size: 0.9em; color: #ddd; }
+        #spell-area { margin-top: auto; margin-bottom: 15px; padding: 8px 5px; background-color:#5a6a5a; border: 1px solid #1e281e; border-radius: 3px; min-height: 50px; display: none; align-items: center; justify-content: center; } /* HIDDEN BY DEFAULT */
+        #spell-area.visible { display: flex; } /* SHOW WHEN CLASS ADDED */
+        .spell-icon { display: inline-block; width: 40px; height: 40px; border: 2px solid #333; border-radius: 4px; background-color: #444; background-size: contain; background-repeat: no-repeat; background-position: center; cursor: pointer; margin: 0 5px; transition: border-color 0.2s, box-shadow 0.2s, filter 0.2s; image-rendering: pixelated; vertical-align: middle; }
+        #fireball-spell { background-image: url('./sprites/sFireball1.png'); } /* Verify Path */
+        .spell-label { font-size: 0.9em; margin-left: 8px; font-weight: bold; color: #eee; text-shadow: 1px 1px #111; }
+        .spell-icon.unavailable { filter: grayscale(90%) brightness(60%); cursor: not-allowed; border-color: #555; }
+        .spell-icon.available { filter: none; cursor: pointer; border-color: #888; }
+        .spell-icon.available:hover { border-color: #eee; }
+        .spell-icon.selected { border-color: yellow; box-shadow: 0 0 8px yellow; }
+        #feedback-area { margin-bottom: 10px; min-height: 20px; font-size: 1.0em; font-weight: bold; color: #fff; text-align: center; }
+        .feedback-levelup { color: #ffd700; text-shadow: 1px 1px #443300; }
+        #end-turn-button { padding: 10px 15px; background-color: #a0522d; border: 2px solid #1e281e; color: white; font-family: 'Courier New', Courier, monospace; cursor: pointer; font-size: 1em; border-radius: 3px; text-align: center; transition: background-color 0.2s; }
+        #end-turn-button:hover { background-color: #8B4513; }
+        #end-turn-button.disabled { background-color: #888; cursor: not-allowed; color: #bbb; }
+        .damage-popup { position: absolute; color: red; font-size: 1.2em; font-weight: bold; animation: moveUpFadeOut 1s forwards; z-index: 20; pointer-events: none; text-shadow: 1px 1px white; }
+        @keyframes moveUpFadeOut { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-30px); } }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; z-index: 50; }
+        .overlay h2 { color: #ffd700; margin-bottom: 20px; }
+        .overlay button { padding: 10px 20px; font-size: 1.1em; cursor: pointer; background-color: #a0522d; border: 2px solid #1e281e; color: white; font-family: 'Courier New', Courier, monospace; border-radius: 3px; }
+        .overlay button:hover { background-color: #8B4513; }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="game-board"> <!-- Cells added by JS --> </div>
+        <div id="ui-panel">
+            <div id="level-display">Level: 1</div>
+            <div id="turn-info"> <h3>Turn Info</h3> <p id="current-turn">Turn: Player</p> <p id="actions-left">Actions Left: 0</p> </div>
+            <div id="unit-info"> <h3>Unit Info</h3> <p id="unit-name">Name: -</p> <p id="unit-hp">HP: -/-</p> <p id="unit-atk">ATK: -</p> <p id="unit-mov">MOV: -</p> </div>
+            <div id="spell-area"> <div id="fireball-spell" class="spell-icon unavailable"></div> <span class="spell-label">Fireball</span> </div>
+            <div id="feedback-area"></div>
+            <button id="end-turn-button">End Turn</button>
+        </div>
+        <div id="start-screen" class="overlay"> <h2>Castle Conquest Tactics</h2> <p>Lead Knights vs Goblins!<br>Defeat all Goblins to advance levels.<br>Unlock Fireball at Lvl 4! (1 use/level)</p> <button id="start-button">Begin Conquest!</button> </div>
+        <div id="game-over-screen" class="overlay" style="display: none;"> <h2 id="game-over-title">Defeat!</h2> <p id="game-over-message"></p> <button id="restart-button">Play Again? (Lvl 1)</button> </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const gameBoard = document.getElementById('game-board'); const levelDisplayElement = document.getElementById('level-display'); const spellAreaElement = document.getElementById('spell-area'); const fireballElement = document.getElementById('fireball-spell'); const turnInfo = document.getElementById('turn-info'); const unitInfo = document.getElementById('unit-info'); const currentTurnDisplay = document.getElementById('current-turn'); const actionsLeftDisplay = document.getElementById('actions-left'); const unitNameDisplay = document.getElementById('unit-name'); const unitHpDisplay = document.getElementById('unit-hp'); const unitAtkDisplay = document.getElementById('unit-atk'); const unitMovDisplay = document.getElementById('unit-mov'); const feedbackArea = document.getElementById('feedback-area'); const endTurnButton = document.getElementById('end-turn-button'); const startScreen = document.getElementById('start-screen'); const gameOverScreen = document.getElementById('game-over-screen'); const startButton = document.getElementById('start-button'); const restartButton = document.getElementById('restart-button'); const gameOverTitle = document.getElementById('game-over-title'); const gameOverMessage = document.getElementById('game-over-message');
+
+        // --- Game Config ---
+        const GRID_COLS = 8; const GRID_ROWS = 10; const CELL_SIZE = 50; const FIREBALL_UNLOCK_LEVEL = 4; const FIREBALL_DAMAGE = 2;
+        const UNIT_DATA = { knight: { name: "Knight", hp: 6, atk: 1, mov: 3, team: 'player', spriteUrl: './sprites/Knight.png'}, goblin: { name: "Goblin", hp: 2, atk: 1, mov: 4, team: 'enemy', spriteUrl: './sprites/Goblin.png'} };
+
+        // --- Game State ---
+        let units = []; let selectedUnit = null; let currentTurn = 'player'; let validMoves = []; let validAttacks = []; let unitCounter = 0; let isProcessing = false; let currentLevel = 1; let clickedUnitObject = null; let hasFireball = false; let fireballSelected = false;
+
+        // --- Initialization & Setup ---
+        function initGame() {
+            console.log("Init Game..."); isProcessing = true; units = []; unitCounter = 0; selectedUnit = null; validMoves = []; validAttacks = []; currentTurn = 'player'; currentLevel = 1; clickedUnitObject = null; hasFireball = false; fireballSelected = false;
+            console.clear(); console.log(`Start Game - Lvl ${currentLevel}`);
+            setupBoard(); spawnInitialUnits(); renderAllUnits();
+            updateLevelDisplay(); updateSpellAreaVisibility(); updateSpellUI(); updateTurnDisplay(); updateUnitInfo(null);
+            feedbackArea.textContent = ''; feedbackArea.className = ''; endTurnButton.classList.remove('disabled'); endTurnButton.disabled = false; gameOverScreen.style.display = 'none'; startScreen.style.display = 'none';
+            isProcessing = false; console.log("Init Complete.");
+        }
+
+function setupBoard() {
+    gameBoard.innerHTML = '';
+    gameBoard.className = ''; // Reset classes like spell-targeting if needed
+    gameBoard.style.gridTemplateColumns = `repeat(${GRID_COLS}, ${CELL_SIZE}px)`;
+    gameBoard.style.gridTemplateRows = `repeat(${GRID_ROWS}, ${CELL_SIZE}px)`;
+    gameBoard.style.width = `${GRID_COLS * CELL_SIZE}px`;
+    gameBoard.style.height = `${GRID_ROWS * CELL_SIZE}px`;
+
+    for (let r = 0; r < GRID_ROWS; r++) {
+        for (let c = 0; c < GRID_COLS; c++) {
+            const cell = document.createElement('div');
+            cell.classList.add('grid-cell');
+            cell.style.width = `${CELL_SIZE}px`;
+            cell.style.height = `${CELL_SIZE}px`;
+            cell.dataset.x = c;
+            cell.dataset.y = r;
+            cell.addEventListener('click', handleCellClick); // Existing click listener
+            gameBoard.appendChild(cell);
+        }
+    }
+
+    // --- ADD HOVER LISTENERS TO THE BOARD (Event Delegation) ---
+    gameBoard.addEventListener('mouseover', handleMouseEnterOnBoard);
+    gameBoard.addEventListener('mouseout', handleMouseLeaveOnBoard);
+    // --- END HOVER LISTENERS ---
+}
+
+        // Readable spawnInitialUnits (NOT minified)
+        function spawnInitialUnits() {
+            console.log(`Spawning units for Level ${currentLevel}`);
+            const occupiedSpawnCells = new Set();
+
+            // --- Player Units ---
+            const potentialKnightPositions = [ { x: 1, y: GRID_ROWS - 2 }, { x: 5, y: GRID_ROWS - 2 }, { x: 3, y: GRID_ROWS - 1 }, { x: 7, y: GRID_ROWS - 2 }, { x: 0, y: GRID_ROWS - 2 }, { x: 2, y: GRID_ROWS - 1 }, { x: 4, y: GRID_ROWS - 1 }, { x: 6, y: GRID_ROWS - 1 } ];
+            let numKnightsToSpawn = 3; // Base
+            if (currentLevel >= 6)  numKnightsToSpawn++;
+            if (currentLevel >= 12) numKnightsToSpawn++;
+            if (currentLevel >= 18) numKnightsToSpawn++;
+            if (currentLevel >= 24) numKnightsToSpawn++;
+            if (currentLevel >= 30) numKnightsToSpawn++;
+
+            console.log(`Spawning ${numKnightsToSpawn} knights.`);
+            for (let i = 0; i < numKnightsToSpawn; i++) {
+                if (i < potentialKnightPositions.length) {
+                    const pos = potentialKnightPositions[i];
+                    createUnit('knight', pos.x, pos.y);
+                    occupiedSpawnCells.add(`${pos.x},${pos.y}`);
+                } else { console.warn(`Max knight positions reached.`); break; }
+            }
+
+            // --- Enemy Units ---
+            const numGoblins = 3 + currentLevel; // Adjusted starting count
+            const spawnRows = 3;
+            console.log(`Attempting to spawn ${numGoblins} goblins...`);
+            for (let i = 0; i < numGoblins; i++) {
+                let spawned = false; let attempts = 0; const maxAttempts = GRID_COLS * spawnRows * 2;
+                while (!spawned && attempts < maxAttempts) {
+                    attempts++; const randX = Math.floor(Math.random() * GRID_COLS); const randY = Math.floor(Math.random() * spawnRows); const spawnKey = `${randX},${randY}`;
+                    if (!occupiedSpawnCells.has(spawnKey)) { createUnit('goblin', randX, randY); occupiedSpawnCells.add(spawnKey); spawned = true; }
+                }
+                if (!spawned) { console.error(`Failed to spawn goblin ${i+1}.`); }
+            }
+            const actualSpawned = units.filter(u => u.team ==='enemy').length;
+            console.log(`Finished spawning ${actualSpawned} goblins.`);
+            updateTurnDisplay();
+        }
+
+
+        function createUnit(type, x, y) { const data = UNIT_DATA[type]; if (!data) { console.error(`Unit type "${type}" not found!`); return; } const unit = { id: unitCounter++, type: type, x: x, y: y, hp: data.hp, maxHp: data.hp, atk: data.atk, mov: data.mov, team: data.team, acted: false, element: null }; units.push(unit); }
+
+        // --- Rendering (Readable, NOT minified) ---
+        function renderAllUnits() { document.querySelectorAll('.unit').forEach(el => el.remove()); units.forEach(unit => renderUnit(unit)); }
+function renderUnit(unit) {
+    // Remove existing element if it exists (important for updates)
+    if (unit.element && unit.element.parentNode) {
+        unit.element.parentNode.removeChild(unit.element);
+    }
+
+    const element = document.createElement('div');
+    element.classList.add('unit', unit.team);
+    element.dataset.id = unit.id; // Keep the ID for hover/other purposes
+
+    const unitData = UNIT_DATA[unit.type];
+    if (unitData.spriteUrl) {
+        element.style.backgroundImage = `url('${unitData.spriteUrl}')`;
+        element.style.backgroundSize = 'contain';
+        element.style.backgroundRepeat = 'no-repeat';
+        element.style.backgroundPosition = 'center';
+        element.style.backgroundColor = 'transparent';
+    } else {
+        element.textContent = unitData.char || '?';
+        element.style.fontSize = `${CELL_SIZE * 0.6}px`;
+        element.style.lineHeight = `${CELL_SIZE * 0.8}px`;
+        if (unit.team === 'player') element.style.color = '#4a90e2';
+        else if (unit.team === 'enemy') element.style.color = '#d0021b';
+    }
+
+    element.style.width = `${CELL_SIZE * 0.8}px`;
+    element.style.height = `${CELL_SIZE * 0.8}px`;
+    element.style.left = `${unit.x * CELL_SIZE + (CELL_SIZE * 0.1)}px`;
+    element.style.top = `${unit.y * CELL_SIZE + (CELL_SIZE * 0.1)}px`;
+    element.classList.toggle('selected', selectedUnit && unit.id === selectedUnit.id);
+
+    // *** NEW: Add click listener directly to the unit element ***
+    element.addEventListener('click', (event) => {
+        handleUnitClick(event, unit); // Pass the event and the unit object
+    });
+    // *** END NEW ***
+
+    unit.element = element;
+    gameBoard.appendChild(element);
+}
+
+// *** NEW: Handles clicks directly on unit elements ***
+function handleUnitClick(event, clickedUnit) {
+    event.stopPropagation(); // !!! IMPORTANT: Prevent this click from also triggering the cell's listener underneath
+
+    if (isProcessing) {
+        console.log("Unit Click ignored: Processing...");
+        return;
+    }
+    if (fireballSelected) {
+        console.log("Unit clicked while Fireball selected.");
+        if (clickedUnit.team === 'enemy') { // Valid Fireball Target Clicked
+             console.log(`Valid Fireball target confirmed by unit click: Unit ${clickedUnit.id}`);
+             castFireball(clickedUnit);
+             hasFireball = false;
+             fireballSelected = false;
+             updateSpellUI();
+        } else { // Clicked friendly unit or invalid target while spell active
+            console.log("Invalid Fireball target (non-enemy unit) clicked. Canceling targeting.");
+            fireballSelected = false;
+            updateSpellUI();
+            updateUnitInfo(clickedUnit); // Show info for the unit clicked
+        }
+        return; // Stop further processing for this click
+    }
+
+    console.log(`Unit Clicked: ${clickedUnit.type} (ID: ${clickedUnit.id})`);
+    updateUnitInfo(clickedUnit); // Update info panel immediately
+
+    if (currentTurn === 'player') {
+        if (selectedUnit) { // An action unit is already selected
+            if (clickedUnit.team === 'enemy' && validAttacks.includes(clickedUnit.id)) {
+                // Attack Action: Clicked an enemy in range
+                const attacker = selectedUnit;
+                console.log(`Attacking unit ${clickedUnit.id} with unit ${attacker.id}`);
+                attackUnit(attacker, clickedUnit);
+                deselectUnit(); // Deselect attacker after action
+                finishAction(attacker);
+                // updateUnitInfo(null); // Maybe keep the attacked unit info? Or clear? Let's clear for now.
+                updateUnitInfo(null);
+
+            } else if (clickedUnit.team === 'player' && clickedUnit.id !== selectedUnit.id && !clickedUnit.acted) {
+                // Switch Selection: Clicked another available friendly unit
+                console.log(`Switching selection from unit ${selectedUnit.id} to ${clickedUnit.id}`);
+                selectUnit(clickedUnit); // selectUnit handles deselecting the old one
+
+            } else if (clickedUnit.id === selectedUnit.id) {
+                // Deselect: Clicked the selected unit again
+                console.log(`Deselecting unit ${clickedUnit.id}`);
+                deselectUnit();
+                updateUnitInfo(null); // Clear info panel on deselect
+
+            } else {
+                // Clicked an enemy not in range, or an acted friendly unit
+                 console.log(`Invalid unit click target (acted friendly or out-of-range enemy) for selected unit ${selectedUnit.id}. Deselecting.`);
+                 deselectUnit(); // Deselect if the click target wasn't a valid action
+                 updateUnitInfo(clickedUnit); // Still show info for the clicked invalid target
+            }
+        } else { // No action unit is selected
+            if (clickedUnit.team === 'player' && !clickedUnit.acted) {
+                // Select Unit: Clicked an available friendly unit
+                console.log(`Selecting unit ${clickedUnit.id}`);
+                selectUnit(clickedUnit);
+            } else {
+                // Clicked enemy or acted friendly when nothing was selected - just show info (already done above)
+                 console.log(`Clicked unit ${clickedUnit.id}, but cannot select (enemy or already acted).`);
+            }
+        }
+    } else {
+        // Click during enemy turn (shouldn't happen often, but good to handle)
+        console.log("Unit clicked during enemy turn.");
+        updateUnitInfo(clickedUnit); // Just show info
+    }
+}
+// *** END NEW ***
+
+        function updateUnitPosition(unit) { if (!unit.element) return; unit.element.style.left = `${unit.x * CELL_SIZE + (CELL_SIZE * 0.1)}px`; unit.element.style.top = `${unit.y * CELL_SIZE + (CELL_SIZE * 0.1)}px`; }
+        function clearHighlights() { document.querySelectorAll('.grid-cell.valid-move, .grid-cell.valid-attack').forEach(c => { c.classList.remove('valid-move', 'valid-attack'); }); validMoves = []; validAttacks = []; }
+        function highlightMoves(unit) { clearHighlights(); if (!unit) return; validMoves = getValidMoves(unit); validAttacks = getValidAttacks(unit); validMoves.forEach(p => { const c=getCellElement(p.x, p.y); if (c) c.classList.add('valid-move'); }); validAttacks.forEach(id => { const t=units.find(u=>u.id===id); if (t) { const c=getCellElement(t.x, t.y); if(c) c.classList.add('valid-attack'); } }); }
+        function showDamagePopup(x, y, damage) { const p=document.createElement('div'); p.classList.add('damage-popup'); p.textContent=`-${damage}`; p.style.left=`${x*CELL_SIZE+CELL_SIZE/2-10}px`; p.style.top=`${y*CELL_SIZE+CELL_SIZE/2-15}px`; gameBoard.appendChild(p); setTimeout(()=>{if(p.parentNode)p.parentNode.removeChild(p);},1000); }
+
+        // --- UI Update ---
+        function updateLevelDisplay() { if (levelDisplayElement) levelDisplayElement.textContent = `Level: ${currentLevel}`; }
+        function updateSpellAreaVisibility() { if (spellAreaElement) spellAreaElement.classList.toggle('visible', currentLevel >= FIREBALL_UNLOCK_LEVEL); }
+        function updateSpellUI() {
+            if(!fireballElement) return;
+            console.log(`UpdateSpellUI called. hasFireball=${hasFireball}, fireballSelected=${fireballSelected}`); // Debug log
+            fireballElement.classList.remove('available','unavailable','selected');
+            if(hasFireball){ fireballElement.classList.add('available'); fireballElement.title="Fireball (Available)"; if(fireballSelected)fireballElement.classList.add('selected'); }
+            else { fireballElement.classList.add('unavailable'); fireballElement.title=(currentLevel<FIREBALL_UNLOCK_LEVEL)?`Unlock Lvl ${FIREBALL_UNLOCK_LEVEL}`:"Used this level"; }
+            gameBoard.classList.toggle('spell-targeting', fireballSelected);
+            console.log(`Board targeting class set to: ${gameBoard.classList.contains('spell-targeting')}`); // Debug log
+        }
+        function updateTurnDisplay() { currentTurnDisplay.textContent=`Turn: ${currentTurn==='player'?'Player':'Enemy'}`; if(currentTurn==='player'){ const rem=units.filter(u=>u.team==='player'&&!u.acted).length; actionsLeftDisplay.textContent=`Actions Left: ${rem}`; endTurnButton.disabled=false; endTurnButton.classList.remove('disabled'); } else { actionsLeftDisplay.textContent=`AI Thinking...`; endTurnButton.disabled=true; endTurnButton.classList.add('disabled'); } }
+        function updateUnitInfo(unit) { clickedUnitObject = unit; if(unit){ const d=UNIT_DATA[unit.type]; unitNameDisplay.textContent=`${d.name}(${unit.id})`; unitHpDisplay.textContent=`HP:${unit.hp}/${unit.maxHp}`; unitAtkDisplay.textContent=`ATK:${unit.atk}`; unitMovDisplay.textContent=`MOV:${unit.mov}`; } else { unitNameDisplay.textContent='-'; unitHpDisplay.textContent='-/-'; unitAtkDisplay.textContent='-'; unitMovDisplay.textContent='-'; } }
+
+        // --- Game Logic: Player Actions & Spells (Readable, NOT minified) ---
+function handleCellClick(event) {
+    // We no longer need stopPropagation here unless needed for other reasons
+
+    if (isProcessing) {
+        console.log("Cell Click ignored: Processing...");
+        return;
+    }
+
+    const cell = event.currentTarget; // The cell the listener is attached to
+    const x = parseInt(cell.dataset.x);
+    const y = parseInt(cell.dataset.y);
+    const unitOnCell = getUnitAt(x, y); // Still useful to know if the cell is occupied
+
+    console.log(`Cell Clicked: (${x}, ${y}). Unit on cell: ${unitOnCell ? unitOnCell.id : 'None'}. Fireball selected: ${fireballSelected}`);
+
+    // --- Fireball Targeting Logic (Only cares about the cell clicked) ---
+    if (fireballSelected) {
+        // If a unit is on the cell AND it's an enemy, handleUnitClick would have already triggered.
+        // So, if we reach here with fireballSelected=true, it means an empty cell or a friendly unit cell was clicked.
+        if (!unitOnCell || unitOnCell.team === 'player') {
+             console.log("Empty cell or friendly unit cell clicked during Fireball targeting. Canceling.");
+             fireballSelected = false; // Cancel targeting
+             updateSpellUI();
+             // If a friendly unit was clicked, handleUnitClick might update info, otherwise clear.
+             if (!unitOnCell) updateUnitInfo(null);
+        }
+         // If an enemy unit was on the cell, handleUnitClick would have dealt with casting or canceling.
+         // We don't need specific enemy check here anymore for casting.
+        return; // Stop further cell processing if fireball was involved.
+    }
+
+    // --- Normal Action/Movement Logic (No unit directly clicked) ---
+    if (currentTurn === 'player') {
+        if (selectedUnit) { // Unit already selected for action
+            if (!unitOnCell && validMoves.some(p => p.x === x && p.y === y)) {
+                // Move Action: Clicked a valid empty cell
+                const mover = selectedUnit;
+                console.log(`Moving unit ${mover.id} to empty cell (${x}, ${y})`);
+                moveUnit(mover, x, y);
+                deselectUnit();
+                finishAction(mover);
+                updateUnitInfo(null); // Clear info after move
+
+            } else if (!unitOnCell) {
+                // Clicked an invalid empty cell - deselect the unit
+                console.log(`Clicked invalid empty cell (${x}, ${y}). Deselecting unit ${selectedUnit.id}.`);
+                deselectUnit();
+                updateUnitInfo(null);
+
+            }
+            // If unitOnCell is not null here, it means a unit was clicked,
+            // and handleUnitClick should have dealt with it (attack, select, deselect).
+            // So, no explicit action needed here if unitOnCell exists.
+
+        } else { // No unit selected for action
+            // Clicked an empty cell when no unit was selected - do nothing, maybe clear info
+            if (!unitOnCell) {
+                 console.log(`Clicked empty cell (${x}, ${y}) with no unit selected.`);
+                 updateUnitInfo(null); // Clear info panel
+            }
+            // If unitOnCell is not null, handleUnitClick should have dealt with selecting it.
+        }
+    } else {
+         // Click during enemy turn on a cell
+         console.log("Cell clicked during enemy turn.");
+         updateUnitInfo(getUnitAt(x,y)); // Show info for unit if any, or clear if empty
+    }
+}
+		
+		// --- NEW HOVER HANDLERS ---
+
+function handleMouseEnterOnBoard(event) {
+    // Check if the element the mouse pointer entered IS a unit div
+    if (event.target.classList.contains('unit')) {
+        const unitElement = event.target;
+        const unitId = parseInt(unitElement.dataset.id); // Get ID from data attribute
+        const hoveredUnit = units.find(u => u.id === unitId); // Find the unit object
+
+        if (hoveredUnit) {
+            // console.log("Hover Enter Unit:", hoveredUnit.id); // Optional debug log
+            updateUnitInfo(hoveredUnit); // Display info of the hovered unit
+        }
+    }
+    // If the target is not a unit div, do nothing special on mouseover
+}
+
+function handleMouseLeaveOnBoard(event) {
+    // Check if the element the mouse pointer left WAS a unit div
+    if (event.target.classList.contains('unit')) {
+        // console.log("Hover Leave Unit:", event.target.dataset.id); // Optional debug log
+
+        // Revert the info panel to show the currently selected action unit,
+        // or clear it if no unit is selected for action.
+        updateUnitInfo(selectedUnit || null);
+    }
+    // If the target is not a unit div, do nothing special on mouseout
+}
+
+// --- END NEW HOVER HANDLERS ---
+
+        function handleFireballClick() {
+            console.log("handleFireballClick triggered."); // Confirm listener attached
+            if(isProcessing||currentTurn!=='player'||!hasFireball) {
+                console.log(`Fireball click blocked: processing=${isProcessing}, turn=${currentTurn}, hasFireball=${hasFireball}`);
+                return;
+            }
+            fireballSelected=!fireballSelected; // Toggle selection state
+            console.log(`Fireball selected state toggled to: ${fireballSelected}`);
+            if(fireballSelected && selectedUnit) { // If activating spell, deselect action unit
+                console.log("Fireball activated, deselecting action unit.");
+                deselectUnit(); // Deselect action unit (won't affect fireball state)
+            }
+            updateSpellUI(); // Update icon appearance and board cursor
+        }
+
+        function selectUnit(unit) { // Selects player unit FOR ACTION
+            if(!unit||unit.acted||unit.team!=='player'||currentTurn!=='player') return;
+            if (fireballSelected) { // If selecting unit while spell active, cancel spell
+                 console.log("Unit selected, canceling fireball targeting.");
+                 fireballSelected = false;
+                 updateSpellUI(); // Update icon/cursor
+            }
+            deselectUnit(); // Deselect any previously selected action unit
+            selectedUnit=unit;
+            if(unit.element) unit.element.classList.add('selected');
+            highlightMoves(unit);
+            updateUnitInfo(unit);
+        }
+
+        function deselectUnit() { // Deselects action unit only
+            if(selectedUnit && selectedUnit.element) selectedUnit.element.classList.remove('selected');
+            selectedUnit=null;
+            clearHighlights();
+            // No longer touches fireballSelected state here
+        }
+		
+		// NEW: Handles mouse entering an element within the game board
+function handleMouseEnterOnBoard(event) {
+    // Check if the element the mouse pointer entered IS a unit div
+    if (event.target.classList.contains('unit')) {
+        const unitElement = event.target;
+        const unitId = parseInt(unitElement.dataset.id); // Get ID from data attribute
+        const hoveredUnit = units.find(u => u.id === unitId); // Find the unit object
+
+        if (hoveredUnit) {
+            // console.log("Hover Enter Unit:", hoveredUnit.id); // Debug log
+            updateUnitInfo(hoveredUnit); // Display info of the hovered unit
+        }
+    }
+}
+
+// NEW: Handles mouse leaving an element within the game board
+function handleMouseLeaveOnBoard(event) {
+    // Check if the element the mouse pointer left WAS a unit div
+    if (event.target.classList.contains('unit')) {
+        // console.log("Hover Leave Unit:", event.target.dataset.id); // Debug log
+        // Revert the info panel to show the currently selected action unit, or clear if none
+        updateUnitInfo(selectedUnit || null);
+    }
+}
+
+        function finishAction(unit) { if(!unit){ return; } console.log(`Finish action: ${unit.id}`); unit.acted=true; updateTurnDisplay(); checkWinLossConditions(); }
+        function moveUnit(unit, targetX, targetY) { if(!unit) return; console.log(`Unit ${unit.id} moves to (${targetX},${targetY})`); unit.x=targetX; unit.y=targetY; updateUnitPosition(unit); }
+        function attackUnit(attacker, defender) { if(!attacker||!defender) return; console.log(`${attacker.id} attacks ${defender.id}`); const dmg=attacker.atk; defender.hp-=dmg; if(defender.hp<0) defender.hp=0; showDamagePopup(defender.x,defender.y,dmg); if(defender.element){ defender.element.style.filter='brightness(2)'; setTimeout(()=>{if(defender.element) defender.element.style.filter='';},150); } console.log(` -> ${defender.id} HP: ${defender.hp}`); updateUnitInfo(clickedUnitObject||selectedUnit||defender); if(defender.hp<=0){ console.log(` -> ${defender.id} defeated!`); removeUnit(defender); } else { checkWinLossConditions(); } }
+        function castFireball(targetUnit) { if(!targetUnit||targetUnit.team!=='enemy') return; console.log(`%cSPELL: Cast Fireball on ${targetUnit.id}`, "color: orange; font-weight: bold;"); isProcessing=true; if(targetUnit.element){ targetUnit.element.style.filter='sepia(1) saturate(3) hue-rotate(-40deg) brightness(1.2)'; setTimeout(()=>{if(targetUnit.element)targetUnit.element.style.filter='';},250); } setTimeout(()=>{ targetUnit.hp-=FIREBALL_DAMAGE; if(targetUnit.hp<0)targetUnit.hp=0; showDamagePopup(targetUnit.x,targetUnit.y,FIREBALL_DAMAGE); updateUnitInfo(targetUnit); console.log(` -> ${targetUnit.id} HP: ${targetUnit.hp}`); if(targetUnit.hp<=0){ console.log(` -> ${targetUnit.id} defeated!`); removeUnit(targetUnit); } else { checkWinLossConditions(); } isProcessing=false; },100); }
+        function removeUnit(unit) { if(!unit) return; console.log(`Removing ${unit.id}`); if(unit.element&&unit.element.parentNode){ unit.element.parentNode.removeChild(unit.element); } units=units.filter(u=>u.id!==unit.id); if(selectedUnit&&selectedUnit.id===unit.id){ deselectUnit(); updateUnitInfo(null); } updateTurnDisplay(); checkWinLossConditions(); }
+        function getUnitAt(x, y) { return units.find(unit => unit.x === x && unit.y === y); }
+        function getCellElement(x,y) { return gameBoard.querySelector(`.grid-cell[data-x='${x}'][data-y='${y}']`); }
+        function getDistance(unitA, unitB) { if (!unitA || !unitB) return Infinity; const dx=Math.abs(unitA.x-unitB.x); const dy=Math.abs(unitA.y-unitB.y); return dx+dy; }
+        function getValidMoves(unit) { // Readable BFS
+             if (!unit) return [];
+             const moves = []; const startX = unit.x; const startY = unit.y;
+             let queue = [{x: startX, y: startY, dist: 0}]; let visited = new Set([`${startX},${startY}`]);
+             while(queue.length > 0) {
+                 const current = queue.shift();
+                 const neighbors = [ {x: current.x, y: current.y - 1}, {x: current.x, y: current.y + 1}, {x: current.x - 1, y: current.y}, {x: current.x + 1, y: current.y} ];
+                 for (const neighbor of neighbors) {
+                     const nx = neighbor.x; const ny = neighbor.y; const neighborKey = `${nx},${ny}`;
+                     if (nx < 0 || nx >= GRID_COLS || ny < 0 || ny >= GRID_ROWS || visited.has(neighborKey)) continue;
+                     const newDist = current.dist + 1; if (newDist > unit.mov) continue;
+                     if (getUnitAt(nx, ny)) continue;
+                     moves.push({x: nx, y: ny}); visited.add(neighborKey); queue.push({x: nx, y: ny, dist: newDist});
+                 } } return moves;
+         }
+        function getValidAttacks(unit) { // Readable Attack Check
+            const attacks = []; if (!unit) return attacks;
+            const potentialTargets = units.filter(u => u.team !== unit.team && u.hp > 0);
+            for (const target of potentialTargets) { if (getDistance(unit, target) === 1) { attacks.push(target.id); } }
+            return attacks;
+        }
+
+        // --- Turn Management & AI ---
+                // REVISED endTurn function for correct processing unlock
+        function endTurn() {
+            // Block ending player turn if AI is somehow still marked as processing
+            if (currentTurn === 'player' && isProcessing) {
+                console.warn("Attempted to end player turn while isProcessing is true. Aborting.");
+                return;
+            }
+            // Don't double-end AI turn if already processing the end sequence
+             if (currentTurn === 'enemy' && !isProcessing) {
+                  console.warn("Attempted to end AI turn when isProcessing is false. Might indicate an issue.");
+                  // We might still want to proceed to reset the state for player turn
+             }
+
+
+            console.log(`--- End Turn Function Called: Ending ${currentTurn}'s Turn ---`);
+
+            // Always deselect/reset UI regardless of whose turn it was
+            deselectUnit(); // Clears selected unit and cancels spell target
+            fireballSelected = false; // Explicitly ensure targeting is off
+            updateSpellUI(); // Update spell icon/cursor
+            updateUnitInfo(null); // Clear info panel
+            feedbackArea.textContent = ''; // Clear feedback
+            feedbackArea.className = '';
+
+
+            if (currentTurn === 'player') {
+                 // --- Ending Player Turn, Starting AI Turn ---
+                 isProcessing = true; // <<< Block player input NOW
+                 currentTurn = 'enemy';
+                 units.filter(u => u.team === 'enemy').forEach(u => { u.acted = false; }); // Reset AI acted status
+                 updateTurnDisplay(); // Update UI to show "AI Thinking..."
+                 // Minimal delay to allow UI repaint before potentially heavy AI logic
+                 setTimeout(runAITurn, 50);
+            }
+            else if (currentTurn === 'enemy') {
+                 // --- Ending AI Turn, Starting Player Turn ---
+                 currentTurn = 'player';
+                 units.filter(u => u.team === 'player').forEach(u => { u.acted = false; }); // Reset Player acted status
+                 updateTurnDisplay(); // Update UI to show "Player" turn and actions
+                 isProcessing = false; // <<< CRITICAL: Allow player input NOW
+                 console.log(`--- Player Turn Start: Lvl ${currentLevel} ---`);
+            }
+             else {
+                 console.error("endTurn called with unexpected currentTurn value:", currentTurn);
+                 isProcessing = false; // Try to recover state by unlocking processing
+             }
+        }
+        endTurnButton.addEventListener('click', () => { if (currentTurn === 'player' && !isProcessing) { endTurn(); } });
+
+        // REVISED runAITurn with reliable action counter
+        function runAITurn() {
+            console.log("--- AI Processing Start ---");
+            isProcessing = true; // Ensure flag is set
+            const enemyUnitsToAct = units.filter(u => u.team === 'enemy' && u.hp > 0 && !u.acted);
+            const totalAiUnitsToAct = enemyUnitsToAct.length;
+            let aiActionsCompletedCount = 0; // Counter specific to this run
+            let currentActionDelay = 0;
+            const actionInterval = 400; // Interval between actions
+
+            // Function called after each AI unit attempts its action
+            function checkAiTurnCompletion() {
+                aiActionsCompletedCount++;
+                console.log(`AI Actions completed: ${aiActionsCompletedCount} / ${totalAiUnitsToAct}`);
+                if (aiActionsCompletedCount >= totalAiUnitsToAct) {
+                    console.log("All AI actions processed for this turn.");
+                    // Add a very small delay before ending turn, just ensures logs flush etc.
+                    setTimeout(() => {
+                        if (!isGameOver()) { // Check game state again before ending
+                             endTurn(); // Calls the function to switch to player turn
+                        } else {
+                             console.log("Game ended during AI processing completion check.");
+                             isProcessing = false; // Unlock if game ended
+                        }
+                    }, 50);
+                }
+            }
+
+            if (totalAiUnitsToAct === 0) {
+                console.log("No AI units available to act.");
+                setTimeout(endTurn, 100); // End AI turn quickly
+                return;
+            }
+            console.log(`AI Units to process this turn: ${totalAiUnitsToAct}`);
+
+            // Schedule each unit's action
+            enemyUnitsToAct.forEach((unit) => {
+                setTimeout(() => {
+                    if (isGameOver()) { checkAiTurnCompletion(); return; } // If game over, just mark action complete
+
+                    try {
+                        const stillValidUnit = units.find(u => u.id === unit.id && u.hp > 0 && !u.acted);
+                        if (stillValidUnit) {
+                            performAIAction(stillValidUnit); // Execute AI logic
+                        } else {
+                            console.log(`%cAI Skip: Unit ${unit.id} invalid/acted before action time.`, "color: grey;");
+                            unit.acted = true; // Ensure marked acted if skipped
+                        }
+                    } catch (error) {
+                        console.error(`Error processing AI for unit ${unit.id}:`, error);
+                        if(unit) unit.acted = true; // Mark as acted even on error to prevent freeze
+                    } finally {
+                        checkAiTurnCompletion(); // Signal completion for this unit
+                    }
+                }, currentActionDelay);
+                currentActionDelay += actionInterval;
+            });
+        }
+
+        // Readable performAIAction (NOT minified)
+        function performAIAction(unit) {
+            console.log(`  AI Thinking: Unit ${unit.id}`);
+            const playerUnits = units.filter(u => u.team === 'player' && u.hp > 0);
+            if(playerUnits.length === 0) { console.log(`  AI ${unit.id}: No targets.`); unit.acted = true; return; }
+
+            // Priority 1: Attack
+            const possibleAttacks = getValidAttacks(unit);
+            let targetToAttack = null;
+            if(possibleAttacks.length > 0) {
+                let lowestHp = Infinity;
+                possibleAttacks.forEach(targetId => {
+                    const potentialTarget = units.find(u => u.id === targetId);
+                    if(potentialTarget && potentialTarget.hp > 0 && potentialTarget.hp < lowestHp) {
+                        lowestHp = potentialTarget.hp; targetToAttack = potentialTarget;
+                    }
+                });
+            }
+            if(targetToAttack) {
+                console.log(`  AI ${unit.id} ATTACKS ${targetToAttack.id}`);
+                attackUnit(unit, targetToAttack);
+                unit.acted = true; return; // Action complete
+            }
+
+            // Priority 2: Move
+            let nearestPlayer = null; let minDist = Infinity;
+            playerUnits.forEach(pUnit => { const dist = getDistance(unit, pUnit); if(dist < minDist) { minDist = dist; nearestPlayer = pUnit; } });
+            if(nearestPlayer) {
+                const possibleMoves = getValidMoves(unit);
+                if(possibleMoves.length > 0) {
+                    let bestMove = null; let closestDistToTarget = minDist;
+                    possibleMoves.forEach(move => { const distAfterMove = Math.abs(move.x - nearestPlayer.x) + Math.abs(move.y - nearestPlayer.y); if(distAfterMove < closestDistToTarget) { closestDistToTarget = distAfterMove; bestMove = move; } });
+                    if(bestMove && (bestMove.x !== unit.x || bestMove.y !== unit.y)) {
+                        console.log(`  AI ${unit.id} MOVES to (${bestMove.x}, ${bestMove.y})`);
+                        moveUnit(unit, bestMove.x, bestMove.y);
+                        unit.acted = true; return; // Action complete
+                    }
+                }
+            }
+
+            // Priority 3: No Action
+            console.log(`  AI ${unit.id} takes NO ACTION.`);
+            unit.acted = true; // Mark as acted anyway
+        }
+
+        // --- Win/Loss & Level Progression (Readable, NOT minified) ---
+        function checkWinLossConditions() {
+            if (isGameOver() || isProcessing) { return true; } // Prevent checks if already over or busy
+            const playerUnitsLeft = units.some(u => u.team === 'player' && u.hp > 0);
+            const enemyUnitsLeft = units.some(u => u.team === 'enemy' && u.hp > 0);
+            if (!enemyUnitsLeft && playerUnitsLeft) { // Level Clear
+                console.log(`Level ${currentLevel} Cleared! Scheduling next level.`);
+                isProcessing = true; // Block other actions while scheduling/transitioning
+                setTimeout(startNextLevel, 300); // Schedule transition
+                return true;
+            }
+            if (!playerUnitsLeft) { // Player Loss
+                gameOver(false); return true;
+            }
+            return false; // Game Continues
+        }
+        function startNextLevel() {
+            isProcessing = true; currentLevel++; console.log(`--- Start Lvl ${currentLevel} ---`);
+            feedbackArea.textContent=`Lvl ${currentLevel} Start!`; feedbackArea.className='feedback-levelup';
+            setTimeout(()=>{ if(!isGameOver()){ feedbackArea.textContent=''; feedbackArea.className=''; }}, 2000);
+            if (currentLevel >= FIREBALL_UNLOCK_LEVEL) { hasFireball=true; console.log("FB refreshed."); } else { hasFireball=false; }
+            fireballSelected=false; units=[]; unitCounter=0; selectedUnit=null; validMoves=[]; validAttacks=[]; currentTurn='player';
+            document.querySelectorAll('.unit,.damage-popup').forEach(el=>el.remove()); clearHighlights();
+            spawnInitialUnits(); renderAllUnits();
+            updateLevelDisplay(); updateSpellAreaVisibility(); updateSpellUI(); updateTurnDisplay(); updateUnitInfo(null);
+            endTurnButton.disabled = false; endTurnButton.classList.remove('disabled');
+            isProcessing = false; console.log(`Lvl ${currentLevel} ready.`);
+        }
+        function isGameOver() { return gameOverScreen.style.display !== 'none'; }
+        function gameOver(playerWon) { if(playerWon) return; console.log(`--- Game Over Lvl ${currentLevel} ---`); isProcessing = true; deselectUnit(); updateUnitInfo(null); endTurnButton.disabled = true; endTurnButton.classList.add('disabled'); gameOverTitle.textContent="Defeat!"; gameOverMessage.textContent=`Fallen on Level ${currentLevel}!`; gameOverScreen.style.display='flex'; }
+
+        // --- Global Event Listeners ---
+        startButton.addEventListener('click', initGame);
+        restartButton.addEventListener('click', initGame);
+        // Ensure listener is attached *after* element potentially recreated
+        document.addEventListener('DOMContentLoaded', () => {
+             const fbElement = document.getElementById('fireball-spell');
+             if (fbElement) {
+                  fbElement.addEventListener('click', handleFireballClick);
+                  console.log("Fireball click listener attached on DOMContentLoaded.");
+             } else {
+                  console.error("Fireball element not found on DOMContentLoaded!");
+             }
+        });
+        window.addEventListener('keydown', function(event) { if (event.shiftKey && event.code === 'KeyT') { console.log("Debug: Shift+T"); if (isGameOver() || startScreen.style.display !== 'none' || isProcessing || currentTurn === 'enemy') { console.log("Cheat blocked."); return; } console.warn("CHEAT: Skip Level!"); feedbackArea.textContent = "CHEAT: Level Skipped!"; feedbackArea.className = 'feedback-levelup'; setTimeout(() => { feedbackArea.textContent = ''; feedbackArea.className = ''; }, 1500); isProcessing = true; setTimeout(startNextLevel, 50); } }); // Cheat code
+
+        // --- Initial Setup ---
+         window.onload = () => { startScreen.style.display='flex'; gameOverScreen.style.display='none'; endTurnButton.classList.add('disabled'); endTurnButton.disabled=true; updateUnitInfo(null); updateLevelDisplay(); updateSpellAreaVisibility(); updateSpellUI(); updateTurnDisplay(); };
+
+    </script>
+</body>
+</html>
