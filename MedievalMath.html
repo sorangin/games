@@ -3,20 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Medieval Math</title> <!-- Version Bump -->
+    <title>Medieval Math Duel - Scroll Fix</title> <!-- Version Bump -->
     <style>
         /* Basic resets and body setup */
-         ```css
- /* Basic resets and body setup */
- html, body {
-     /* height: 100%; */ /* REMOVED this */
-     margin: 0; padding: 0;
-     overflow: auto; /* CHANGED from hidden */
-     font-family: 'Verdana', sans-serif;
- }
+        html, body {
+            height: 100%; margin: 0; padding: 0;
+            overflow: auto; /* Ensure scrolling is allowed for the page within iframe */
+            font-family: 'Verdana', sans-serif;
+            /* Smooth scrolling for the whole page/iframe */
+            scroll-behavior: smooth;
+        }
+        body {
+            display: flex; justify-content: center; align-items: center;
+            background-color: #5d6a5a; color: #eee;
+            min-height: 100%; /* Ensure body takes at least full height */
+        }
 
         /* Game container */
-        #game-container { position: relative; width: 95%; max-width: 550px; min-height: 450px; max-height: 98vh; padding: clamp(10px, 3vw, 20px); background-color: #8d7163; border: 5px solid #4b3f31; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.4); text-align: center; overflow-y: auto; }
+        #game-container {
+            position: relative; width: 95%; max-width: 550px;
+            /* Let height be determined by content, but set max */
+            min-height: 450px; max-height: 98vh;
+            padding: clamp(10px, 3vw, 20px); background-color: #8d7163;
+            border: 5px solid #4b3f31; border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+            text-align: center;
+             /* Internal scroll only if content overflows container height severely */
+             overflow-y: auto;
+        }
 
         /* Fullscreen Button */
         #fullscreen-button { position: absolute; top: 8px; right: 8px; width: 35px; height: 35px; font-size: clamp(1.1em, 3vw, 1.6em); line-height: 33px; text-align: center; background: rgba(75, 63, 49, 0.6); border: 1px solid #eee; color: #eee; border-radius: 5px; cursor: pointer; z-index: 50; }
@@ -38,28 +52,13 @@
         .hp-bar.knight { background-color: #4a90e2; }
         .hp-bar:not(.knight) { background-color: #d0021b; }
         .hp-text { font-size: clamp(0.8em, 2.5vw, 0.9em); font-weight: bold; color: #fff; text-shadow: 1px 1px #111; }
-        #status-area { display: flex; flex-wrap: wrap; justify-content: space-evenly; padding: clamp(6px, 2vw, 8px); margin-bottom: 10px; /* Reduced margin */ background-color: #6b4f41; border-radius: 4px; border: 1px solid #4b3f31; font-size: clamp(0.8em, 2.5vw, 0.9em); }
+        #status-area { display: flex; flex-wrap: wrap; justify-content: space-evenly; padding: clamp(6px, 2vw, 8px); margin-bottom: 10px; background-color: #6b4f41; border-radius: 4px; border: 1px solid #4b3f31; font-size: clamp(0.8em, 2.5vw, 0.9em); }
         #status-area span { margin: 3px 8px; font-weight: bold; color: #fff; text-shadow: 1px 1px #111; }
         #sharpen-indicator { color: orange; font-style: italic; }
-
-        /* --- Shop Area --- */
-        #shop-area {
-            display: flex;
-            justify-content: center;
-            gap: 15px; /* Space between buttons */
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-        }
-        #shop-area button {
-            padding: 8px 12px; font-size: 0.9em; cursor: pointer;
-            background-color: #6a4b3a; border: 2px solid #3b2f21; color: #fff;
-            border-radius: 4px; transition: background-color 0.2s, opacity 0.2s;
-            line-height: 1.3; /* Improve readability */
-        }
+        #shop-area { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
+        #shop-area button { padding: 8px 12px; font-size: 0.9em; cursor: pointer; background-color: #6a4b3a; border: 2px solid #3b2f21; color: #fff; border-radius: 4px; transition: background-color 0.2s, opacity 0.2s; line-height: 1.3; }
         #shop-area button:hover:not(:disabled) { background-color: #5a3b2a; }
         #shop-area button:disabled { background-color: #777; color: #aaa; cursor: not-allowed; opacity: 0.6; }
-        /* ----------------- */
-
         #problem-area { background-color: #6b4f41; padding: clamp(10px, 3vw, 15px); border-radius: 5px; border: 2px solid #4b3f31; margin-bottom: 15px; }
         #math-problem { font-size: clamp(1.4em, 5vw, 1.9em); font-weight: bold; margin-bottom: 10px; color: #fff; text-shadow: 1px 1px #222; word-wrap: break-word; }
         #answer-input { width: clamp(60px, 20vw, 90px); padding: clamp(6px, 2vw, 9px); font-size: clamp(1.2em, 4vw, 1.6em); text-align: center; border: 2px solid #4b3f31; border-radius: 4px; margin-right: 10px; margin-bottom: 5px; -moz-appearance: textfield; }
@@ -67,15 +66,11 @@
         #submit-button { padding: clamp(8px, 2.5vw, 12px) clamp(15px, 4vw, 20px); font-size: clamp(1em, 3.5vw, 1.3em); background-color: #a0522d; border: 2px solid #1a0f0c; color: white; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; vertical-align: top; margin-bottom: 5px; }
         #submit-button:hover:not(:disabled) { background-color: #8B4513; }
         #submit-button:disabled { background-color: #888; cursor: not-allowed; }
-
-        #feedback-area { margin-top: 10px; min-height: 20px; /* Reduced height */ font-size: clamp(0.9em, 3vw, 1.1em); font-weight: bold; }
+        #feedback-area { margin-top: 10px; min-height: 20px; font-size: clamp(0.9em, 3vw, 1.1em); font-weight: bold; }
         .feedback-correct { color: #33FF57; text-shadow: 1px 1px #114411; }
         .feedback-incorrect { color: #FF5733; text-shadow: 1px 1px #441111; }
         .feedback-levelup { color: #ffd700; text-shadow: 1px 1px #443300; }
-        .feedback-purchase { color: #87CEEB; text-shadow: 1px 1px #112233;} /* Sky blue for purchases */
-
-
-        /* Overlay Styles */
+        .feedback-purchase { color: #87CEEB; text-shadow: 1px 1px #112233; }
         .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; z-index: 100; padding: 20px; box-sizing: border-box; font-family: 'Verdana', sans-serif; display: none; }
          .overlay h2 { color: #ffd700; margin-bottom: 20px; text-shadow: 2px 2px #553300; font-size: clamp(1.8em, 6vw, 2.5em); }
          .overlay p { margin-bottom: 25px; font-size: clamp(1em, 3vw, 1.2em); line-height: 1.6; max-width: 600px; }
@@ -93,15 +88,7 @@
         <h1>Medieval Math Duel</h1>
         <div id="duel-area"> <div class="character" id="knight"> <div class="sprite" id="knight-sprite"></div> <div class="hp-bar-container"><div class="hp-bar knight" id="knight-hp-bar"></div></div> <div class="hp-text" id="knight-hp-text">HP: 20/20</div> </div> <div class="character" id="goblin"> <div class="sprite" id="goblin-sprite"></div> <div class="hp-bar-container"><div class="hp-bar" id="goblin-hp-bar"></div></div> <div class="hp-text" id="goblin-hp-text">HP: 15/15</div> </div> </div>
         <div id="status-area"> <span id="level-display">Level: 1</span> <span id="xp-display">XP: 0 / 15</span> <span id="gold-display">Gold: 0</span> <span id="sharpen-indicator" style="display: none;">Sword Sharpened!</span></div>
-
-        <!-- Permanent Shop Area -->
-        <div id="shop-area">
-            <button id="buy-potion-button">Potion (${POTION_COST}g)<br/>+${POTION_HEAL_AMOUNT} HP</button>
-            <button id="buy-sharpen-button">Sharpen (${SHARPEN_COST}g)<br/>+${SHARPEN_BONUS_ATTACK} ATK (Next Turn)</button>
-            <!-- Add more shop items here later -->
-        </div>
-        <!-- End Shop Area -->
-
+        <div id="shop-area"> <button id="buy-potion-button">Potion (15g)<br/>+10 HP</button> <button id="buy-sharpen-button">Sharpen (20g)<br/>+2 ATK (Next Turn)</button> </div>
         <div id="problem-area"> <div id="math-problem"> Solve: 5 + 3 = ?</div> <input type="tel" pattern="[0-9\-]*" inputmode="numeric" id="answer-input" autofocus> <button id="submit-button">Attack!</button> </div>
         <div id="feedback-area"></div>
 
@@ -134,7 +121,6 @@
         const goldDisplay = document.getElementById('gold-display');
         const sharpenIndicator = document.getElementById('sharpen-indicator');
         const fullscreenButton = document.getElementById('fullscreen-button');
-        // Shop Buttons
         const buyPotionButton = document.getElementById('buy-potion-button');
         const buySharpenButton = document.getElementById('buy-sharpen-button');
 
@@ -152,6 +138,7 @@
         const POTION_COST = 15; const POTION_HEAL_AMOUNT = 10;
         const SHARPEN_COST = 20; const SHARPEN_BONUS_ATTACK = 2;
         const FEEDBACK_DURATION = 2000; // ms for temporary feedback messages
+        const SCROLL_DELAY = 300; // ms delay before scrolling input into view
 
         // --- Game State ---
         let knightMaxHp = KNIGHT_MAX_HP_BASE; let knightAttack = KNIGHT_ATTACK_BASE;
@@ -162,11 +149,11 @@
         let playerLevel = 1; let playerXP = 0; let xpToNextLevel = BASE_XP_TO_LEVEL;
         let playerGold = 0;
         let isSwordSharpened = false;
-        let feedbackTimeoutId = null; // To clear temporary feedback messages
+        let feedbackTimeoutId = null;
 
         // --- Functions ---
 
-        function calculateXpNeeded(level) { /* ... no change ... */ return BASE_XP_TO_LEVEL + Math.floor(Math.pow(level -1, XP_LEVEL_SCALING_FACTOR) * 5); }
+        function calculateXpNeeded(level) { return BASE_XP_TO_LEVEL + Math.floor(Math.pow(level -1, XP_LEVEL_SCALING_FACTOR) * 5); }
 
         function updatePlayerStatsForLevel(healPlayer = false) {
              knightMaxHp = KNIGHT_MAX_HP_BASE + (playerLevel - 1) * KNIGHT_HP_PER_LEVEL;
@@ -178,7 +165,7 @@
              goblinHp = goblinMaxHp;
              console.log(`Stats Lvl ${playerLevel}: K HP=${knightHp}/${knightMaxHp}, ATK=${knightAttack} | G HP=${goblinHp}/${goblinMaxHp}, ATK=${goblinAttack}`);
              updateHpDisplay('knight'); updateHpDisplay('goblin');
-             updatePurchaseButtonStates(); // Update buttons as Max HP might change
+             updatePurchaseButtonStates();
         }
 
         function startNewDuel() {
@@ -187,7 +174,7 @@
 
             isGameOver = false;
             processingAnswer = false;
-            clearTemporaryFeedback(); // Clear any lingering feedback
+            clearTemporaryFeedback();
 
             updateHpDisplay('knight'); updateHpDisplay('goblin');
             knightSprite.classList.remove('attack', 'level-up');
@@ -203,14 +190,14 @@
 
             startScreen.style.display = 'none'; gameOverScreen.style.display = 'none';
 
-            setTimeout(() => { if(!isGameOver) answerInput.focus(); }, 100);
+            setTimeout(() => { if(!isGameOver) answerInput.focus(); /* Focus handled separately now */ }, 100);
             console.log(`Duel Started. Lvl:${playerLevel}, XP:${playerXP}/${xpToNextLevel}, Gold:${playerGold}, Sharpened:${isSwordSharpened}`);
         }
 
         function resetGameFull() {
              playerLevel = 1; playerXP = 0; playerGold = 0; isSwordSharpened = false;
              xpToNextLevel = calculateXpNeeded(playerLevel);
-             knightHp = KNIGHT_MAX_HP_BASE; // Reset HP on full reset
+             knightHp = KNIGHT_MAX_HP_BASE; // Reset HP explicitly on full reset
              startNewDuel();
         }
 
@@ -219,83 +206,51 @@
             xpDisplay.textContent = `XP: ${playerXP} / ${xpToNextLevel}`;
             goldDisplay.textContent = `Gold: ${playerGold}`;
             sharpenIndicator.style.display = isSwordSharpened ? 'inline' : 'none';
-            updatePurchaseButtonStates(); // Update button states whenever status changes
+            if (isSwordSharpened) sharpenIndicator.classList.add('sharpened'); else sharpenIndicator.classList.remove('sharpened');
+            updatePurchaseButtonStates();
         }
 
-        function generateProblem() { /* ... no change ... */ let n1, n2, op, ans; let max = BASE_MAX_NUMBER + (playerLevel - 1) * NUMBER_INCREASE_PER_LEVEL; let ops = ['+', '-']; if (playerLevel >= MULTIPLICATION_UNLOCK_LEVEL) ops.push('*'); op = ops[Math.floor(Math.random() * ops.length)]; switch(op) { case '+': n1=~~(Math.random()*(max+1)); n2=~~(Math.random()*(max+1)); ans=n1+n2; break; case '-': n1=~~(Math.random()*(max+1)); n2=~~(Math.random()*(n1+1)); ans=n1-n2; break; case '*': let lfb=Math.max(0,playerLevel-MULTIPLICATION_UNLOCK_LEVEL); const f1=MAX_MULTIPLICATION_FACTOR+lfb*MULT_FACTOR_INCREASE_PER_LEVEL; const f2=Math.max(2,MAX_MULTIPLICATION_FACTOR+~~(lfb/2)); n1=~~(Math.random()*(f1+1)); n2=~~(Math.random()*(f2+1)); if(n1==0&&Math.random()<0.4) n1=1; if(n2==0&&Math.random()<0.4) n2=1; ans=n1*n2; break; } currentProblem = { num1:n1, num2:n2, operator:op, answer:ans }; console.log(`Lvl ${playerLevel} Problem: ${n1} ${op} ${n2} = ? (Ans: ${ans})`);}
-        function displayProblem() { /* ... no change ... */ const op = currentProblem.operator === '*' ? '×' : currentProblem.operator; mathProblemDisplay.textContent = `Solve: ${currentProblem.num1} ${op} ${currentProblem.num2} = ?`; }
-        function updateHpDisplay(char) { /* ... no change ... */ let cur, max, bar, txt; if(char==='knight'){cur=knightHp;max=knightMaxHp;bar=knightHpBar;txt=knightHpText;}else{cur=goblinHp;max=goblinMaxHp;bar=goblinHpBar;txt=goblinHpText;} const pct=Math.max(0,(cur/max)*100); bar.style.width=`${pct}%`; txt.textContent=`HP: ${Math.max(0,cur)}/${max}`; updatePurchaseButtonStates(); /* Update buttons when HP changes */ }
-        function triggerAnimation(el, anim) { /* ... no change ... */ if(el.classList.contains('defeat')&&anim!=='defeat')return; if(el.classList.contains('level-up')&&anim!=='level-up')return; el.classList.remove('attack','level-up'); el.classList.add(anim); let delay=(anim==='level-up')?1000:200; if(anim!=='defeat'){setTimeout(()=>{if(el)el.classList.remove(anim);},delay);} }
+        function generateProblem() { let n1, n2, op, ans; let max = BASE_MAX_NUMBER + (playerLevel - 1) * NUMBER_INCREASE_PER_LEVEL; let ops = ['+', '-']; if (playerLevel >= MULTIPLICATION_UNLOCK_LEVEL) ops.push('*'); op = ops[Math.floor(Math.random() * ops.length)]; switch(op) { case '+': n1=~~(Math.random()*(max+1)); n2=~~(Math.random()*(max+1)); ans=n1+n2; break; case '-': n1=~~(Math.random()*(max+1)); n2=~~(Math.random()*(n1+1)); ans=n1-n2; break; case '*': let lfb=Math.max(0,playerLevel-MULTIPLICATION_UNLOCK_LEVEL); const f1=MAX_MULTIPLICATION_FACTOR+lfb*MULT_FACTOR_INCREASE_PER_LEVEL; const f2=Math.max(2,MAX_MULTIPLICATION_FACTOR+~~(lfb/2)); n1=~~(Math.random()*(f1+1)); n2=~~(Math.random()*(f2+1)); if(n1==0&&Math.random()<0.4) n1=1; if(n2==0&&Math.random()<0.4) n2=1; ans=n1*n2; break; } currentProblem = { num1:n1, num2:n2, operator:op, answer:ans }; console.log(`Lvl ${playerLevel} Problem: ${n1} ${op} ${n2} = ? (Ans: ${ans})`);}
+        function displayProblem() { const op = currentProblem.operator === '*' ? '×' : currentProblem.operator; mathProblemDisplay.textContent = `Solve: ${currentProblem.num1} ${op} ${currentProblem.num2} = ?`; }
+        function updateHpDisplay(char) { let cur, max, bar, txt; if(char==='knight'){cur=knightHp;max=knightMaxHp;bar=knightHpBar;txt=knightHpText;}else{cur=goblinHp;max=goblinMaxHp;bar=goblinHpBar;txt=goblinHpText;} const pct=Math.max(0,(cur/max)*100); bar.style.width=`${pct}%`; txt.textContent=`HP: ${Math.max(0,cur)}/${max}`; updatePurchaseButtonStates(); }
+        function triggerAnimation(el, anim) { if(el.classList.contains('defeat')&&anim!=='defeat')return; if(el.classList.contains('level-up')&&anim!=='level-up')return; el.classList.remove('attack','level-up'); el.classList.add(anim); let delay=(anim==='level-up')?1000:200; if(anim!=='defeat'){setTimeout(()=>{if(el)el.classList.remove(anim);},delay);} }
 
-        // --- Temporary Feedback ---
         function showTemporaryFeedback(message, typeClass = '', duration = FEEDBACK_DURATION) {
-            clearTemporaryFeedback(); // Clear previous message timeout
-            feedbackArea.textContent = message;
-            feedbackArea.className = typeClass; // Apply class for styling
-            feedbackTimeoutId = setTimeout(() => {
-                if (feedbackArea.textContent === message) { // Only clear if it's the same message
-                    feedbackArea.textContent = '';
-                    feedbackArea.className = '';
-                }
-            }, duration);
+            clearTemporaryFeedback(); feedbackArea.textContent = message; feedbackArea.className = typeClass;
+            feedbackTimeoutId = setTimeout(() => { if (feedbackArea.textContent === message) { feedbackArea.textContent = ''; feedbackArea.className = ''; } }, duration);
         }
+        function clearTemporaryFeedback() { if (feedbackTimeoutId) { clearTimeout(feedbackTimeoutId); feedbackTimeoutId = null; } }
 
-        function clearTemporaryFeedback() {
-            if (feedbackTimeoutId) {
-                clearTimeout(feedbackTimeoutId);
-                feedbackTimeoutId = null;
-            }
-             // Optionally clear text immediately too:
-             // feedbackArea.textContent = '';
-             // feedbackArea.className = '';
-        }
-
-        // --- Purchase Button State ---
         function updatePurchaseButtonStates() {
-            if (!buyPotionButton || !buySharpenButton) return; // Safety check
-
-            // Potion Button
+            if (!buyPotionButton || !buySharpenButton) return;
             buyPotionButton.disabled = (playerGold < POTION_COST || knightHp >= knightMaxHp || isGameOver || processingAnswer);
-
-            // Sharpen Button
             buySharpenButton.disabled = (playerGold < SHARPEN_COST || isSwordSharpened || isGameOver || processingAnswer);
         }
 
-        // --- Purchase Actions ---
         function buyPotion() {
-            if (buyPotionButton.disabled) return; // Extra safety
-
+            if (buyPotionButton.disabled) return;
             playerGold -= POTION_COST;
-            const healAmount = Math.min(POTION_HEAL_AMOUNT, knightMaxHp - knightHp); // Heal only up to max HP
+            const healAmount = Math.min(POTION_HEAL_AMOUNT, knightMaxHp - knightHp);
             knightHp += healAmount;
-
             console.log(`Bought Potion. Healed ${healAmount}. HP: ${knightHp}/${knightMaxHp}. Gold: ${playerGold}`);
             showTemporaryFeedback(`Used Potion! +${healAmount} HP.`, 'feedback-purchase');
-            updateStatusDisplay(); // Updates gold, calls updatePurchaseButtonStates
-            updateHpDisplay('knight'); // Updates HP bar, calls updatePurchaseButtonStates
+            updateStatusDisplay(); updateHpDisplay('knight');
         }
-
          function buySharpen() {
-             if (buySharpenButton.disabled) return; // Extra safety
-
-             playerGold -= SHARPEN_COST;
-             isSwordSharpened = true;
+             if (buySharpenButton.disabled) return;
+             playerGold -= SHARPEN_COST; isSwordSharpened = true;
              console.log(`Bought Sharpening. Buff active! Gold: ${playerGold}`);
              showTemporaryFeedback(`Sword Sharpened! +${SHARPEN_BONUS_ATTACK} ATK next turn.`, 'feedback-purchase');
-             updateStatusDisplay(); // Updates gold and indicator, calls updatePurchaseButtonStates
+             updateStatusDisplay();
          }
 
-        // --- Core Game Logic ---
         function handleSubmit() {
             if (isGameOver || processingAnswer) return;
-            processingAnswer = true;
-            submitButton.disabled = true; answerInput.disabled = true;
-            updatePurchaseButtonStates(); // Disable shop buttons during processing
-            clearTemporaryFeedback(); // Clear shop feedback if present
-            // feedbackArea.textContent = ''; feedbackArea.className = ''; // Clear main feedback too
+            processingAnswer = true; submitButton.disabled = true; answerInput.disabled = true;
+            updatePurchaseButtonStates(); // Disable shop buttons
+            clearTemporaryFeedback();
 
-            const playerAnswerStr = answerInput.value.trim();
-            const playerAnswer = parseInt(playerAnswerStr);
+            const playerAnswerStr = answerInput.value.trim(); const playerAnswer = parseInt(playerAnswerStr);
 
             if (playerAnswerStr === '' || isNaN(playerAnswer)) {
                 showTemporaryFeedback('Please enter a valid number!', 'feedback-incorrect');
@@ -305,92 +260,58 @@
             }
 
             let actualKnightAttack = knightAttack;
-            if (isSwordSharpened) {
-                console.log("Applying Sharpened Sword bonus!");
-                actualKnightAttack += SHARPEN_BONUS_ATTACK;
-                isSwordSharpened = false; // Use buff
-                // Status display updated below or in next duel start
-            }
-
-            let outcomeDelay = 500; // Base delay
+            if (isSwordSharpened) { console.log("Applying Sharpened bonus!"); actualKnightAttack += SHARPEN_BONUS_ATTACK; isSwordSharpened = false; /* Buff used */ }
 
             if (playerAnswer === currentProblem.answer) { // Correct
-                // Show immediate feedback, might be overwritten by level up/win
                 feedbackArea.textContent = 'Correct!'; feedbackArea.className = 'feedback-correct';
-                triggerAnimation(knightSprite, 'attack');
-                goblinHp -= actualKnightAttack;
-                // HP display updated after delay
-
-                setTimeout(() => { // Delay updates until after attack animation starts
-                    updateHpDisplay('goblin');
-                    console.log(`Correct. Knight dealt ${actualKnightAttack}. Goblin HP:`, Math.max(0, goblinHp));
-
+                triggerAnimation(knightSprite, 'attack'); goblinHp -= actualKnightAttack;
+                setTimeout(() => { // Delay updates
+                    updateHpDisplay('goblin'); console.log(`Correct. Dealt ${actualKnightAttack}. G HP:`, Math.max(0, goblinHp));
                     if (goblinHp <= 0) { // Goblin Defeated
                         console.log("Goblin Defeated!"); triggerAnimation(goblinSprite, 'defeat');
                         let xpGained = XP_PER_GOBLIN_BASE + Math.floor((playerLevel-1) * XP_LEVEL_BONUS_FACTOR);
                         let goldGained = GOLD_PER_GOBLIN_BASE + (playerLevel - 1) * GOLD_LEVEL_BONUS;
                         playerXP += xpGained; playerGold += goldGained;
-                        console.log(`Gained ${xpGained} XP, ${goldGained} Gold.`);
-                        showTemporaryFeedback(`Goblin Vanquished! +${xpGained} XP, +${goldGained} Gold.`, 'feedback-correct', 2500); // Longer message
-
-                        let leveledUpThisTurn = checkLevelUp(); // Check AFTER XP gain
-                        updateStatusDisplay(); // Update display immediately
-
-                        // Proceed IMMEDIATELY to next duel setup after delay
-                        setTimeout(startNewDuel, leveledUpThisTurn ? 1200 : 800); // Longer delay if leveled up
-                        // processingAnswer will be reset by startNewDuel
-
-                    } else { // Goblin NOT defeated
+                        showTemporaryFeedback(`Goblin Vanquished! +${xpGained} XP, +${goldGained} Gold.`, 'feedback-correct', 2500);
+                        let leveledUp = checkLevelUp(); updateStatusDisplay();
+                        setTimeout(startNewDuel, leveledUp ? 1200 : 800); // Auto proceed
+                    } else { // Continue round
                         generateProblem(); displayProblem(); answerInput.value = '';
-                        submitButton.disabled = false; answerInput.disabled = false;
-                        processingAnswer = false;
-                        updatePurchaseButtonStates(); // Re-enable shop buttons
+                        submitButton.disabled = false; answerInput.disabled = false; processingAnswer = false;
+                        updatePurchaseButtonStates();
                         setTimeout(() => { if (!isGameOver) answerInput.focus(); }, 50);
                     }
-                }, 200); // Short delay matching attack anim
-
-
+                }, 200);
             } else { // Incorrect
-                feedbackArea.textContent = `Incorrect! Answer was ${currentProblem.answer}.`; feedbackArea.className = 'feedback-incorrect';
-                triggerAnimation(goblinSprite, 'attack');
-                knightHp -= goblinAttack;
-                // HP display updated after delay
-
-                 setTimeout(() => { // Delay updates until after attack animation starts
-                     updateHpDisplay('knight');
-                     console.log("Incorrect. Knight HP:", Math.max(0, knightHp));
-
+                feedbackArea.textContent = `Incorrect! Answer: ${currentProblem.answer}.`; feedbackArea.className = 'feedback-incorrect';
+                triggerAnimation(goblinSprite, 'attack'); knightHp -= goblinAttack;
+                 setTimeout(() => { // Delay updates
+                     updateHpDisplay('knight'); console.log("Incorrect. K HP:", Math.max(0, knightHp));
                      if (knightHp <= 0) { // Knight Defeated
-                        setTimeout(() => gameOver(false), 600); // Delay before showing loss screen
-                        processingAnswer = false; // Allow restart etc.
-                     } else { // Knight NOT defeated
+                        setTimeout(() => gameOver(false), 600); processingAnswer = false; // Allow restart
+                     } else { // Continue round
                         generateProblem(); displayProblem(); answerInput.value = '';
-                        submitButton.disabled = false; answerInput.disabled = false;
-                        processingAnswer = false;
-                        updatePurchaseButtonStates(); // Re-enable shop buttons
+                        submitButton.disabled = false; answerInput.disabled = false; processingAnswer = false;
+                        updatePurchaseButtonStates();
                         setTimeout(() => { if (!isGameOver) answerInput.focus(); }, 50);
                      }
-                 }, 200); // Short delay matching attack anim
+                 }, 200);
             }
         }
 
         function checkLevelUp() {
             let leveledUp = false;
             while (playerXP >= xpToNextLevel) {
-                leveledUp = true;
-                playerXP -= xpToNextLevel;
-                playerLevel++;
+                leveledUp = true; playerXP -= xpToNextLevel; playerLevel++;
                 xpToNextLevel = calculateXpNeeded(playerLevel);
-                updatePlayerStatsForLevel(true); // Pass true to HEAL player
-                showTemporaryFeedback(`LEVEL UP! Level ${playerLevel}! Knight Healed!`, 'feedback-levelup', 2500); // Longer message
+                updatePlayerStatsForLevel(true); // Heal player
+                showTemporaryFeedback(`LEVEL UP! Level ${playerLevel}! Knight Healed!`, 'feedback-levelup', 2500);
                 triggerAnimation(knightSprite, 'level-up');
-                // HP display updated inside updatePlayerStatsForLevel
             }
-            // Status display updated after this in handleSubmit if needed
             return leveledUp;
         }
 
-        function gameOver(playerWon) { // Only called on player loss
+        function gameOver(playerWon) { // Only called on loss
              console.log("--- Game Over --- Player Won:", playerWon);
              isGameOver = true; submitButton.disabled = true; answerInput.disabled = true;
              xpToNextLevel = calculateXpNeeded(playerLevel);
@@ -408,31 +329,46 @@
 
         // --- Event Listeners ---
         submitButton.addEventListener('click', handleSubmit);
-        answerInput.addEventListener('keyup', function(event) { if (event.key === 'Enter' && !submitButton.disabled && !processingAnswer) { event.preventDefault(); handleSubmit(); } }); // Added processing check
+        answerInput.addEventListener('keyup', function(event) { if (event.key === 'Enter' && !submitButton.disabled && !processingAnswer) { event.preventDefault(); handleSubmit(); } });
         startButton.onclick = () => { resetGameFull(); };
-        restartButton.onclick = () => { resetGameFull(); }; // Make restart button on loss screen do a FULL reset
+        restartButton.onclick = () => { resetGameFull(); }; // Restart button on loss does FULL reset
         if (fullscreenButton) { fullscreenButton.addEventListener('click', toggleFullscreen); } else { console.error("FS button not found!"); }
         document.addEventListener('fullscreenchange', () => { if (fullscreenButton) { fullscreenButton.textContent = document.fullscreenElement ? '✕' : '⛶'; fullscreenButton.title = document.fullscreenElement ? 'Exit FS' : 'Enter FS'; } });
-        document.addEventListener('keydown', function(event) { if (isGameOver && gameOverScreen.style.display === 'flex') { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); resetGameFull(); } } }); // Make keyboard restart a FULL reset too
+        document.addEventListener('keydown', function(event) { if (isGameOver && gameOverScreen.style.display === 'flex') { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); resetGameFull(); } } });
 
         // Shop Button Listeners
         buyPotionButton.addEventListener('click', buyPotion);
         buySharpenButton.addEventListener('click', buySharpen);
 
+        // *** ADDED: Input Focus Listener for Scrolling ***
+        answerInput.addEventListener('focus', () => {
+            console.log("Answer input focused, scheduling scroll...");
+            // Use a setTimeout to allow the keyboard animation to start/finish
+            setTimeout(() => {
+                 // Check if game is still running and input is focused
+                 if (!isGameOver && document.activeElement === answerInput) {
+                     console.log("Scrolling input into view...");
+                     answerInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                 } else {
+                     console.log("Scroll cancelled (game over or input lost focus).");
+                 }
+            }, SCROLL_DELAY);
+        });
+        // *** END ADDED LISTENER ***
+
 
         // --- Initial Setup on Load ---
          window.onload = () => {
-             gameOverScreen.style.display = 'none';
-             startScreen.style.display = 'flex';
+             gameOverScreen.style.display = 'none'; startScreen.style.display = 'flex';
              answerInput.disabled = true; submitButton.disabled = true; isGameOver = true;
              updatePlayerStatsForLevel(true); // Set initial Lvl 1 stats & FULLY HEAL
              xpToNextLevel = calculateXpNeeded(playerLevel); updateStatusDisplay();
              if (!fullscreenButton) console.warn("FS button element not found during init.");
-             console.log("Game loaded. Waiting for player to start.");
-             // Set initial text on buttons
+             // Set initial text on buttons dynamically
              buyPotionButton.innerHTML = `Potion (${POTION_COST}g)<br/>+${POTION_HEAL_AMOUNT} HP`;
              buySharpenButton.innerHTML = `Sharpen (${SHARPEN_COST}g)<br/>+${SHARPEN_BONUS_ATTACK} ATK (Next Turn)`;
              updatePurchaseButtonStates(); // Set initial disabled state
+             console.log("Game loaded. Waiting for player to start.");
          };
 
     </script>
