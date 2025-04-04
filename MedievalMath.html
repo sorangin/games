@@ -6,8 +6,14 @@
     <title>Medieval Math</title> <!-- Version Bump -->
     <style>
         /* Basic resets and body setup */
-        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: 'Verdana', sans-serif; }
-        body { display: flex; justify-content: center; align-items: center; background-color: #5d6a5a; color: #eee; }
+         ```css
+ /* Basic resets and body setup */
+ html, body {
+     /* height: 100%; */ /* REMOVED this */
+     margin: 0; padding: 0;
+     overflow: auto; /* CHANGED from hidden */
+     font-family: 'Verdana', sans-serif;
+ }
 
         /* Game container */
         #game-container { position: relative; width: 95%; max-width: 550px; min-height: 450px; max-height: 98vh; padding: clamp(10px, 3vw, 20px); background-color: #8d7163; border: 5px solid #4b3f31; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.4); text-align: center; overflow-y: auto; }
