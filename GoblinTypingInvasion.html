@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Goblin Typing Invasion (Mobile Optimized)</title>
+    <title>Goblin Typing Invasion (Mobile Keyboard Fix)</title>
     <style>
         /* Reset and Basic Setup */
         * { box-sizing: border-box; }
@@ -17,145 +17,155 @@
             font-family: 'Courier New', Courier, monospace;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: center; /* Align container vertically */
             background-color: #5c7e5c;
             background-image: linear-gradient(to bottom, #3a4f3a, #2a3a2a);
+            /* Ensure body takes full height even when keyboard changes viewport */
+            min-height: 100%;
         }
 
-        /* Game Container - Aspect Ratio Scaling & Reduced Height for Mobile */
+        /* Game Container - Vertical Flex Layout */
         #game-container {
             position: relative;
-            /* --- Aspect Ratio & Mobile Height Adjustment --- */
-            aspect-ratio: 800 / 600; /* Maintain this ratio */
-            height: 75vh;        /* **NEW: Prioritize vertical fit (less tall)** */
-            max-height: 600px;   /* Max pixel height */
-            width: auto;         /* **NEW: Width derived from height + aspect ratio */
-            max-width: 95vw;     /* **MODIFIED: Max width relative to viewport */
-            /* --- Centering & Visuals --- */
-            margin: auto;
+            display: flex;
+            flex-direction: column; /* Stack children vertically */
+            width: 95vw;         /* Primarily scale based on viewport width */
+            max-width: 800px;    /* Max pixel width */
+            height: 90vh;        /* Use significant viewport height */
+            max-height: 700px;   /* Increase max-height slightly if needed */
+            margin: auto;        /* Center container */
             background-color: #d2b48c;
             border: 8px solid #4a3b2a;
             border-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="%238b5a2b"/><stop offset="100%" stop-color="%234a3b2a"/></linearGradient></defs><rect fill="url(%23g)" width="100" height="100"/></svg>') 8 stretch;
             box-shadow: 0 0 20px rgba(0,0,0,0.6);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
+            overflow: hidden;    /* Hide anything going outside container */
         }
 
-        /* UI Top Bar */
+        /* UI Top Bar - Fixed Height */
         #ui-top {
             padding: 8px 15px;
             background-color: rgba(210, 180, 140, 0.8);
             border-bottom: 4px solid #4a3b2a;
             text-align: center;
-            flex-shrink: 0;
-            position: relative;
+            flex-shrink: 0; /* Prevent shrinking */
+            position: relative; /* For fullscreen button */
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 5; /* Keep above game area if overlap occurs */
         }
-
-        /* Stats Display */
-        #stats-display {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-            font-size: clamp(0.9em, 2.5vw, 1.1em);
-            color: #f5deb3;
-            background-color: rgba(74, 59, 42, 0.8);
-            padding: 5px 50px 5px 10px;
-            border-radius: 5px;
-            position: relative;
-            border: 1px solid #a0522d;
+        #stats-display { /* Unchanged */
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 8px; font-size: clamp(0.9em, 2.5vw, 1.1em); color: #f5deb3;
+            background-color: rgba(74, 59, 42, 0.8); padding: 5px 50px 5px 10px;
+            border-radius: 5px; position: relative; border: 1px solid #a0522d;
         }
         #score-display, #level-display { margin: 0 5px; white-space: nowrap; }
 
-        /* Typing Input */
+        /* --- Typing Input - Moved Out of UI Bar, Fixed Height --- */
         #typing-input {
             font-size: clamp(1.2em, 4vw, 1.5em);
             font-family: inherit;
-            padding: 8px;
-            width: 80%;
-            max-width: 350px;
+            padding: 10px; /* More padding */
+            width: 90%; /* Wider */
+            max-width: 400px;
             text-align: center;
             border: 3px solid #4a3b2a;
             border-radius: 5px;
             outline: none;
-            display: block;
-            margin: 5px auto 0;
+            margin: 8px auto; /* Center horizontally with margin */
             background-color: #fffaf0;
+            flex-shrink: 0; /* Prevent shrinking */
+            display: block; /* Ensure it behaves as a block */
+            order: 1; /* Position after ui-top in flex */
+            z-index: 5; /* Keep above game area */
+            /* Mobile input helpers */
             autocomplete="off"; autocapitalize="off"; autocorrect="off"; spellcheck="false";
         }
         #typing-input:focus { border-color: #cd853f; box-shadow: 0 0 5px #cd853f; }
         #typing-input::placeholder { color: #aaa; }
 
-        /* Game Area */
-        #game-area {
-            flex-grow: 1;
-            position: relative;
-            width: 100%;
-            /* **MODIFIED Background Gradient - Less Sky, More Ground** */
-            background-image:
-                linear-gradient(to top, #556b2f 0%, #6b8e23 35%, transparent 60%), /* Ground fades up */
-                linear-gradient(to bottom, #6ca0dc 20%, #87ceeb 50%, #556b2f 60%); /* Sky starts later, ground starts earlier */
-            background-size: 100% 100%;
-        }
-
-        /* Knight - Positioned Higher */
-        #knight {
-            position: absolute;
-            left: 5%;
-            bottom: 25px; /* **MOVED UP** */
-            width: clamp(70px, 12vw, 100px);
-            height: clamp(90px, 15vh, 120px);
-            background: url("sprites/Knight.png") no-repeat center bottom / contain;
-            z-index: 2;
-            filter: drop-shadow(2px 2px 3px rgba(0,0,0,0.5));
-        }
-
-        /* Goblin - Will also spawn higher due to JS change */
-        .goblin {
-            position: absolute;
-            width: clamp(50px, 8vw, 70px);
-            height: clamp(70px, 11vh, 90px);
-            background: url("sprites/Goblin.png") no-repeat center bottom / contain;
-            transition: transform 0.15s ease-out, opacity 0.3s ease-in-out, left 0.04s linear;
-            z-index: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.4));
-        }
-        .goblin.hit { transform: translateX(8px) rotate(3deg); }
-        .goblin.dying { opacity: 0; transform: scale(0.8) rotate(-15deg); pointer-events: none; }
-
-        /* Goblin Word */
-        .goblin-word {
-            position: absolute; left: 50%; transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.75); color: #fff; border: 1px solid rgba(255, 255, 255, 0.3);
-            padding: 4px 8px; border-radius: 4px; font-size: clamp(1.1em, 3vw, 1.4em); font-weight: bold;
-            white-space: nowrap; text-align: center; text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
-            transition: background-color 0.1s linear, top 0.2s ease-out, z-index 0s linear;
-        }
-        .goblin-word.correct-prefix { background-color: #32cd32; color: #000; }
-
-        /* Message Display */
-        #message-display {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            font-size: clamp(1.5em, 4vw, 2.5em); color: #ffdddd; background-color: rgba(0, 0, 0, 0.8);
-            padding: 20px 30px; border-radius: 10px; text-align: center; z-index: 100;
-            display: none; width: 80%; max-width: 500px; white-space: pre-wrap;
-        }
-
-        /* Start Button */
-        #start-button-container { text-align: center; padding-top: 10px; }
-        button#start-button {
+        /* Start Button Container (Inside ui-top) */
+        #start-button-container { text-align: center; padding-top: 0; /* No extra padding needed now */ }
+        button#start-button { /* Unchanged */
             display: inline-block; font-size: clamp(1.2em, 3.5vw, 1.5em); padding: 10px 20px; cursor: pointer;
             background-color: #8b4513; color: white; border: 2px solid #4a3b2a; border-radius: 5px; font-family: inherit;
         }
         button#start-button:hover { background-color: #a0522d; }
 
-        /* Fullscreen Button */
-        #fullscreen-button {
+
+        /* Game Area - Flexible Height, Fixed Aspect Ratio */
+        #game-area {
+            flex-grow: 1; /* Takes remaining vertical space */
+            position: relative; /* For absolute positioning of children */
+            width: 100%; /* Fill horizontal space */
+            aspect-ratio: 800 / 500; /* ** ASPECT RATIO HERE, maybe less tall */
+            overflow: hidden; /* Important: Hide parts outside the aspect ratio box */
+            background-image: /* Adjust gradient if needed */
+                linear-gradient(to top, #556b2f 0%, #6b8e23 35%, transparent 60%),
+                linear-gradient(to bottom, #6ca0dc 20%, #87ceeb 50%, #556b2f 60%);
+            background-size: cover; /* Ensure gradient covers */
+            background-position: center center;
+            order: 2; /* Position after input in flex */
+            min-height: 150px; /* Prevent collapsing too small */
+        }
+
+        /* Knight - Positioned relative to new game area size */
+        #knight {
+            position: absolute;
+            left: 5%;
+            bottom: 10px; /* Relative to game-area bottom */
+            /* Size relative to game-area's current size */
+            width: clamp(60px, 15%, 100px); /* Use percentage? */
+            height: clamp(80px, 20%, 120px);
+            background: url("sprites/Knight.png") no-repeat center bottom / contain;
+            z-index: 2;
+            filter: drop-shadow(2px 2px 3px rgba(0,0,0,0.5));
+        }
+
+        /* Goblin - Positioned relative to new game area size */
+        .goblin {
+            position: absolute;
+             /* Size relative to game-area's current size */
+            width: clamp(45px, 10%, 70px);
+            height: clamp(60px, 15%, 90px);
+            background: url("sprites/Goblin.png") no-repeat center bottom / contain;
+            transition: transform 0.15s ease-out, opacity 0.3s ease-in-out, left 0.04s linear;
+            z-index: 1;
+            display: flex; flex-direction: column; align-items: center;
+            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.4));
+        }
+        .goblin.hit { transform: translateX(8px) rotate(3deg); }
+        .goblin.dying { opacity: 0; transform: scale(0.8) rotate(-15deg); pointer-events: none; }
+
+        /* Goblin Word - Size relative to goblin */
+        .goblin-word {
+            position: absolute; left: 50%; transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.75); color: #fff; border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 3px 6px; /* Slightly smaller padding */
+            border-radius: 4px;
+            font-size: clamp(0.9em, 2.5vw, 1.2em); /* Slightly smaller font */
+            font-weight: bold; white-space: nowrap; text-align: center; text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+            transition: background-color 0.1s linear, top 0.2s ease-out, z-index 0s linear;
+             /* Adjust top positions if needed based on smaller font/padding */
+             /* top: -30px etc. if necessary */
+        }
+        .goblin-word.correct-prefix { background-color: #32cd32; color: #000; }
+
+        /* Message Display */
+        #message-display {
+            position: absolute;
+            /* Position relative to game-container, not game-area */
+            top: 55%; /* Adjust vertical position */
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(1.4em, 4vw, 2.2em);
+            color: #ffdddd; background-color: rgba(0, 0, 0, 0.85);
+            padding: 15px 25px; border-radius: 10px; text-align: center;
+            z-index: 100; /* Highest */
+            display: none; width: 80%; max-width: 450px; white-space: pre-wrap;
+        }
+
+        /* Fullscreen Button (in ui-top) */
+        #fullscreen-button { /* Unchanged */
             position: absolute; top: 5px; right: 10px; background: rgba(74, 59, 42, 0.6); border: 1px solid #f0e68c;
             color: #f0e68c; font-size: clamp(1.2em, 3vw, 1.8em); width: 35px; height: 35px; line-height: 33px;
             text-align: center; border-radius: 5px; cursor: pointer; z-index: 15; user-select: none;
@@ -165,32 +175,42 @@
         /* Fullscreen State */
         #game-container:fullscreen {
             max-width: none; max-height: none; width: 100%; height: 100%; border: none;
-            /* Revert height/width overrides in fullscreen */
-            height: 100%; width: 100%;
+             /* Ensure flex layout works well in fullscreen too */
+             height: 100%; width: 100%;
         }
+        #game-container:fullscreen #game-area {
+             /* Optionally change aspect ratio in fullscreen? Or keep it? */
+             /* aspect-ratio: 16 / 9; */
+        }
+
     </style>
 </head>
 <body>
-     <!-- Game Container -->
+     <!-- Game Container (Now a flex column) -->
      <div id="game-container">
-         <!-- UI Top Bar -->
+         <!-- UI Top Bar (First flex item) -->
          <div id="ui-top">
              <button id="fullscreen-button" title="Toggle Fullscreen">⛶</button>
              <div id="stats-display">
                  <div id="score-display">Score: 0</div>
                  <div id="level-display">Wave: 1</div>
              </div>
-             <input type="text" id="typing-input" placeholder="Type goblin words..." disabled>
+             <!-- Start Button moved inside ui-top for simplicity -->
              <div id="start-button-container">
                 <button id="start-button">Start Invasion</button>
-            </div>
+             </div>
          </div>
-         <!-- Game Area -->
+
+         <!-- Typing Input (Second flex item - MOVED HERE) -->
+         <input type="text" id="typing-input" placeholder="Type goblin words..." disabled>
+
+         <!-- Game Area (Third flex item - takes remaining space) -->
          <div id="game-area">
              <div id="knight"></div>
              <!-- Goblins are added here dynamically -->
          </div>
-         <!-- Message Overlay -->
+
+         <!-- Message Overlay (Positioned absolutely over container) -->
          <div id="message-display"></div>
      </div>
 
@@ -198,66 +218,9 @@
         // --- DOM Elements ---
         let gameContainer, gameArea, knight, typingInput, scoreDisplay, levelDisplay, messageDisplay, startButton, startButtonContainer, fullscreenButton;
 
-        // --- Game Words (Expanded List) ---
+        // --- Game Words ---
         const wordListSource = [ /* ... Word list unchanged ... */
-            "goblin", "attack", "knight", "sword", "shield", "magic", "danger", "quick", "type", "defend",
-            "wave", "score", "castle", "arrow", "forest", "speed", "ogre", "troll", "dragon", "bash",
-            "charge", "block", "enemy", "power", "haste", "invade", "retreat", "valor", "victory", "defeat",
-            "elf", "dwarf", "orc", "beast", "monster", "human", "undead", "skeleton", "zombie", "ghoul",
-            "imp", "demon", "angel", "wizard", "sorcerer", "witch", "warrior", "rogue", "ranger", "cleric",
-            "paladin", "barbarian", "gnome", "sprite", "fairy", "giant", "cyclops", "minotaur", "griffin",
-            "chimera", "strike", "cast", "heal", "dodge", "parry", "flee", "pursue", "summon", "banish",
-            "enchant", "curse", "explore", "sneak", "ambush", "shoot", "throw", "swing", "slash", "stab",
-            "crush", "guard", "protect", "reinforce", "counter", "advance", "flank", "surround", "conquer",
-            "fortify", "axe", "mace", "spear", "dagger", "bow", "crossbow", "staff", "wand", "armor",
-            "helmet", "gauntlets", "boots", "potion", "scroll", "amulet", "ring", "key", "map", "treasure",
-            "gold", "gem", "crystal", "artifact", "relic", "standard", "banner", "catapult", "ram", "siege",
-            "dungeon", "cave", "mountain", "swamp", "desert", "plains", "village", "city", "tower", "keep",
-            "fortress", "ruins", "temple", "shrine", "abyss", "portal", "realm", "kingdom", "empire",
-            "battlefield", "graveyard", "tavern", "inn", "shop", "strength", "agility", "wisdom", "courage",
-            "fear", "chaos", "order", "light", "dark", "shadow", "fire", "water", "earth", "air", "ice",
-            "lightning", "poison", "holy", "arcane", "divine", "ancient", "mythic", "legendary", "epic",
-            "rage", "fury", "focus", "stealth", "cunning", "loyalty", "betrayal", "honor", "glory", "doom",
-            "fate", "destiny", "quest", "mission", "bounty", "reward", "penalty", "brave", "fierce", "mighty",
-            "hidden", "lost", "sacred", "corrupt", "noble", "savage", "wild", "tame", "free", "bound",
-            "about", "above", "across", "action", "active", "actual", "always", "amount", "animal", "answer",
-            "appear", "around", "author", "aware", "balance", "become", "before", "behind", "better", "between",
-            "beyond", "border", "bring", "build", "button", "cable", "camera", "cancel", "carbon", "center",
-            "change", "circle", "clean", "clear", "close", "coffee", "color", "common", "corner", "could",
-            "cover", "create", "credit", "current", "cycle", "daily", "dance", "decide", "define", "degree",
-            "delete", "depend", "detail", "differ", "direct", "divide", "doctor", "dollar", "double", "dream",
-            "drive", "during", "early", "either", "empty", "enough", "enter", "equal", "error", "event",
-            "every", "exact", "except", "exist", "expect", "explain", "extra", "factor", "family", "father",
-            "field", "figure", "final", "floor", "follow", "force", "format", "forward", "friend", "front",
-            "future", "gather", "general", "group", "guide", "happen", "happy", "heavy", "hello", "house",
-            "however", "image", "impact", "import", "indeed", "index", "inform", "input", "inside", "issue",
-            "itself", "jacket", "joint", "judge", "keyboard", "known", "label", "large", "later", "layer",
-            "learn", "leave", "legal", "level", "listen", "little", "local", "logic", "longer", "lower",
-            "lucky", "lunch", "major", "manage", "manual", "margin", "market", "master", "match", "maybe",
-            "measure", "media", "member", "memory", "mention", "message", "metal", "method", "middle", "might",
-            "minor", "minus", "minute", "mirror", "mobile", "model", "modify", "moment", "money", "month",
-            "morning", "mother", "mouse", "movie", "music", "myself", "native", "nearby", "nearly", "network",
-            "never", "noise", "normal", "north", "notice", "number", "object", "occur", "offer", "often",
-            "online", "only", "open", "option", "order", "other", "output", "outside", "owner", "paint",
-            "paper", "parent", "parse", "party", "pause", "peace", "people", "period", "person", "phase",
-            "phone", "photo", "piece", "place", "plant", "please", "point", "policy", "pretty", "press",
-            "price", "print", "prior", "private", "process", "proof", "proper", "public", "query", "quest",
-            "radio", "raise", "range", "reach", "react", "ready", "really", "reason", "record", "refer",
-            "region", "reject", "relate", "remove", "repeat", "reply", "report", "reset", "result", "return",
-            "right", "round", "route", "sample", "scale", "scene", "scope", "screen", "search", "secure",
-            "select", "sense", "series", "server", "service", "session", "setup", "share", "shift", "short",
-            "should", "simple", "since", "single", "skill", "small", "smart", "smile", "solid", "solve",
-            "sound", "south", "space", "speak", "special", "split", "sport", "stack", "stage", "stand",
-            "start", "state", "static", "status", "still", "stock", "store", "story", "stream", "street",
-            "study", "style", "subject", "sugar", "super", "supply", "support", "surely", "surface", "switch",
-            "symbol", "system", "table", "target", "teach", "team", "thank", "their", "theme", "there",
-            "these", "thick", "thing", "think", "third", "those", "though", "three", "through", "title",
-            "today", "token", "total", "touch", "trace", "track", "trade", "train", "trend", "truck",
-            "truly", "trust", "twice", "under", "union", "unique", "until", "update", "upper", "usual",
-            "valid", "value", "video", "virus", "visit", "visual", "voice", "volume", "watch", "while",
-            "white", "whole", "width", "window", "within", "without", "woman", "world", "worry", "worth",
-            "would", "write", "wrong", "yellow", "yield", "young"
-        ];
+            "goblin", "attack", "knight", "sword", "shield", "magic", "danger", "quick", "type", "defend", "wave", "score", "castle", "arrow", "forest", "speed", "ogre", "troll", "dragon", "bash", "charge", "block", "enemy", "power", "haste", "invade", "retreat", "valor", "victory", "defeat", "elf", "dwarf", "orc", "beast", "monster", "human", "undead", "skeleton", "zombie", "ghoul", "imp", "demon", "angel", "wizard", "sorcerer", "witch", "warrior", "rogue", "ranger", "cleric", "paladin", "barbarian", "gnome", "sprite", "fairy", "giant", "cyclops", "minotaur", "griffin", "chimera", "strike", "cast", "heal", "dodge", "parry", "flee", "pursue", "summon", "banish", "enchant", "curse", "explore", "sneak", "ambush", "shoot", "throw", "swing", "slash", "stab", "crush", "guard", "protect", "reinforce", "counter", "advance", "flank", "surround", "conquer", "fortify", "axe", "mace", "spear", "dagger", "bow", "crossbow", "staff", "wand", "armor", "helmet", "gauntlets", "boots", "potion", "scroll", "amulet", "ring", "key", "map", "treasure", "gold", "gem", "crystal", "artifact", "relic", "standard", "banner", "catapult", "ram", "siege", "dungeon", "cave", "mountain", "swamp", "desert", "plains", "village", "city", "tower", "keep", "fortress", "ruins", "temple", "shrine", "abyss", "portal", "realm", "kingdom", "empire", "battlefield", "graveyard", "tavern", "inn", "shop", "strength", "agility", "wisdom", "courage", "fear", "chaos", "order", "light", "dark", "shadow", "fire", "water", "earth", "air", "ice", "lightning", "poison", "holy", "arcane", "divine", "ancient", "mythic", "legendary", "epic", "rage", "fury", "focus", "stealth", "cunning", "loyalty", "betrayal", "honor", "glory", "doom", "fate", "destiny", "quest", "mission", "bounty", "reward", "penalty", "brave", "fierce", "mighty", "hidden", "lost", "sacred", "corrupt", "noble", "savage", "wild", "tame", "free", "bound", "about", "above", "across", "action", "active", "actual", "always", "amount", "animal", "answer", "appear", "around", "author", "aware", "balance", "become", "before", "behind", "better", "between", "beyond", "border", "bring", "build", "button", "cable", "camera", "cancel", "carbon", "center", "change", "circle", "clean", "clear", "close", "coffee", "color", "common", "corner", "could", "cover", "create", "credit", "current", "cycle", "daily", "dance", "decide", "define", "degree", "delete", "depend", "detail", "differ", "direct", "divide", "doctor", "dollar", "double", "dream", "drive", "during", "early", "either", "empty", "enough", "enter", "equal", "error", "event", "every", "exact", "except", "exist", "expect", "explain", "extra", "factor", "family", "father", "field", "figure", "final", "floor", "follow", "force", "format", "forward", "friend", "front", "future", "gather", "general", "group", "guide", "happen", "happy", "heavy", "hello", "house", "however", "image", "impact", "import", "indeed", "index", "inform", "input", "inside", "issue", "itself", "jacket", "joint", "judge", "keyboard", "known", "label", "large", "later", "layer", "learn", "leave", "legal", "level", "listen", "little", "local", "logic", "longer", "lower", "lucky", "lunch", "major", "manage", "manual", "margin", "market", "master", "match", "maybe", "measure", "media", "member", "memory", "mention", "message", "metal", "method", "middle", "might", "minor", "minus", "minute", "mirror", "mobile", "model", "modify", "moment", "money", "month", "morning", "mother", "mouse", "movie", "music", "myself", "native", "nearby", "nearly", "network", "never", "noise", "normal", "north", "notice", "number", "object", "occur", "offer", "often", "online", "only", "open", "option", "order", "other", "output", "outside", "owner", "paint", "paper", "parent", "parse", "party", "pause", "peace", "people", "period", "person", "phase", "phone", "photo", "piece", "place", "plant", "please", "point", "policy", "pretty", "press", "price", "print", "prior", "private", "process", "proof", "proper", "public", "query", "quest", "radio", "raise", "range", "reach", "react", "ready", "really", "reason", "record", "refer", "region", "reject", "relate", "remove", "repeat", "reply", "report", "reset", "result", "return", "right", "round", "route", "sample", "scale", "scene", "scope", "screen", "search", "secure", "select", "sense", "series", "server", "service", "session", "setup", "share", "shift", "short", "should", "simple", "since", "single", "skill", "small", "smart", "smile", "solid", "solve", "sound", "south", "space", "speak", "special", "split", "sport", "stack", "stage", "stand", "start", "state", "static", "status", "still", "stock", "store", "story", "stream", "street", "study", "style", "subject", "sugar", "super", "supply", "support", "surely", "surface", "switch", "symbol", "system", "table", "target", "teach", "team", "thank", "their", "theme", "there", "these", "thick", "thing", "think", "third", "those", "though", "three", "through", "title", "today", "token", "total", "touch", "trace", "track", "trade", "train", "trend", "truck", "truly", "trust", "twice", "under", "union", "unique", "until", "update", "upper", "usual", "valid", "value", "video", "virus", "visit", "visual", "voice", "volume", "watch", "while", "white", "whole", "width", "window", "within", "without", "woman", "world", "worry", "worth", "would", "write", "wrong", "yellow", "yield", "young" ];
         let wordsAvailable = [];
 
         // --- Game State ---
@@ -273,7 +236,12 @@
         const gameLoopInterval = 40; const baseGoblinsPerWave = 3; const goblinsPerWaveIncrease = 2;
 
         // --- Text Staggering & Z-index Parameters ---
-        const textOverlapCheckDistance = 65; const NORMAL_TEXT_TOP = -35; const HIGH_TEXT_TOP = -60; const HIGHEST_TEXT_TOP = -85; const STAGGER_LEVELS = [NORMAL_TEXT_TOP, HIGH_TEXT_TOP, HIGHEST_TEXT_TOP];
+        // Note: Top positions might need adjustment if game area is significantly shorter
+        const textOverlapCheckDistance = 65;
+        const NORMAL_TEXT_TOP = -30; // Adjusted slightly up
+        const HIGH_TEXT_TOP = -50;   // Adjusted slightly up
+        const HIGHEST_TEXT_TOP = -70;// Adjusted slightly up
+        const STAGGER_LEVELS = [NORMAL_TEXT_TOP, HIGH_TEXT_TOP, HIGHEST_TEXT_TOP];
         const DEFAULT_WORD_ZINDEX = 3; const ACTIVE_WORD_ZINDEX = 10;
 
         // --- Functions ---
@@ -283,106 +251,88 @@
             if (levelDisplay) levelDisplay.textContent = `Wave: ${wave}`;
          }
         function getRandomWord() { /* ... unchanged ... */
-             if (wordsAvailable.length === 0) {
-                 if (wordListSource.length > 0) {
-                     console.log("Replenishing word list.");
-                     wordsAvailable = [...wordListSource];
-                 } else {
-                     console.error("CRITICAL: wordListSource is empty!");
-                     return "ERROR";
-                 }
-             }
-             const randomIndex = Math.floor(Math.random() * wordsAvailable.length);
-             const word = wordsAvailable.splice(randomIndex, 1)[0]; // Remove word to avoid immediate repeats
-             return word;
+            if (wordsAvailable.length === 0) {
+                if (wordListSource.length > 0) { wordsAvailable = [...wordListSource]; }
+                else { console.error("CRITICAL: wordListSource empty!"); return "ERROR"; }
+            }
+            const randomIndex = Math.floor(Math.random() * wordsAvailable.length);
+            return wordsAvailable.splice(randomIndex, 1)[0];
          }
         function startNewWave() { /* ... unchanged ... */
-            console.log(`[startNewWave] Starting Wave ${wave}. Need ${goblinsNeededForNextWave} kills.`);
-            killsThisWave = 0;
-            clearTimeout(spawnTimerId);
-            spawnTimerId = null;
+            console.log(`Starting Wave ${wave}. Need ${goblinsNeededForNextWave} kills.`);
+            killsThisWave = 0; clearTimeout(spawnTimerId); spawnTimerId = null;
             const currentSpawnInterval = Math.max(minSpawnInterval, baseSpawnInterval - (spawnIntervalDecreasePerWave * (wave - 1)));
-            console.log(`[startNewWave] Spawn interval for wave ${wave}: ${currentSpawnInterval}ms`);
+            console.log(`Spawn interval: ${currentSpawnInterval}ms`);
             function scheduleNextSpawn() {
                  if (!gameActive) return;
-                 spawnTimerId = setTimeout(() => {
-                    spawnGoblin();
-                    scheduleNextSpawn();
-                }, currentSpawnInterval);
+                 spawnTimerId = setTimeout(() => { spawnGoblin(); scheduleNextSpawn(); }, currentSpawnInterval);
             }
             scheduleNextSpawn();
         }
 
-        function spawnGoblin() { // **MODIFIED for higher base position**
+        function spawnGoblin() { // **Position relative to game-area**
             if (!gameActive || !gameArea) return;
             try {
                 nextGoblinId++; const id = nextGoblinId;
                 const newGoblin = document.createElement('div');
-                newGoblin.className = 'goblin';
-                newGoblin.id = `goblin-${id}`;
+                newGoblin.className = 'goblin'; newGoblin.id = `goblin-${id}`;
 
-                const areaWidth = gameArea.offsetWidth;
-                let initialX = areaWidth > 0 ? areaWidth + Math.random() * 50 + 20 : 850;
+                const areaWidth = gameArea.offsetWidth; // Width of the game area itself
+                let initialX = areaWidth > 0 ? areaWidth + Math.random() * 50 + 20 : 850; // Start off right edge of game area
 
-                // *** MODIFIED: Goblins spawn higher ***
-                const baseBottom = 25; // Was 10
-                const verticalVariance = 40;
+                // Base bottom position relative to game-area bottom
+                const baseBottom = 10; // Lower position is fine now
+                const verticalVariance = 30; // Less variance maybe needed if area is shorter
                 const randomBottom = baseBottom + (Math.random() * verticalVariance) - (verticalVariance / 2);
-                // Ensure minimum bottom doesn't go below new base
-                newGoblin.style.bottom = `${Math.max(baseBottom - (verticalVariance / 2), randomBottom)}px`;
+                newGoblin.style.bottom = `${Math.max(5, randomBottom)}px`; // Ensure min 5px
 
                 const wordElement = document.createElement('div');
                 wordElement.className = 'goblin-word';
                 const word = getRandomWord();
-                if (!word || word === "ERROR") {
-                     console.error("Failed to get word for goblin spawn, stopping spawn."); return;
-                }
+                if (!word || word === "ERROR") { console.error("Failed to get word."); return; }
                 wordElement.textContent = word;
                 wordElement.style.top = `${NORMAL_TEXT_TOP}px`; wordElement.style.zIndex = DEFAULT_WORD_ZINDEX;
 
                 newGoblin.appendChild(wordElement);
-                gameArea.appendChild(newGoblin);
+                gameArea.appendChild(newGoblin); // Append to game area
                 newGoblin.offsetHeight; newGoblin.style.left = `${initialX}px`;
 
                 const goblinData = { id, element: newGoblin, wordElement, word, hp: baseGoblinHP, xPosition: initialX, staggerLevel: 0 };
                 goblins.push(goblinData);
 
-            } catch (error) {
-                console.error("[spawnGoblin] CRITICAL ERROR:", error); gameOver("Error spawning goblin!");
-            }
+            } catch (error) { console.error("[spawnGoblin] CRITICAL ERROR:", error); gameOver("Error spawning!"); }
         }
 
-        function updateGoblinPosition(goblinData, currentSpeed) { /* ... unchanged ... */
+        function updateGoblinPosition(goblinData, currentSpeed) {
             if (!goblinData || !goblinData.element || !gameActive) return;
             goblinData.xPosition -= currentSpeed;
             goblinData.element.style.left = `${goblinData.xPosition}px`;
+             // Check against knightDefenseLine which is calculated relative to gameArea
             if (goblinData.xPosition <= knightDefenseLine) {
-                console.log(`Goblin ${goblinData.id} ("${goblinData.word}") reached knight defense line (${knightDefenseLine.toFixed(1)}px)!`);
-                gameOver(`A goblin carrying "${goblinData.word}" broke through!`);
+                console.log(`Goblin ${goblinData.id} ("${goblinData.word}") reached knight!`);
+                gameOver(`"${goblinData.word}" goblin broke through!`);
             }
          }
-        function manageTextStaggering() { /* ... unchanged ... */
+        function manageTextStaggering() { /* ... unchanged, uses goblinData.xPosition etc ... */
             if (!gameActive || goblins.length < 1) return;
             goblins.sort((a, b) => b.xPosition - a.xPosition);
             for (let i = 0; i < goblins.length; i++) {
-                let currentGoblin = goblins[i];
-                if (!currentGoblin || !currentGoblin.wordElement) continue;
+                let currentGoblin = goblins[i]; if (!currentGoblin?.wordElement) continue;
                 let targetLevel = 0;
                 for (let j = i + 1; j < goblins.length; j++) {
-                    let otherGoblin = goblins[j];
-                     if (!otherGoblin || !otherGoblin.wordElement) continue;
-                     if (Math.abs(currentGoblin.xPosition - otherGoblin.xPosition) < textOverlapCheckDistance) {
+                    let otherGoblin = goblins[j]; if (!otherGoblin?.wordElement) continue;
+                    if (Math.abs(currentGoblin.xPosition - otherGoblin.xPosition) < textOverlapCheckDistance) {
                          if (otherGoblin.staggerLevel >= targetLevel) { targetLevel = otherGoblin.staggerLevel + 1; }
-                     }
+                    }
                 }
                 targetLevel = Math.min(targetLevel, STAGGER_LEVELS.length - 1);
                 currentGoblin.staggerLevel = targetLevel;
                 currentGoblin.wordElement.style.top = `${STAGGER_LEVELS[targetLevel]}px`;
                 if (currentGoblin === currentTypingTarget) {
                     currentGoblin.wordElement.style.zIndex = ACTIVE_WORD_ZINDEX;
-                     if (typingInput && typingInput.value.length > 0 && currentGoblin.word.toLowerCase().startsWith(typingInput.value.trim().toLowerCase())) {
+                    if (typingInput?.value.length > 0 && currentGoblin.word.toLowerCase().startsWith(typingInput.value.trim().toLowerCase())) {
                          currentGoblin.wordElement.classList.add('correct-prefix');
-                     } else { currentGoblin.wordElement.classList.remove('correct-prefix'); }
+                    } else { currentGoblin.wordElement.classList.remove('correct-prefix'); }
                 } else {
                     currentGoblin.wordElement.style.zIndex = DEFAULT_WORD_ZINDEX + currentGoblin.staggerLevel;
                     currentGoblin.wordElement.classList.remove('correct-prefix');
@@ -390,94 +340,101 @@
             }
          }
         function killGoblin(goblinData) { /* ... unchanged ... */
-            if (!goblinData || !goblinData.element) return;
-            goblinData.element.classList.add('dying');
-            setTimeout(() => {
-                if (goblinData.element && goblinData.element.parentNode === gameArea) {
-                    gameArea.removeChild(goblinData.element);
-                }
-            }, 500);
-            const index = goblins.findIndex(g => g.id === goblinData.id);
-            if (index > -1) { goblins.splice(index, 1); }
-            if (currentTypingTarget && currentTypingTarget.id === goblinData.id) {
-                currentTypingTarget = null;
-                if (typingInput) typingInput.value = '';
-                checkInput();
-            }
-            score += killScore; killsThisWave++; updateUIDisplay();
-            if (killsThisWave >= goblinsNeededForNextWave) {
-                wave++; goblinsNeededForNextWave += goblinsPerWaveIncrease;
-                console.log(`Wave ${wave - 1} COMPLETE! Starting wave ${wave}. Need ${goblinsNeededForNextWave} kills`);
-                showMessage(`Wave ${wave - 1} Complete!`, 1500);
-                clearTimeout(spawnTimerId); spawnTimerId = null;
-                 if (wordsAvailable.length < 20 && wordListSource.length > 0) {
-                    console.log("Replenishing word list between waves.");
-                    wordsAvailable = [...wordListSource];
-                 }
-                spawnTimerId = setTimeout(startNewWave, 2000);
-            }
+             if (!goblinData?.element) return;
+             goblinData.element.classList.add('dying');
+             setTimeout(() => { goblinData.element?.remove(); }, 500); // Use optional chaining
+             const index = goblins.findIndex(g => g.id === goblinData.id);
+             if (index > -1) { goblins.splice(index, 1); }
+             if (currentTypingTarget?.id === goblinData.id) {
+                 currentTypingTarget = null;
+                 if (typingInput) typingInput.value = '';
+                 checkInput();
+             }
+             score += killScore; killsThisWave++; updateUIDisplay();
+             if (killsThisWave >= goblinsNeededForNextWave) {
+                 wave++; goblinsNeededForNextWave += goblinsPerWaveIncrease;
+                 console.log(`Wave ${wave - 1} COMPLETE! Next: ${goblinsNeededForNextWave}`);
+                 showMessage(`Wave ${wave - 1} Complete!`, 1500);
+                 clearTimeout(spawnTimerId); spawnTimerId = null;
+                 if (wordsAvailable.length < 20 && wordListSource.length > 0) { wordsAvailable = [...wordListSource]; }
+                 spawnTimerId = setTimeout(startNewWave, 2000);
+             }
          }
         function processCorrectWord(goblinData) { /* ... unchanged ... */
              goblinData.element.classList.add('hit');
-             setTimeout(() => { if (goblinData.element) goblinData.element.classList.remove('hit'); }, 150);
+             setTimeout(() => { goblinData.element?.classList.remove('hit'); }, 150);
              goblinData.xPosition += pushbackAmount;
              if(gameArea) goblinData.xPosition = Math.min(goblinData.xPosition, gameArea.offsetWidth + 50);
              goblinData.element.style.left = `${goblinData.xPosition}px`;
              killGoblin(goblinData);
          }
         function checkInput() { /* ... unchanged ... */
-            if (!gameActive || !typingInput) return;
-            const currentInput = typingInput.value.trim().toLowerCase();
-            let previousTarget = currentTypingTarget;
-            if (!currentTypingTarget && currentInput !== '') {
-                let bestMatch = null; let minDistance = Infinity;
-                for (const goblin of goblins) {
-                    if (goblin.word.toLowerCase().startsWith(currentInput)) {
-                        if (goblin.xPosition < minDistance) { minDistance = goblin.xPosition; bestMatch = goblin; }
-                    }
-                }
-                if (bestMatch) { currentTypingTarget = bestMatch; }
-            }
-            if (currentTypingTarget) {
-                const targetWordLower = currentTypingTarget.word.toLowerCase();
-                if (targetWordLower.startsWith(currentInput)) {
-                    if (currentInput === targetWordLower) { processCorrectWord(currentTypingTarget); return; }
-                } else {
-                    currentTypingTarget = null;
-                    if (currentInput !== '') { checkInput(); } else { manageTextStaggering(); }
-                    return;
-                }
-            }
-            if (previousTarget !== currentTypingTarget || currentInput !== typingInput.lastValue) { manageTextStaggering(); }
-            typingInput.lastValue = currentInput;
+             if (!gameActive || !typingInput) return;
+             const currentInput = typingInput.value.trim().toLowerCase();
+             let previousTarget = currentTypingTarget;
+             if (!currentTypingTarget && currentInput !== '') {
+                 let bestMatch = null; let minDistance = Infinity;
+                 for (const goblin of goblins) {
+                     if (goblin.word.toLowerCase().startsWith(currentInput) && goblin.xPosition < minDistance) {
+                          minDistance = goblin.xPosition; bestMatch = goblin;
+                     }
+                 }
+                 if (bestMatch) { currentTypingTarget = bestMatch; }
+             }
+             if (currentTypingTarget) {
+                 const targetWordLower = currentTypingTarget.word.toLowerCase();
+                 if (targetWordLower.startsWith(currentInput)) {
+                     if (currentInput === targetWordLower) { processCorrectWord(currentTypingTarget); return; }
+                 } else {
+                     currentTypingTarget = null;
+                     if (currentInput !== '') { checkInput(); } else { manageTextStaggering(); }
+                     return;
+                 }
+             }
+             if (previousTarget !== currentTypingTarget || currentInput !== typingInput.lastValue) { manageTextStaggering(); }
+             typingInput.lastValue = currentInput;
          }
         function gameLoop() { /* ... unchanged ... */
-            if (!gameActive) return;
-            try {
-                const currentSpeed = baseGoblinSpeed + (speedIncreasePerWave * (wave - 1));
-                for (let i = goblins.length - 1; i >= 0; i--) { updateGoblinPosition(goblins[i], currentSpeed); }
-            } catch (error) { console.error("[gameLoop] CRITICAL ERROR:", error); gameOver("A critical error occurred!"); }
+             if (!gameActive) return;
+             try {
+                 const currentSpeed = baseGoblinSpeed + (speedIncreasePerWave * (wave - 1));
+                 for (let i = goblins.length - 1; i >= 0; i--) { updateGoblinPosition(goblins[i], currentSpeed); }
+             } catch (error) { console.error("[gameLoop] ERROR:", error); gameOver("Critical Error!"); }
          }
-        function calculateKnightDefenseLine() { /* ... unchanged ... */
-             if (knight && gameArea) {
-                 const knightRect = knight.getBoundingClientRect();
-                 const gameAreaRect = gameArea.getBoundingClientRect();
-                 knightDefenseLine = (knightRect.right - gameAreaRect.left);
-             } else { knightDefenseLine = 50; console.warn("Could not calculate knight defense line."); }
-         }
-        function startGame() { /* ... unchanged ... */
+
+        // **MODIFIED: Calculate relative to gameArea**
+        function calculateKnightDefenseLine() {
+            if (knight && gameArea) {
+                // Get knight's position relative to the viewport
+                const knightRect = knight.getBoundingClientRect();
+                // Get game area's position relative to the viewport
+                const gameAreaRect = gameArea.getBoundingClientRect();
+                // Calculate knight's right edge relative to the game area's left edge
+                // This value represents the "finish line" within the gameArea's coordinate system
+                knightDefenseLine = knightRect.right - gameAreaRect.left;
+                // console.log(`Knight defense line (relative to game area): ${knightDefenseLine.toFixed(1)}px`);
+            } else {
+                knightDefenseLine = 50; // Fallback
+                console.warn("Could not calculate defense line accurately.");
+            }
+        }
+
+        function startGame() { // Ensure elements are correctly referenced
              console.log("--- startGame() ---"); if (gameActive) return;
              try {
                  gameActive = true; score = 0; wave = 1; killsThisWave = 0;
                  goblinsNeededForNextWave = baseGoblinsPerWave; goblins = []; currentTypingTarget = null;
-                 if (gameArea) { gameArea.querySelectorAll('.goblin').forEach(gob => gob.remove()); }
+                 if (gameArea) { gameArea.querySelectorAll('.goblin').forEach(gob => gob.remove()); } // Clear from game area
                  updateUIDisplay(); hideMessage();
                  if (typingInput) {
                      typingInput.disabled = false; typingInput.placeholder = 'Type goblin words!';
                      typingInput.value = ''; typingInput.lastValue = '';
                      try { typingInput.focus(); } catch(e) { console.warn("Focus failed", e); }
                  }
-                 if (startButtonContainer) { startButtonContainer.style.display = 'none'; }
+                 // Hide Start button (now in ui-top)
+                 if(startButton) startButton.style.display = 'none';
+                 if(startButtonContainer) startButtonContainer.style.display = 'none'; // Hide container too
+
                  calculateKnightDefenseLine();
                  if (wordsAvailable.length < 50 || wordsAvailable.length < goblinsNeededForNextWave * 2) {
                      wordsAvailable = [...wordListSource];
@@ -490,10 +447,12 @@
                  console.error("[startGame] CRITICAL ERROR:", error); gameActive = false;
                  showMessage("Error starting game:\n" + error.message, 0);
                  if (typingInput) typingInput.disabled = true;
-                 if (startButtonContainer) startButtonContainer.style.display = 'block';
+                  // Show Start button again
+                 if(startButton) startButton.style.display = 'inline-block';
+                  if(startButtonContainer) startButtonContainer.style.display = 'block';
              }
          }
-        function gameOver(message = "Game Over!") { /* ... unchanged ... */
+        function gameOver(message = "Game Over!") { // Ensure elements are correctly referenced
              console.log(`[gameOver] ${message}`); if (!gameActive) return; gameActive = false;
              clearInterval(gameLoopTimerId); clearTimeout(spawnTimerId);
              gameLoopTimerId = null; spawnTimerId = null;
@@ -503,62 +462,116 @@
                  if(currentTypingTarget?.wordElement) currentTypingTarget.wordElement.classList.remove('correct-prefix');
                  currentTypingTarget = null;
              }
-             if (startButtonContainer) { startButtonContainer.style.display = 'block'; }
+              // Show Start button again
+             if(startButton) startButton.style.display = 'inline-block';
+             if(startButtonContainer) startButtonContainer.style.display = 'block';
          }
         function showMessage(text, duration = 3000) { /* ... unchanged ... */
-            if (!messageDisplay) return;
-            messageDisplay.innerHTML = text.replace(/\n/g, '<br>'); messageDisplay.style.display = 'block';
+            if (!messageDisplay) return; messageDisplay.innerHTML = text.replace(/\n/g, '<br>');
+            messageDisplay.style.display = 'block';
             if (messageDisplay.hideTimeout) clearTimeout(messageDisplay.hideTimeout);
             if (duration > 0) { messageDisplay.hideTimeout = setTimeout(hideMessage, duration); }
             else { messageDisplay.hideTimeout = null; }
          }
         function hideMessage() { /* ... unchanged ... */
-             if (!messageDisplay) return;
-             messageDisplay.style.display = 'none';
+             if (!messageDisplay) return; messageDisplay.style.display = 'none';
              if (messageDisplay.hideTimeout) { clearTimeout(messageDisplay.hideTimeout); messageDisplay.hideTimeout = null; }
          }
         function toggleFullscreen() { /* ... unchanged ... */
-             if(!gameContainer) { console.error("FS Error: gameContainer not found!"); return; }
+             if(!gameContainer) { console.error("FS Error: gameContainer missing"); return; }
              try {
                  if (!document.fullscreenElement) {
-                     if (gameContainer.requestFullscreen) { gameContainer.requestFullscreen().catch(err => { console.error(`FS request failed: ${err.message}`, err); showMessage(`FS failed: ${err.message}`, 4000); }); }
+                     if (gameContainer.requestFullscreen) { gameContainer.requestFullscreen().catch(err => { console.error(`FS request failed: ${err.message}`, err); showMessage(`FS failed`, 4000); }); }
                      else { console.error("FS API not supported."); showMessage("FS not supported.", 3000); }
                  } else {
                      if (document.exitFullscreen) { document.exitFullscreen().catch(err => { console.error(`Exit FS failed: ${err.message}`, err); }); }
                      else { console.error("Exit FS not supported."); }
                  }
-             } catch (error) { console.error("Error toggling fullscreen:", error); showMessage("Error toggling fullscreen.", 3000); }
+             } catch (error) { console.error("Error toggling fullscreen:", error); showMessage("Error FS toggle.", 3000); }
          }
 
         // --- Initial Setup & Event Listeners ---
-        function initializeGame() { /* ... unchanged ... */
+        function initializeGame() {
              console.log("Initializing game...");
-             gameContainer = document.getElementById('game-container'); gameArea = document.getElementById('game-area'); knight = document.getElementById('knight'); typingInput = document.getElementById('typing-input'); scoreDisplay = document.getElementById('score-display'); levelDisplay = document.getElementById('level-display'); messageDisplay = document.getElementById('message-display'); startButton = document.getElementById('start-button'); startButtonContainer = document.getElementById('start-button-container'); fullscreenButton = document.getElementById('fullscreen-button');
+             gameContainer = document.getElementById('game-container');
+             gameArea = document.getElementById('game-area'); // Essential for gameplay logic
+             knight = document.getElementById('knight');
+             typingInput = document.getElementById('typing-input'); // Now top-level child of container
+             scoreDisplay = document.getElementById('score-display');
+             levelDisplay = document.getElementById('level-display');
+             messageDisplay = document.getElementById('message-display');
+             startButton = document.getElementById('start-button');
+             startButtonContainer = document.getElementById('start-button-container'); // Still exists in ui-top
+             fullscreenButton = document.getElementById('fullscreen-button');
+
               if (!gameContainer || !gameArea || !knight || !typingInput || !scoreDisplay || !levelDisplay || !messageDisplay || !startButton || !startButtonContainer || !fullscreenButton) {
-                  console.error("CRITICAL INIT ERROR: Elements missing!"); document.body.innerHTML = '<p style="color:red;">Error: Game assets missing. Cannot start.</p>'; return;
+                  console.error("CRITICAL INIT ERROR: Elements missing!"); document.body.innerHTML = '<p style="color:red;">Error: Game assets missing.</p>'; return;
               }
               console.log("Elements found.");
+
               wordsAvailable = [...wordListSource];
-              if (wordsAvailable.length === 0) { console.warn("Word list empty!"); showMessage("Warning: No words loaded!", 5000); }
-              else { console.log(`Word list initialized with ${wordsAvailable.length} words.`); }
+              if (wordsAvailable.length === 0) { console.warn("Word list empty!"); showMessage("Warning: No words!", 5000); }
+              else { console.log(`Word list initialized: ${wordsAvailable.length} words.`); }
+
              startButton.addEventListener('click', startGame);
              fullscreenButton.addEventListener('click', toggleFullscreen);
              typingInput.addEventListener('input', checkInput);
-             let resizeTimeout;
-             window.addEventListener('resize', () => {
-                 clearTimeout(resizeTimeout); resizeTimeout = setTimeout(() => { if (gameActive || !gameLoopTimerId) { calculateKnightDefenseLine(); } }, 100);
+
+             // Attempt to scroll input into view on focus, might help on some browsers
+             typingInput.addEventListener('focus', () => {
+                 setTimeout(() => { // Delay slightly to allow keyboard animation
+                    // Check if visualViewport API is available
+                     if (window.visualViewport) {
+                         // console.log('Visual viewport height:', window.visualViewport.height);
+                         // Attempt to scroll the container, or body, or the input itself
+                         // Experiment with which element works best
+                         // gameContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                     } else {
+                        // Fallback for older browsers
+                        // typingInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                     }
+                 }, 300); // Adjust delay if needed
              });
+
+
+             let resizeTimeout;
+             const handleResize = () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    console.log("Resize detected");
+                    calculateKnightDefenseLine(); // Recalculate on resize
+                    // Potentially adjust layout further if needed based on new size
+                }, 150); // Debounce resize events
+             }
+
+             window.addEventListener('resize', handleResize);
+             // Also listen to visualViewport resize if available, as it triggers for keyboard
+             if (window.visualViewport) {
+                 window.visualViewport.addEventListener('resize', handleResize);
+                 console.log("VisualViewport API detected, attaching resize listener.");
+             } else {
+                 console.log("VisualViewport API not detected.");
+             }
+
+
              document.addEventListener('fullscreenchange', () => {
                  if (fullscreenButton) {
                      const isFullscreen = !!document.fullscreenElement;
-                     fullscreenButton.textContent = isFullscreen ? '✕' : '⛶'; fullscreenButton.title = isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen';
-                     console.log("Fullscreen changed:", isFullscreen); setTimeout(calculateKnightDefenseLine, 50);
+                     fullscreenButton.textContent = isFullscreen ? '✕' : '⛶';
+                     fullscreenButton.title = isFullscreen ? 'Exit' : 'Enter';
+                     console.log("Fullscreen changed:", isFullscreen);
+                     // Recalculate layout dependent things after FS change
+                     setTimeout(calculateKnightDefenseLine, 100);
                  }
              });
              console.log("Listeners attached.");
+
              updateUIDisplay(); typingInput.disabled = true; typingInput.placeholder = 'Press Start!';
-             startButtonContainer.style.display = 'block'; hideMessage();
-             setTimeout(calculateKnightDefenseLine, 150);
+             // Ensure start button is visible initially
+             startButton.style.display = 'inline-block';
+             startButtonContainer.style.display = 'block';
+             hideMessage();
+             setTimeout(calculateKnightDefenseLine, 200); // Delay initial calc slightly more
              console.log("Initialization complete.");
         }
         window.addEventListener('DOMContentLoaded', initializeGame);
