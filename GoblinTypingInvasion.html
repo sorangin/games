@@ -2,55 +2,259 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <!-- Viewport for mobile compatibility -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Goblin Typing Invasion</title> <!-- Version updated -->
+    <title>Goblin Typing Invasion (Single File, External Sprites)</title>
     <style>
-        /* Styles largely unchanged... */
-         * { box-sizing: border-box; } html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; } body { font-family: 'Courier New', Courier, monospace; display: flex; justify-content: center; align-items: center; background-color: #5c7e5c; background-image: linear-gradient(to bottom, #3a4f3a, #2a3a2a); } #game-container { position: relative; width: 95vw; max-width: 800px; height: 90vh; max-height: 600px; min-height: 450px; background-color: #d2b48c; border: 8px solid #4a3b2a; border-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="%238b5a2b"/><stop offset="100%" stop-color="%234a3b2a"/></linearGradient></defs><rect fill="url(%23g)" width="100" height="100"/></svg>') 8 stretch; box-shadow: 0 0 20px rgba(0,0,0,0.6); overflow: hidden; display: flex; flex-direction: column; } #ui-top { padding: 8px 15px; background-color: rgba(210, 180, 140, 0.8); border-bottom: 4px solid #4a3b2a; text-align: center; flex-shrink: 0; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.2); } #stats-display { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: clamp(0.9em, 2.5vw, 1.1em); color: #f5deb3; background-color: rgba(74, 59, 42, 0.8); padding: 5px 50px 5px 10px; border-radius: 5px; position: relative; border: 1px solid #a0522d; } #score-display, #level-display { margin: 0 5px; white-space: nowrap; } #typing-input { font-size: clamp(1.2em, 4vw, 1.5em); font-family: inherit; padding: 8px; width: 80%; max-width: 350px; text-align: center; border: 3px solid #4a3b2a; border-radius: 5px; outline: none; display: block; margin: 5px auto 0; background-color: #fffaf0; } #typing-input:focus { border-color: #cd853f; box-shadow: 0 0 5px #cd853f; } #typing-input::placeholder { color: #aaa; } #game-area { flex-grow: 1; position: relative; width: 100%; background-image: linear-gradient(to top, #556b2f 0%, #6b8e23 25%, transparent 50%), linear-gradient(to bottom, #6ca0dc 30%, #87ceeb 85%, #556b2f 100%); background-size: 100% 100%; } #knight { position: absolute; left: 5%; bottom: 10px; width: clamp(70px, 15vw, 100px); height: clamp(90px, 20vw, 120px); background: url("sprites/Knight.png") no-repeat center bottom / contain; z-index: 2; filter: drop-shadow(2px 2px 3px rgba(0,0,0,0.5)); }
+        /* Reset and Basic Setup */
+        * { box-sizing: border-box; }
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent scrollbars on body */
+        }
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            display: flex; /* Use flexbox for centering */
+            justify-content: center; /* Center horizontally */
+            align-items: center; /* Center vertically */
+            background-color: #5c7e5c;
+            background-image: linear-gradient(to bottom, #3a4f3a, #2a3a2a);
+        }
+
+        /* Game Container - Aspect Ratio Scaling */
+        #game-container {
+            position: relative;
+            /* --- Aspect Ratio Control --- */
+            aspect-ratio: 800 / 600; /* Maintain this ratio (adjust if needed) */
+            width: 95vw;         /* Scale based on viewport width */
+            max-width: 800px;    /* Max pixel width */
+            height: auto;        /* Height is determined by width + aspect ratio */
+            max-height: 95vh;   /* Max height relative to viewport height */
+            margin: auto;        /* Center container in flexbox */
+            /* --- Visuals --- */
+            background-color: #d2b48c;
+            border: 8px solid #4a3b2a;
+            /* SVG border image - already inline */
+            border-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="%238b5a2b"/><stop offset="100%" stop-color="%234a3b2a"/></linearGradient></defs><rect fill="url(%23g)" width="100" height="100"/></svg>') 8 stretch;
+            box-shadow: 0 0 20px rgba(0,0,0,0.6);
+            overflow: hidden;    /* Hide anything going outside */
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* UI Top Bar */
+        #ui-top {
+            padding: 8px 15px;
+            background-color: rgba(210, 180, 140, 0.8);
+            border-bottom: 4px solid #4a3b2a;
+            text-align: center;
+            flex-shrink: 0; /* Prevent shrinking */
+            position: relative;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        /* Stats Display */
+        #stats-display {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: clamp(0.9em, 2.5vw, 1.1em);
+            color: #f5deb3;
+            background-color: rgba(74, 59, 42, 0.8);
+            padding: 5px 50px 5px 10px; /* Make space for fullscreen button */
+            border-radius: 5px;
+            position: relative;
+            border: 1px solid #a0522d;
+        }
+        #score-display, #level-display {
+            margin: 0 5px;
+            white-space: nowrap;
+        }
+
+        /* Typing Input */
+        #typing-input {
+            font-size: clamp(1.2em, 4vw, 1.5em);
+            font-family: inherit;
+            padding: 8px;
+            width: 80%;
+            max-width: 350px;
+            text-align: center;
+            border: 3px solid #4a3b2a;
+            border-radius: 5px;
+            outline: none;
+            display: block;
+            margin: 5px auto 0;
+            background-color: #fffaf0;
+            /* Mobile input helpers */
+            autocomplete="off"
+            autocapitalize="off"
+            autocorrect="off"
+            spellcheck="false";
+        }
+        #typing-input:focus {
+            border-color: #cd853f;
+            box-shadow: 0 0 5px #cd853f;
+        }
+        #typing-input::placeholder { color: #aaa; }
+
+        /* Game Area */
+        #game-area {
+            flex-grow: 1; /* Takes remaining space */
+            position: relative;
+            width: 100%;
+            /* Background gradient */
+            background-image: linear-gradient(to top, #556b2f 0%, #6b8e23 25%, transparent 50%), linear-gradient(to bottom, #6ca0dc 30%, #87ceeb 85%, #556b2f 100%);
+            background-size: 100% 100%;
+        }
+
+        /* Knight - Using External Sprite */
+        #knight {
+            position: absolute;
+            left: 5%;
+            bottom: 10px;
+            width: clamp(70px, 12vw, 100px);
+            height: clamp(90px, 15vh, 120px);
+            /* --- USE EXTERNAL SPRITE --- */
+            /* Ensure 'sprites/Knight.png' exists relative to this HTML file */
+            background: url("sprites/Knight.png") no-repeat center bottom / contain;
+            z-index: 2;
+            filter: drop-shadow(2px 2px 3px rgba(0,0,0,0.5));
+        }
+
+        /* Goblin - Using External Sprite */
         .goblin {
-            position: absolute; width: clamp(50px, 10vw, 70px); height: clamp(70px, 15vw, 90px);
+            position: absolute;
+            width: clamp(50px, 8vw, 70px);
+            height: clamp(70px, 11vh, 90px);
+            /* --- USE EXTERNAL SPRITE --- */
+            /* Ensure 'sprites/Goblin.png' exists relative to this HTML file */
             background: url("sprites/Goblin.png") no-repeat center bottom / contain;
-            /* Use a faster linear transition for left movement */
-            transition: transform 0.15s ease-out, opacity 0.3s ease-in-out, left 0.04s linear; /* Match game loop interval for smoother left transition */
-            z-index: 1; display: flex; flex-direction: column; align-items: center;
+            transition: transform 0.15s ease-out, opacity 0.3s ease-in-out, left 0.04s linear;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.4));
         }
-        .goblin.hit { transform: translateX(8px) rotate(3deg); } .goblin.dying { opacity: 0; transform: scale(0.8) rotate(-15deg); pointer-events: none; }
+        .goblin.hit { transform: translateX(8px) rotate(3deg); }
+        .goblin.dying { opacity: 0; transform: scale(0.8) rotate(-15deg); pointer-events: none; }
+
+        /* Goblin Word */
         .goblin-word {
-            position: absolute; left: 50%; transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.75); color: #fff; border: 1px solid rgba(255, 255, 255, 0.3);
-            padding: 4px 8px; border-radius: 4px; font-size: clamp(1.1em, 3.5vw, 1.4em); font-weight: bold;
-            white-space: nowrap; text-align: center; text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
-             /* *** Z-INDEX TRANSITION CHANGE: Removed delay *** */
-             transition: background-color 0.1s linear, top 0.2s ease-out, z-index 0s linear;
-             /* Initial z-index set by JS */
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.75);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: clamp(1.1em, 3vw, 1.4em);
+            font-weight: bold;
+            white-space: nowrap;
+            text-align: center;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+            transition: background-color 0.1s linear, top 0.2s ease-out, z-index 0s linear;
         }
-        .goblin-word.correct-prefix { background-color: #32cd32; color: #000; }
-        #message-display { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: clamp(1.5em, 5vw, 2.5em); color: #ffdddd; background-color: rgba(0, 0, 0, 0.8); padding: 20px 30px; border-radius: 10px; text-align: center; z-index: 100; display: none; width: 80%; max-width: 500px; white-space: pre-wrap; }
-        #start-button-container { text-align: center; padding-top: 10px; }
-        button#start-button { display: inline-block; font-size: clamp(1.2em, 4vw, 1.5em); padding: 10px 20px; cursor: pointer; background-color: #8b4513; color: white; border: 2px solid #4a3b2a; border-radius: 5px; font-family: inherit; }
+        .goblin-word.correct-prefix {
+            background-color: #32cd32;
+            color: #000;
+        }
+
+        /* Message Display */
+        #message-display {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(1.5em, 4vw, 2.5em);
+            color: #ffdddd;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px 30px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 100;
+            display: none;
+            width: 80%;
+            max-width: 500px;
+            white-space: pre-wrap; /* Allow line breaks */
+        }
+
+        /* Start Button */
+        #start-button-container {
+            text-align: center;
+            padding-top: 10px;
+        }
+        button#start-button {
+            display: inline-block;
+            font-size: clamp(1.2em, 3.5vw, 1.5em);
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #8b4513;
+            color: white;
+            border: 2px solid #4a3b2a;
+            border-radius: 5px;
+            font-family: inherit;
+        }
         button#start-button:hover { background-color: #a0522d; }
-        #fullscreen-button { position: absolute; top: 5px; right: 10px; background: rgba(74, 59, 42, 0.6); border: 1px solid #f0e68c; color: #f0e68c; font-size: clamp(1.2em, 3vw, 1.8em); width: 35px; height: 35px; line-height: 33px; text-align: center; border-radius: 5px; cursor: pointer; z-index: 15; }
+
+        /* Fullscreen Button */
+        #fullscreen-button {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            background: rgba(74, 59, 42, 0.6);
+            border: 1px solid #f0e68c;
+            color: #f0e68c;
+            font-size: clamp(1.2em, 3vw, 1.8em);
+            width: 35px;
+            height: 35px;
+            line-height: 33px;
+            text-align: center;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 15;
+            user-select: none;
+        }
         #fullscreen-button:hover { background: rgba(74, 59, 42, 0.8); }
-        #game-container:fullscreen { max-width: none; max-height: none; width: 100%; height: 100%; border: none; }
+
+        /* Fullscreen State */
+        #game-container:fullscreen {
+            max-width: none;
+            max-height: none;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
     </style>
 </head>
 <body>
+     <!-- Game Container -->
      <div id="game-container">
+         <!-- UI Top Bar -->
          <div id="ui-top">
+             <!-- Fullscreen Button -->
              <button id="fullscreen-button" title="Toggle Fullscreen">⛶</button>
+             <!-- Stats -->
              <div id="stats-display">
                  <div id="score-display">Score: 0</div>
                  <div id="level-display">Wave: 1</div>
              </div>
-             <input type="text" id="typing-input" placeholder="Type goblin words..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" disabled>
+             <!-- Input -->
+             <input type="text" id="typing-input" placeholder="Type goblin words..." disabled>
+             <!-- Start Button Container -->
              <div id="start-button-container">
                 <button id="start-button">Start Invasion</button>
             </div>
          </div>
+         <!-- Game Area -->
          <div id="game-area">
              <div id="knight"></div>
+             <!-- Goblins are added here dynamically -->
          </div>
+         <!-- Message Overlay -->
          <div id="message-display"></div>
      </div>
 
@@ -58,11 +262,8 @@
         // --- DOM Elements ---
         let gameContainer, gameArea, knight, typingInput, scoreDisplay, levelDisplay, messageDisplay, startButton, startButtonContainer, fullscreenButton;
 
-        // --- Game Words ---
-                // --- Game Words ---
-        // !!! EXPANDED WORD LIST !!!
+        // --- Game Words (Expanded List) ---
         const wordListSource = [
-            // Original & Thematic
             "goblin", "attack", "knight", "sword", "shield", "magic", "danger", "quick", "type", "defend",
             "wave", "score", "castle", "arrow", "forest", "speed", "ogre", "troll", "dragon", "bash",
             "charge", "block", "enemy", "power", "haste", "invade", "retreat", "valor", "victory", "defeat",
@@ -83,8 +284,6 @@
             "rage", "fury", "focus", "stealth", "cunning", "loyalty", "betrayal", "honor", "glory", "doom",
             "fate", "destiny", "quest", "mission", "bounty", "reward", "penalty", "brave", "fierce", "mighty",
             "hidden", "lost", "sacred", "corrupt", "noble", "savage", "wild", "tame", "free", "bound",
-
-            // General Typing Practice Words
             "about", "above", "across", "action", "active", "actual", "always", "amount", "animal", "answer",
             "appear", "around", "author", "aware", "balance", "become", "before", "behind", "better", "between",
             "beyond", "border", "bring", "build", "button", "cable", "camera", "cancel", "carbon", "center",
@@ -106,7 +305,7 @@
             "online", "only", "open", "option", "order", "other", "output", "outside", "owner", "paint",
             "paper", "parent", "parse", "party", "pause", "peace", "people", "period", "person", "phase",
             "phone", "photo", "piece", "place", "plant", "please", "point", "policy", "pretty", "press",
-            "price", "print", "prior", "private", "process", "proof", "proper", "public", "query", "quest", // Quest is thematic too!
+            "price", "print", "prior", "private", "process", "proof", "proper", "public", "query", "quest",
             "radio", "raise", "range", "reach", "react", "ready", "really", "reason", "record", "refer",
             "region", "reject", "relate", "remove", "repeat", "reply", "report", "reset", "result", "return",
             "right", "round", "route", "sample", "scale", "scene", "scope", "screen", "search", "secure",
@@ -133,17 +332,16 @@
 
         // --- Game Parameters ---
         const baseSpawnInterval = 3500; const minSpawnInterval = 800; const spawnIntervalDecreasePerWave = 180;
-        // *** SPEED CHANGE: Increased base speed ***
-        const baseGoblinSpeed = 1.8; // Pixels per game loop interval at wave 1 (WAS 0.9)
-        const speedIncreasePerWave = 0.09; // Slightly increased speed gain per wave too
+        const baseGoblinSpeed = 1.8; // Pixels per game loop interval at wave 1
+        const speedIncreasePerWave = 0.09;
         const baseGoblinHP = 1; const pushbackAmount = 35; const killScore = 10;
-        const gameLoopInterval = 40; // ms, target ~25 FPS (1000 / 40)
+        const gameLoopInterval = 40; // ms, target ~25 FPS
         const baseGoblinsPerWave = 3; const goblinsPerWaveIncrease = 2;
 
         // --- Text Staggering & Z-index Parameters ---
         const textOverlapCheckDistance = 65; const NORMAL_TEXT_TOP = -35; const HIGH_TEXT_TOP = -60; const HIGHEST_TEXT_TOP = -85; const STAGGER_LEVELS = [NORMAL_TEXT_TOP, HIGH_TEXT_TOP, HIGHEST_TEXT_TOP];
         const DEFAULT_WORD_ZINDEX = 3;
-        const ACTIVE_WORD_ZINDEX = 10; // Z-index when word is being typed (must be > DEFAULT + STAGGER_LEVELS.length)
+        const ACTIVE_WORD_ZINDEX = 10; // Z-index when word is being typed
 
         // --- Functions ---
 
@@ -155,11 +353,16 @@
         function getRandomWord() {
             if (wordsAvailable.length === 0) {
                 if (wordListSource.length > 0) {
+                    console.log("Replenishing word list.");
                     wordsAvailable = [...wordListSource];
-                } else { return "ERROR"; }
+                } else {
+                    console.error("CRITICAL: wordListSource is empty!");
+                    return "ERROR";
+                }
             }
             const randomIndex = Math.floor(Math.random() * wordsAvailable.length);
-             return wordsAvailable[randomIndex];
+            const word = wordsAvailable.splice(randomIndex, 1)[0]; // Remove word to avoid immediate repeats
+            return word;
         }
 
         function startNewWave() {
@@ -186,10 +389,11 @@
             try {
                 nextGoblinId++; const id = nextGoblinId;
                 const newGoblin = document.createElement('div');
-                newGoblin.className = 'goblin'; newGoblin.id = `goblin-${id}`;
+                newGoblin.className = 'goblin';
+                newGoblin.id = `goblin-${id}`;
 
                 const areaWidth = gameArea.offsetWidth;
-                let initialX = areaWidth > 0 ? areaWidth + 50 : 800;
+                let initialX = areaWidth > 0 ? areaWidth + Math.random() * 50 + 20 : 850;
 
                 const baseBottom = 10; const verticalVariance = 40;
                 const randomBottom = baseBottom + (Math.random() * verticalVariance) - (verticalVariance / 2);
@@ -198,71 +402,71 @@
                 const wordElement = document.createElement('div');
                 wordElement.className = 'goblin-word';
                 const word = getRandomWord();
-                 if (!word || word === "ERROR") { console.error("Failed to get word for goblin spawn"); return; }
+                if (!word || word === "ERROR") {
+                     console.error("Failed to get word for goblin spawn, stopping spawn.");
+                     return;
+                }
                 wordElement.textContent = word;
-                // Initial style set by manageTextStaggering later in the game loop
                 wordElement.style.top = `${NORMAL_TEXT_TOP}px`;
                 wordElement.style.zIndex = DEFAULT_WORD_ZINDEX;
 
-
                 newGoblin.appendChild(wordElement);
                 gameArea.appendChild(newGoblin);
-                newGoblin.offsetHeight; // Force reflow
+                newGoblin.offsetHeight;
                 newGoblin.style.left = `${initialX}px`;
 
                 const goblinData = { id, element: newGoblin, wordElement, word, hp: baseGoblinHP, xPosition: initialX, staggerLevel: 0 };
                 goblins.push(goblinData);
 
-            } catch (error) { console.error("[spawnGoblin] CRITICAL ERROR:", error); gameOver("Error spawning goblin!"); }
+            } catch (error) {
+                console.error("[spawnGoblin] CRITICAL ERROR:", error);
+                gameOver("Error spawning goblin!");
+            }
         }
 
         function updateGoblinPosition(goblinData, currentSpeed) {
             if (!goblinData || !goblinData.element || !gameActive) return;
+
             goblinData.xPosition -= currentSpeed;
             goblinData.element.style.left = `${goblinData.xPosition}px`;
 
             if (goblinData.xPosition <= knightDefenseLine) {
-                console.log(`Goblin ${goblinData.id} (${goblinData.word}) reached knight!`);
-                gameOver(`A goblin with "${goblinData.word}" reached the knight!`);
+                console.log(`Goblin ${goblinData.id} ("${goblinData.word}") reached knight defense line (${knightDefenseLine.toFixed(1)}px)!`);
+                gameOver(`A goblin carrying "${goblinData.word}" broke through!`);
             }
         }
 
         function manageTextStaggering() {
             if (!gameActive || goblins.length < 1) return;
-            goblins.sort((a, b) => b.xPosition - a.xPosition); // Sort right-to-left
+            goblins.sort((a, b) => b.xPosition - a.xPosition);
 
             for (let i = 0; i < goblins.length; i++) {
                 let currentGoblin = goblins[i];
                 if (!currentGoblin || !currentGoblin.wordElement) continue;
 
                 let targetLevel = 0;
-                for (let j = i + 1; j < goblins.length; j++) { // Check against goblins further left
+                for (let j = i + 1; j < goblins.length; j++) {
                     let otherGoblin = goblins[j];
                      if (!otherGoblin || !otherGoblin.wordElement) continue;
                      if (Math.abs(currentGoblin.xPosition - otherGoblin.xPosition) < textOverlapCheckDistance) {
-                         if (otherGoblin.staggerLevel >= targetLevel) { targetLevel = otherGoblin.staggerLevel + 1; }
+                         if (otherGoblin.staggerLevel >= targetLevel) {
+                             targetLevel = otherGoblin.staggerLevel + 1;
+                         }
                      }
                 }
                 targetLevel = Math.min(targetLevel, STAGGER_LEVELS.length - 1);
                 currentGoblin.staggerLevel = targetLevel;
                 currentGoblin.wordElement.style.top = `${STAGGER_LEVELS[targetLevel]}px`;
 
-                // *** Z-INDEX LOGIC: Prioritize the current target ***
                 if (currentGoblin === currentTypingTarget) {
-                    currentGoblin.wordElement.style.zIndex = ACTIVE_WORD_ZINDEX; // Highest z-index
-                    // Add highlighting class if it's the target and being typed (even partially)
-                    // checkInput() might have already added it, but this ensures it's there
+                    currentGoblin.wordElement.style.zIndex = ACTIVE_WORD_ZINDEX;
                      if (typingInput && typingInput.value.length > 0 && currentGoblin.word.toLowerCase().startsWith(typingInput.value.trim().toLowerCase())) {
                          currentGoblin.wordElement.classList.add('correct-prefix');
                      } else {
-                        // If it's the target but input doesn't match (e.g., input cleared), remove class
                         currentGoblin.wordElement.classList.remove('correct-prefix');
                      }
-
                 } else {
-                    // Set z-index based on stagger level for non-targets
                     currentGoblin.wordElement.style.zIndex = DEFAULT_WORD_ZINDEX + currentGoblin.staggerLevel;
-                    // Remove highlighting if not the target
                     currentGoblin.wordElement.classList.remove('correct-prefix');
                 }
             }
@@ -286,7 +490,7 @@
             if (currentTypingTarget && currentTypingTarget.id === goblinData.id) {
                 currentTypingTarget = null;
                 if (typingInput) typingInput.value = '';
-                checkInput(); // Re-evaluate target
+                checkInput();
             }
 
             score += killScore;
@@ -296,9 +500,15 @@
             if (killsThisWave >= goblinsNeededForNextWave) {
                 wave++;
                 goblinsNeededForNextWave += goblinsPerWaveIncrease;
-                console.log(`Wave ${wave - 1} COMPLETE! Starting wave ${wave}. Need ${goblinsNeededForNextWave}`);
+                console.log(`Wave ${wave - 1} COMPLETE! Starting wave ${wave}. Need ${goblinsNeededForNextWave} kills`);
                 showMessage(`Wave ${wave - 1} Complete!`, 1500);
+
                 clearTimeout(spawnTimerId);
+                spawnTimerId = null;
+                 if (wordsAvailable.length < 20 && wordListSource.length > 0) {
+                    console.log("Replenishing word list between waves.");
+                    wordsAvailable = [...wordListSource];
+                 }
                 spawnTimerId = setTimeout(startNewWave, 2000);
             }
         }
@@ -317,52 +527,43 @@
         function checkInput() {
             if (!gameActive || !typingInput) return;
             const currentInput = typingInput.value.trim().toLowerCase();
+            let previousTarget = currentTypingTarget;
 
-            let previousTarget = currentTypingTarget; // Keep track if target changes
-
-            // --- Target Selection ---
             if (!currentTypingTarget && currentInput !== '') {
                 let bestMatch = null;
                 let minDistance = Infinity;
                 for (const goblin of goblins) {
-                    if (goblin.word.toLowerCase().startsWith(currentInput) && goblin.xPosition < minDistance) {
-                        minDistance = goblin.xPosition;
-                        bestMatch = goblin;
+                    if (goblin.word.toLowerCase().startsWith(currentInput)) {
+                        if (goblin.xPosition < minDistance) {
+                            minDistance = goblin.xPosition;
+                            bestMatch = goblin;
+                        }
                     }
                 }
                 if (bestMatch) { currentTypingTarget = bestMatch; }
             }
 
-            // --- Input Validation ---
             if (currentTypingTarget) {
                 const targetWordLower = currentTypingTarget.word.toLowerCase();
                 if (targetWordLower.startsWith(currentInput)) {
                     if (currentInput === targetWordLower) {
-                        processCorrectWord(currentTypingTarget); // This will clear target, input, and call checkInput->manageTextStaggering
-                        return; // Exit early as state is changing significantly
-                    } else {
-                        // Partial match - highlighting handled by manageTextStaggering
+                        processCorrectWord(currentTypingTarget);
+                        return;
                     }
                 } else {
-                    // Mismatch - clear current target
                     currentTypingTarget = null;
-                    // Re-check input to find a *new* target if input still matches another goblin
-                    if (currentInput !== '') checkInput(); // Recursive call
-                    else manageTextStaggering(); // If input is empty, just update staggering
-                    return; // Exit current checkInput call
+                    if (currentInput !== '') { checkInput(); }
+                    else { manageTextStaggering(); }
+                    return;
                 }
-            } else if (currentInput !== '') {
-                 // Input exists but no target matches it. Ensure no target is visually selected.
-                 // Handled by manageTextStaggering removing highlights from non-targets.
             }
 
-
-            // If the target potentially changed OR input changed, update staggering/z-index
             if (previousTarget !== currentTypingTarget || currentInput !== typingInput.lastValue) {
                  manageTextStaggering();
             }
-            typingInput.lastValue = currentInput; // Store current value for next comparison
+            typingInput.lastValue = currentInput;
         }
+
 
         function gameLoop() {
             if (!gameActive) return;
@@ -371,10 +572,10 @@
                 for (let i = goblins.length - 1; i >= 0; i--) {
                     updateGoblinPosition(goblins[i], currentSpeed);
                 }
-                 // Optional: Can call manageTextStaggering() here too for very smooth updates,
-                 // but calling it mainly on input change is usually sufficient and more performant.
-                 // manageTextStaggering();
-            } catch (error) { console.error("[gameLoop] CRITICAL ERROR:", error); gameOver("A critical error occurred!"); }
+            } catch (error) {
+                console.error("[gameLoop] CRITICAL ERROR:", error);
+                gameOver("A critical error occurred during the game loop!");
+            }
         }
 
         function calculateKnightDefenseLine() {
@@ -382,15 +583,16 @@
                 const knightRect = knight.getBoundingClientRect();
                 const gameAreaRect = gameArea.getBoundingClientRect();
                 knightDefenseLine = (knightRect.right - gameAreaRect.left);
-                 console.log(`Knight defense line: ${knightDefenseLine}px`);
-            } else { knightDefenseLine = 50; console.warn("Could not calculate knight defense line accurately."); }
+            } else {
+                knightDefenseLine = 50;
+                console.warn("Could not get knight/gameArea elements to calculate defense line accurately. Using fallback.");
+            }
         }
 
-        // *** Start Game Function *** (Rest of the code)
         function startGame() {
              console.log("--- startGame() ---");
              if (gameActive) {
-                 console.log("[startGame] Game already active.");
+                 console.log("[startGame] Game already active. Ignoring call.");
                  return;
              }
 
@@ -400,96 +602,92 @@
                  wave = 1;
                  killsThisWave = 0;
                  goblinsNeededForNextWave = baseGoblinsPerWave;
-                 goblins = []; // Clear goblin array
+                 goblins = [];
                  currentTypingTarget = null;
 
-                 // Clear existing goblin DOM elements from previous game
                  if (gameArea) {
                      const existingGoblins = gameArea.querySelectorAll('.goblin');
                      existingGoblins.forEach(gob => gob.remove());
                      console.log(`[startGame] Removed ${existingGoblins.length} old goblin elements.`);
                  }
 
-                 // Reset UI
                  updateUIDisplay();
-                 hideMessage(); // Hide any previous game over message
+                 hideMessage();
                  if (typingInput) {
                      typingInput.disabled = false;
                      typingInput.placeholder = 'Type goblin words!';
                      typingInput.value = '';
-                     typingInput.lastValue = ''; // Reset last value tracker
-                     try { typingInput.focus(); } catch(e) { console.warn("Focus failed", e); }
+                     typingInput.lastValue = '';
+                     try { typingInput.focus(); }
+                     catch(e) { console.warn("Focusing input failed.", e); }
                  }
                  if (startButtonContainer) {
-                     startButtonContainer.style.display = 'none'; // Hide start button
+                     startButtonContainer.style.display = 'none';
                  }
 
-                 // Calculate defense line
                  calculateKnightDefenseLine();
 
-                 // Clear any residual timers
+                  if (wordsAvailable.length < 50 || wordsAvailable.length < goblinsNeededForNextWave * 2) {
+                       console.log("Replenishing word list at game start.");
+                       wordsAvailable = [...wordListSource];
+                  }
+                   if (wordsAvailable.length === 0) { throw new Error("Word list is empty!"); }
+
                  clearInterval(gameLoopTimerId);
                  clearTimeout(spawnTimerId);
                  gameLoopTimerId = null;
                  spawnTimerId = null;
 
-                 // Start the main game loop
                  gameLoopTimerId = setInterval(gameLoop, gameLoopInterval);
                  console.log("[startGame] Game loop started. ID:", gameLoopTimerId);
-
-                 // Start the first wave spawning process
                  startNewWave();
-
                  console.log("[startGame] Game started successfully.");
 
              } catch (error) {
                  console.error("[startGame] CRITICAL ERROR during startup:", error);
-                 gameActive = false; // Ensure game state is inactive
-                 showMessage("Error starting game: " + error.message, 5000);
+                 gameActive = false;
+                 showMessage("Error starting game:\n" + error.message, 0);
                  if (typingInput) typingInput.disabled = true;
-                  if (startButtonContainer) startButtonContainer.style.display = 'block'; // Show start button again on error
+                 if (startButtonContainer) startButtonContainer.style.display = 'block';
              }
          }
 
         function gameOver(message = "Game Over!") {
              console.log(`[gameOver] Triggered. Message: ${message}`);
-             if (!gameActive) return; // Prevent multiple triggers
-
+             if (!gameActive) {
+                 console.log("[gameOver] Game already inactive. Ignoring call.");
+                 return;
+             }
              gameActive = false;
-
-             // Stop game timers
              clearInterval(gameLoopTimerId);
              clearTimeout(spawnTimerId);
              gameLoopTimerId = null;
              spawnTimerId = null;
              console.log("[gameOver] Game timers stopped.");
+             showMessage(`${message}\n\nFinal Score: ${score}\nWave Reached: ${wave}\n\nClick Start to play again!`, 0);
 
-             // Display final message
-             showMessage(`${message}\nFinal Score: ${score}\nWave Reached: ${wave}\n\nClick Start to play again!`, 0); // duration 0 = stays until hidden
-
-             // Disable input, show start button
              if (typingInput) {
                  typingInput.disabled = true;
                  typingInput.placeholder = 'Game Over!';
-                  // Clear visual feedback from last target
                   if(currentTypingTarget && currentTypingTarget.wordElement) {
                       currentTypingTarget.wordElement.classList.remove('correct-prefix');
                   }
-                  currentTypingTarget = null; // Clear target reference
+                  currentTypingTarget = null;
              }
              if (startButtonContainer) {
-                 startButtonContainer.style.display = 'block'; // Show start button
+                 startButtonContainer.style.display = 'block';
              }
          }
 
         function showMessage(text, duration = 3000) {
             if (!messageDisplay) return;
-            messageDisplay.innerHTML = text.replace(/\n/g, '<br>'); // Convert newlines to <br> for HTML
+            messageDisplay.innerHTML = text.replace(/\n/g, '<br>');
             messageDisplay.style.display = 'block';
-
             if (messageDisplay.hideTimeout) clearTimeout(messageDisplay.hideTimeout);
             if (duration > 0) {
                 messageDisplay.hideTimeout = setTimeout(hideMessage, duration);
+            } else {
+                messageDisplay.hideTimeout = null;
             }
         }
 
@@ -503,43 +701,59 @@
         }
 
         function toggleFullscreen() {
-             if(!gameContainer) { console.error("Fullscreen Error: gameContainer not found!"); return; }
+             if(!gameContainer) {
+                 console.error("Fullscreen Error: gameContainer element not found!"); return;
+             }
              try {
                  if (!document.fullscreenElement) {
                       if (gameContainer.requestFullscreen) {
-                          gameContainer.requestFullscreen().catch(err => { console.error(`FS request failed: ${err.message}`, err); });
-                      } else { console.error("FS Error: requestFullscreen method not supported."); }
+                          gameContainer.requestFullscreen()
+                              .catch(err => { console.error(`FS request failed: ${err.message}`, err); showMessage(`Fullscreen failed: ${err.message}`, 4000); });
+                      } else { console.error("FS API 'requestFullscreen' not supported."); showMessage("Fullscreen not supported.", 3000); }
                  } else {
                       if (document.exitFullscreen) {
-                          document.exitFullscreen().catch(err => { console.error(`Exit FS failed: ${err.message}`, err); });
-                      } else { console.error("FS Error: exitFullscreen method not supported."); }
+                          document.exitFullscreen()
+                              .catch(err => { console.error(`Exit FS failed: ${err.message}`, err); });
+                      } else { console.error("FS API 'exitFullscreen' not supported."); }
                  }
-             } catch (error) { console.error("Error toggling fullscreen:", error); }
+             } catch (error) { console.error("Error toggling fullscreen:", error); showMessage("Error toggling fullscreen.", 3000); }
         }
 
         // --- Initial Setup & Event Listeners ---
-        window.addEventListener('load', () => {
-             console.log("Window loaded. Initializing game...");
+        function initializeGame() {
+             console.log("Initializing game elements and listeners...");
              gameContainer = document.getElementById('game-container'); gameArea = document.getElementById('game-area'); knight = document.getElementById('knight'); typingInput = document.getElementById('typing-input'); scoreDisplay = document.getElementById('score-display'); levelDisplay = document.getElementById('level-display'); messageDisplay = document.getElementById('message-display'); startButton = document.getElementById('start-button'); startButtonContainer = document.getElementById('start-button-container'); fullscreenButton = document.getElementById('fullscreen-button');
 
               if (!gameContainer || !gameArea || !knight || !typingInput || !scoreDisplay || !levelDisplay || !messageDisplay || !startButton || !startButtonContainer || !fullscreenButton) {
-                  console.error("CRITICAL INIT ERROR: One or more essential elements not found! Aborting.");
-                  alert("Error: Game assets missing. Cannot start. Check console (F12)."); return;
+                  console.error("CRITICAL INIT ERROR: One or more essential HTML elements not found! Aborting setup.");
+                  document.body.innerHTML = '<p style="color:red; font-size: 20px; text-align:center; padding: 20px;">Error: Game assets missing in HTML. Cannot start. Check console (F12) for details.</p>';
+                  return;
               }
-              console.log("Essential elements found.");
+              console.log("All essential elements found.");
 
-             wordsAvailable = [...wordListSource];
-             if (wordsAvailable.length === 0) { console.warn("Word list is empty!"); showMessage("Warning: No words loaded!", 5000); }
+              wordsAvailable = [...wordListSource];
+              if (wordsAvailable.length === 0) { console.warn("Word list source is empty!"); showMessage("Warning: No words loaded!", 5000); }
+              else { console.log(`Word list initialized with ${wordsAvailable.length} words.`); }
 
              startButton.addEventListener('click', startGame);
              fullscreenButton.addEventListener('click', toggleFullscreen);
              typingInput.addEventListener('input', checkInput);
-             window.addEventListener('resize', calculateKnightDefenseLine);
+
+             let resizeTimeout;
+             window.addEventListener('resize', () => {
+                 clearTimeout(resizeTimeout);
+                 resizeTimeout = setTimeout(() => {
+                     if (gameActive || !gameLoopTimerId) { calculateKnightDefenseLine(); }
+                 }, 100);
+             });
 
              document.addEventListener('fullscreenchange', () => {
                  if (fullscreenButton) {
-                     fullscreenButton.textContent = document.fullscreenElement ? '✕' : '⛶';
-                     fullscreenButton.title = document.fullscreenElement ? 'Exit Fullscreen' : 'Enter Fullscreen';
+                     const isFullscreen = !!document.fullscreenElement;
+                     fullscreenButton.textContent = isFullscreen ? '✕' : '⛶';
+                     fullscreenButton.title = isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen';
+                     console.log("Fullscreen state changed. Is fullscreen:", isFullscreen);
+                     setTimeout(calculateKnightDefenseLine, 50);
                  }
              });
              console.log("Event listeners attached.");
@@ -547,9 +761,12 @@
              updateUIDisplay();
              typingInput.disabled = true; typingInput.placeholder = 'Press Start!';
              startButtonContainer.style.display = 'block'; hideMessage();
-             setTimeout(calculateKnightDefenseLine, 100); // Calc initial defense line
-             console.log("Initialization complete. Ready to start.");
-        });
+             setTimeout(calculateKnightDefenseLine, 150);
+             console.log("Initialization complete. Game ready to start.");
+        }
+
+        // --- Start Initialization on Load ---
+        window.addEventListener('DOMContentLoaded', initializeGame);
 
     </script>
 
