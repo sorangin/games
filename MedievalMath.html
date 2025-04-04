@@ -1,50 +1,49 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Medieval Math Duel - Scroll Fix v2</title> <!-- Version Bump -->
     <style>
         /* Basic resets and body setup */
         html {
-            height: 100%; /* Provides reference for body min-height */
-            margin: 0; padding: 0;
-            overflow: hidden; /* PREVENT scroll on HTML element itself */
+            height: 100%; margin: 0; padding: 0;
+            overflow: hidden; /* Prevent scroll on HTML element itself */
             font-family: 'Verdana', sans-serif;
             scroll-behavior: smooth;
         }
         body {
-           /* REMOVED display: flex; justify-content: center; align-items: center; */
+           /* --- RE-APPLY FLEXBOX --- */
+            display: flex;
+            flex-direction: column; /* Stack children vertically */
+            justify-content: flex-start; /* Align container to top */
+            align-items: center; /* Center container horizontally */
+           /* --- End Flexbox --- */
+
             min-height: 100%; /* Ensure body can be at least viewport height */
-            height: auto; /* Allow body height to grow with content */
+            height: auto; /* Allow body height to grow */
             margin: 0;
             background-color: #5d6a5a; color: #eee;
-            overflow-y: auto; /* <<<< MAKE BODY THE SCROLLER */
-            overflow-x: hidden; /* Prevent horizontal scroll */
-            /* Add some padding back if needed for centering/spacing */
+            overflow-y: auto; /* BODY is the main scroller */
+            overflow-x: hidden;
+             /* Add padding back if needed for spacing */
              padding: 10px 0;
-             box-sizing: border-box; /* Include padding in height calc */
+             box-sizing: border-box;
         }
 
         /* Game container */
         #game-container {
             position: relative; /* Keep for absolute positioning children */
             width: 95%; max-width: 550px;
-            /* Height is determined by content */
             min-height: 450px;
-            /* REMOVED max-height */
+            /* Height is determined by content */
             padding: clamp(10px, 3vw, 20px); background-color: #8d7163;
             border: 5px solid #4b3f31; border-radius: 8px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.4);
             text-align: center;
-             /* REMOVED overflow-y: auto; */
-             /* Center the container within the scrolling body */
-             margin: 0 auto; /* Auto horizontal margins */
+             /* REMOVED margin: 0 auto; - Flex handles centering */
+             /* Add back margin if needed for spacing from body padding */
+             /* margin: 10px 0; */
+             flex-shrink: 0; /* Prevent container from shrinking if body flexes */
         }
 
-        /* Fullscreen Button */
+        /* Fullscreen Button - Stays relative to game-container */
         #fullscreen-button {
-            position: absolute; top: 8px; right: 8px; /* Stays relative to game-container */
+            position: absolute; top: 8px; right: 8px;
             width: 35px; height: 35px; font-size: clamp(1.1em, 3vw, 1.6em);
             line-height: 33px; text-align: center;
             background: rgba(75, 63, 49, 0.6); border: 1px solid #eee; color: #eee;
@@ -59,7 +58,7 @@
             margin: 0; /* Remove margin in fullscreen */
         }
 
-        /* Rest of the styles */
+        /* ... rest of styles ... */
         h1 { font-size: clamp(1.5em, 5vw, 2.2em); margin-bottom: 15px; color: #fff; text-shadow: 2px 2px #2a231b; }
         #duel-area { display: flex; justify-content: space-around; align-items: flex-end; height: clamp(140px, 25vh, 180px); margin-bottom: 15px; border-bottom: 3px dashed #4b3f31; padding-bottom: 15px; }
         .character { display: flex; flex-direction: column; align-items: center; }
@@ -121,7 +120,7 @@
     </div> <!-- End of game-container -->
 
     <script>
-        // --- DOM Elements ---
+        // --- DOM Elements & Config & State (No changes needed here) ---
         const gameContainer = document.getElementById('game-container');
         const knightSprite = document.getElementById('knight-sprite');
         const goblinSprite = document.getElementById('goblin-sprite');
@@ -147,7 +146,6 @@
         const buyPotionButton = document.getElementById('buy-potion-button');
         const buySharpenButton = document.getElementById('buy-sharpen-button');
 
-        // --- Game Config ---
         const KNIGHT_MAX_HP_BASE = 20; const GOBLIN_MAX_HP_BASE = 15;
         const KNIGHT_ATTACK_BASE = 3; const GOBLIN_ATTACK_BASE = 2;
         const KNIGHT_HP_PER_LEVEL = 5; const KNIGHT_ATK_PER_LEVEL = 1;
@@ -160,10 +158,9 @@
         const BASE_XP_TO_LEVEL = 15; const XP_LEVEL_SCALING_FACTOR = 1.5;
         const POTION_COST = 15; const POTION_HEAL_AMOUNT = 10;
         const SHARPEN_COST = 20; const SHARPEN_BONUS_ATTACK = 2;
-        const FEEDBACK_DURATION = 2000; // ms for temporary feedback messages
-        const SCROLL_DELAY = 300; // ms delay before scrolling input into view
+        const FEEDBACK_DURATION = 2000;
+        const SCROLL_DELAY = 300;
 
-        // --- Game State ---
         let knightMaxHp = KNIGHT_MAX_HP_BASE; let knightAttack = KNIGHT_ATTACK_BASE;
         let goblinMaxHp = GOBLIN_MAX_HP_BASE; let goblinAttack = GOBLIN_ATTACK_BASE;
         let knightHp = KNIGHT_MAX_HP_BASE; let goblinHp = GOBLIN_MAX_HP_BASE;
@@ -174,7 +171,7 @@
         let isSwordSharpened = false;
         let feedbackTimeoutId = null;
 
-        // --- Functions ---
+        // --- Functions (Most remain unchanged) ---
 
         function calculateXpNeeded(level) { return BASE_XP_TO_LEVEL + Math.floor(Math.pow(level -1, XP_LEVEL_SCALING_FACTOR) * 5); }
 
@@ -332,6 +329,8 @@
             setTimeout(() => {
                  if (!isGameOver && document.activeElement === answerInput) {
                      console.log("Scrolling input into view...");
+                     // Use scrollIntoView on a parent element if input is too low
+                     // document.getElementById('problem-area').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                      answerInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
                  } else { console.log("Scroll cancelled."); }
             }, SCROLL_DELAY);
