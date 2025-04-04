@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Color Cascade Game (9:16 Forced)</title>
+    <title>Color Cascade</title>
     <style>
         /* --- Body Styles --- */
         html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #000; }
@@ -18,6 +18,7 @@
             height: 100%; width: auto; max-width: 100%; max-height: 100%;
             position: relative; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box; background-color: #333;
             border: 3px solid #222; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transition: background-color 0.1s ease-out; /* Added for smooth flash */
         }
 
         /* --- Internal Elements (Fixed Sizes) --- */
@@ -33,11 +34,10 @@
         .overlay button { padding: 12px 25px; font-size: 1.1em; cursor: pointer; border: none; border-radius: 5px; background-color: #4CAF50; color: white; transition: background-color 0.2s ease, transform 0.1s ease; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
         .overlay button:hover { background-color: #45a049; } .overlay button:active { transform: scale(0.97); }
 
-        /* --- Fullscreen Button --- */
-        #fullscreen-btn {
+        /* --- UI Buttons (Fullscreen & Mute) --- */
+        .ui-button {
             position: absolute;
             top: 8px;
-            right: 8px;
             z-index: 30;
             padding: 3px 6px; /* Adjusted padding */
             font-size: 1.6em; /* Increased font size for icon */
@@ -57,10 +57,16 @@
             justify-content: center;
             align-items: center;
         }
-        #fullscreen-btn:hover { background-color: rgba(255, 255, 255, 0.8); }
-        #fullscreen-btn:active { transform: scale(0.95); }
-        #fullscreen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+         .ui-button:hover { background-color: rgba(255, 255, 255, 0.8); }
+         .ui-button:active { transform: scale(0.95); }
+         .ui-button:disabled { opacity: 0.5; cursor: not-allowed; }
 
+        #fullscreen-btn {
+             right: 8px; /* Position Fullscreen button */
+        }
+        #mute-btn {
+            right: 45px; /* Position Mute button next to Fullscreen */
+        }
 
     </style>
 </head>
@@ -72,8 +78,11 @@
             <div id="score-display">Score: 0</div>
             <div id="game-area"></div>
             <div id="controls"></div>
-             <!-- Initial text removed, JS will set the icon -->
-            <button id="fullscreen-btn" title="Toggle Fullscreen" disabled></button>
+
+             <!-- UI Buttons -->
+             <button id="mute-btn" class="ui-button" title="Toggle Sound">🔊</button>
+             <button id="fullscreen-btn" class="ui-button" title="Toggle Fullscreen" disabled></button>
+
 
             <!-- Overlays are inside game-container -->
             <div id="start-screen" class="overlay">
@@ -105,35 +114,249 @@
             const restartButton = document.getElementById('restart-button');
             const finalScoreDisplay = document.getElementById('final-score');
             const fullscreenButton = document.getElementById('fullscreen-btn');
+            const muteButton = document.getElementById('mute-btn'); // Get the mute button
 
-             if (!fullscreenWrapper || !gameContainer || !fullscreenButton || !startButton || !restartButton ) {
-                console.error("Error: Critical elements missing."); return;
-             }
+            if (!fullscreenWrapper || !gameContainer || !fullscreenButton || !startButton || !restartButton || !muteButton) { // Check mute button too
+                console.error("Error: Critical DOM elements missing. Game cannot start.");
+                // Optionally disable buttons or show an error message to the user
+                if(startButton) startButton.disabled = true;
+                if(restartButton) restartButton.disabled = true;
+                if(muteButton) muteButton.disabled = true;
+                if(fullscreenButton) fullscreenButton.disabled = true;
+                return;
+            }
+
+            // --- Audio Setup ---
+            // WARNING: .mid files have very poor/inconsistent browser support!
+            // Consider converting them to .mp3 or .ogg for reliability.
+            const musicTracks = [
+                'audio/music_Treasure.mp3',
+                'audio/music_AoiUsagi-Die.mp3',
+                'audio/music_WormsTheme.mp3' // .mp3 has much better support
+            ];
+            const successSfxPath = 'audio/Success.wav';
+            const failSfxPath = 'audio/Error.wav';
+            const gameOverSfxPath = 'audio/GameOver.wav';
+
+            // Initialize bgMusic with the first track for preloading/initialization purposes
+            let bgMusic = new Audio(musicTracks[0]);
+            bgMusic.loop = true;
+            bgMusic.volume = 0.3; // Adjust as needed
+
+            let successSfx = new Audio(successSfxPath);
+            successSfx.volume = 0.7;
+
+            let failSfx = new Audio(failSfxPath);
+            failSfx.volume = 0.7;
+
+            let gameOverSfx = new Audio(gameOverSfxPath);
+            gameOverSfx.volume = 0.8;
+
+            let isMuted = false; // Mute state
+            let audioInitialized = false; // Flag to track if audio context is unlocked
+
+            // Helper function to play SFX (resets playback if already playing)
+            function playSfx(sfx) {
+                if (isMuted || !audioInitialized) return; // Check initialization state
+                // Check if sfx is valid and ready
+                if (sfx && sfx.readyState >= 2) { // HAVE_CURRENT_DATA or more
+                     sfx.currentTime = 0; // Rewind to start
+                     sfx.play().catch(e => console.warn("SFX play failed:", e));
+                } else if (sfx) {
+                    // If not ready, try loading it again just in case, then play when ready
+                    sfx.load(); // May not be necessary but can sometimes help
+                    sfx.addEventListener('canplaythrough', () => {
+                         sfx.currentTime = 0;
+                         sfx.play().catch(e => console.warn("SFX play (after load) failed:", e));
+                    }, { once: true }); // Play only once when ready
+                     console.warn("SFX not ready, attempting to play when loaded:", sfx.src);
+                } else {
+                    console.error("Attempted to play an invalid SFX object.");
+                }
+            }
+
+
+            // Function to handle starting music (respects mute & initialization)
+            function startMusic() {
+                if (isMuted || !audioInitialized) return;
+                // Ensure bgMusic is valid and has a source loaded
+                 if (bgMusic && bgMusic.src && bgMusic.readyState >= 2) { // Check readiness
+                    bgMusic.play().catch(e => console.error("Music play failed (track: " + bgMusic.src + "):", e));
+                 } else if (bgMusic && bgMusic.src) {
+                    // If source is set but not ready, attempt to play once loaded
+                    bgMusic.addEventListener('canplaythrough', () => {
+                         bgMusic.play().catch(e => console.error("Music play (after load) failed:", e));
+                    }, { once: true });
+                    console.warn("Music not ready, attempting to play when loaded:", bgMusic.src);
+                    // bgMusic.load(); // Already called in startGame, usually not needed here again
+                } else {
+                    console.warn("Attempted to play music, but source is invalid or not ready.");
+                }
+            }
+
+            // Function to stop music
+            function stopMusic() {
+                if (bgMusic) {
+                    bgMusic.pause();
+                    bgMusic.currentTime = 0; // Reset position
+                }
+            }
+
+             // Function to try and unlock audio context on first user interaction
+            function initializeAudio() {
+                if (audioInitialized) return;
+                console.log("Attempting to initialize audio context...");
+
+                // Sounds to attempt unlocking with
+                const soundsToUnlock = [bgMusic, successSfx, failSfx, gameOverSfx];
+                let unlockPromise = Promise.resolve();
+
+                soundsToUnlock.forEach(sound => {
+                    // Chain the play/pause attempts safely
+                    unlockPromise = unlockPromise.then(() => {
+                        // Check if sound element is valid and potentially playable
+                        if (sound && sound.play instanceof Function) {
+                            // Temporarily unmute for the unlock attempt
+                            const wasMuted = sound.muted;
+                            sound.muted = false;
+                            const playPromise = sound.play();
+                            if (playPromise !== undefined) {
+                                return playPromise.then(() => {
+                                     sound.pause();
+                                     sound.muted = wasMuted; // Restore original mute state
+                                     }).catch(e => {
+                                         sound.muted = wasMuted; // Restore mute state on error too
+                                         // Ignore specific errors like "interrupted" or "not allowed" which are common here
+                                         if (e.name !== 'AbortError' && e.name !== 'NotAllowedError') {
+                                             console.warn("Audio unlock play/pause failed for:", sound.src, e.name);
+                                         }
+                                     });
+                            } else {
+                                return Promise.resolve(); // Skip if play() is not available or returns undefined
+                            }
+                        } else {
+                            return Promise.resolve(); // Skip if sound object is invalid
+                        }
+                    }).catch(e => { /* Ignore chain errors */ });
+                });
+
+                unlockPromise.then(() => {
+                    // Check again in case it was already set by a rapid event
+                    if (!audioInitialized) {
+                         audioInitialized = true;
+                         console.log("Audio context potentially initialized by user action.");
+                         // If not muted and game has already started (less likely here, but possible), try starting music
+                         if (!isGameOver && !isMuted) {
+                              startMusic();
+                         }
+                    }
+                }).catch(e => {
+                     console.warn("Audio context unlock sequence encountered issues:", e);
+                });
+            }
+
 
             // --- Game Config, State Vars, Game Logic Functions ---
             const colors = ['#FF5733', '#33FF57', '#3357FF', '#FF33A1', '#F1C40F'];
             const initialFallSpeed = 3; const speedIncrement = 0.15; let score = 0; let currentBlock = null;
-            let currentBlockColor = ''; let fallSpeed = initialFallSpeed; let isGameOver = true;
+            let currentBlockColor = ''; let fallSpeed = initialFallSpeed; let isGameOver = true; // Start as true
             let animationFrameId = null; let isStartingOrRestarting = false;
+
             function getRandomColor() { return colors[Math.floor(Math.random() * colors.length)]; }
             function getRandomPositionX() { const w = gameArea.offsetWidth, bW = 40; return Math.max(0, Math.min(w - bW, Math.floor(Math.random() * (w - bW)))); }
             function createBlock() { if (currentBlock && currentBlock.parentNode) currentBlock.remove(); const b = document.createElement('div'); b.classList.add('block'); currentBlockColor = getRandomColor(); b.style.backgroundColor = currentBlockColor; b.style.left = `${getRandomPositionX()}px`; b.style.top = '-50px'; gameArea.appendChild(b); currentBlock = b; }
             function gameLoop() { if (isGameOver) return; moveBlock(); animationFrameId = requestAnimationFrame(gameLoop); }
             function moveBlock() { if (!currentBlock || isGameOver) return; let t = parseFloat(currentBlock.style.top || -50); t += fallSpeed; currentBlock.style.top = `${t}px`; const gH = gameArea.offsetHeight, bH = 40; if (t + bH >= gH - 5) endGame(); }
-            function handleColorSelection(selectedColor) { if (isGameOver || !currentBlock) return; if (selectedColor === currentBlockColor) { score++; scoreDisplay.textContent = `Score: ${score}`; fallSpeed += speedIncrement; currentBlock.remove(); currentBlock = null; currentBlockColor = ''; setTimeout(createBlock, 10); } else { flashScreen('#FF0000'); } }
-            function handleControlClick(event) { const c = event.target.dataset.color; if (c) handleColorSelection(c); }
-            function handleControlTouch(event) { event.preventDefault(); const el = event.target; const c = el.dataset.color; if (c) { handleColorSelection(c); el.classList.add('active-touch'); const rm = () => { el.classList.remove('active-touch'); el.removeEventListener('touchend', rm); el.removeEventListener('touchcancel', rm); }; el.addEventListener('touchend', rm); el.addEventListener('touchcancel', rm); } }
-            function flashScreen(color) { if (!gameContainer) return; gameContainer.style.transition = 'background-color 0.1s ease-out'; gameContainer.style.backgroundColor = color; setTimeout(() => { gameContainer.style.backgroundColor = '#333'; setTimeout(() => gameContainer.style.transition = '', 100); }, 100); }
+
+            function handleColorSelection(selectedColor) {
+                if (isGameOver || !currentBlock) return;
+                if (selectedColor === currentBlockColor) {
+                    playSfx(successSfx); // <<< Play success SFX
+                    score++;
+                    scoreDisplay.textContent = `Score: ${score}`;
+                    fallSpeed += speedIncrement;
+                    if(currentBlock && currentBlock.parentNode) currentBlock.remove(); // Ensure removal
+                    currentBlock = null;
+                    currentBlockColor = '';
+                    setTimeout(createBlock, 10); // Create next block slightly faster
+                } else {
+                    playSfx(failSfx); // <<< Play fail SFX
+                    flashScreen('#FF0000');
+                }
+            }
+
+            function handleControlClick(event) { const c = event.target.dataset.color; if (c) { initializeAudio(); handleColorSelection(c); } } // Also attempt init on control click
+            function handleControlTouch(event) { event.preventDefault(); initializeAudio(); const el = event.target; const c = el.dataset.color; if (c) { handleColorSelection(c); el.classList.add('active-touch'); const rm = () => { el.classList.remove('active-touch'); el.removeEventListener('touchend', rm); el.removeEventListener('touchcancel', rm); }; el.addEventListener('touchend', rm); el.addEventListener('touchcancel', rm); } } // And touch
+            function flashScreen(color) { if (!gameContainer) return; /* gameContainer.style.transition = 'background-color 0.1s ease-out'; // Ensure transition is set */ gameContainer.style.backgroundColor = color; setTimeout(() => { if (gameContainer) gameContainer.style.backgroundColor = '#333'; /* setTimeout(() => gameContainer.style.transition = '', 100); // Reset transition if needed, but style has it */ }, 100); }
             function setupControls() { controlsDiv.innerHTML = ''; colors.forEach(c => { const btn = document.createElement('button'); btn.classList.add('control-button'); btn.style.backgroundColor = c; btn.dataset.color = c; btn.addEventListener('click', handleControlClick); btn.addEventListener('touchstart', handleControlTouch, { passive: false }); controlsDiv.appendChild(btn); }); }
-            function startGame() { score = 0; fallSpeed = initialFallSpeed; scoreDisplay.textContent = `Score: ${score}`; isGameOver = false; isStartingOrRestarting = false; gameArea.innerHTML = ''; currentBlock = null; currentBlockColor = ''; startScreen.style.display = 'none'; gameOverScreen.style.display = 'none'; if (animationFrameId) cancelAnimationFrame(animationFrameId); createBlock(); animationFrameId = requestAnimationFrame(gameLoop); }
-            function endGame() { if (isGameOver) return; isGameOver = true; if (animationFrameId) cancelAnimationFrame(animationFrameId); animationFrameId = null; flashScreen('#AA0000'); finalScoreDisplay.textContent = `Your Score: ${score}`; gameOverScreen.style.display = 'flex'; }
+
+            function startGame() {
+                console.log("Starting game...");
+                score = 0;
+                fallSpeed = initialFallSpeed;
+                scoreDisplay.textContent = `Score: ${score}`;
+                isGameOver = false; // Set game state correctly
+                isStartingOrRestarting = false; // Reset this flag
+                gameArea.innerHTML = ''; // Clear previous blocks
+                currentBlock = null;
+                currentBlockColor = '';
+                startScreen.style.display = 'none';
+                gameOverScreen.style.display = 'none';
+
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                }
+
+                // Stop game over sound if it was playing
+                if (gameOverSfx) {
+                    gameOverSfx.pause();
+                    gameOverSfx.currentTime = 0;
+                }
+
+                stopMusic(); // Stop any previous music just in case
+
+                // Select and set new random background music
+                const randomIndex = Math.floor(Math.random() * musicTracks.length);
+                const selectedTrack = musicTracks[randomIndex];
+                console.log("Selected music:", selectedTrack);
+
+                // Update the source of the *existing* bgMusic object
+                bgMusic.src = selectedTrack;
+
+                // Explicitly load the new source. This is important.
+                bgMusic.load();
+
+                // Attempt to play the new track (startMusic checks mute/init state)
+                startMusic();
+
+                createBlock(); // Create the first block
+                animationFrameId = requestAnimationFrame(gameLoop); // Start the game loop
+            }
+
+            function endGame() {
+                if (isGameOver) return; // Prevent running multiple times
+                console.log("Ending game...");
+                isGameOver = true;
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+                stopMusic(); // Stop background music
+                playSfx(gameOverSfx); // Play game over SFX
+                flashScreen('#AA0000');
+                finalScoreDisplay.textContent = `Your Score: ${score}`;
+                gameOverScreen.style.display = 'flex';
+                // Clean up the last block
+                if (currentBlock && currentBlock.parentNode) {
+                     currentBlock.remove();
+                     currentBlock = null;
+                }
+            }
 
             // --- Fullscreen API Logic ---
             function isFullscreenActive() { return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement); }
-            function openFullscreen(elem) { if (!elem) return; if (elem.requestFullscreen) { elem.requestFullscreen().catch(err => console.error(`FS Error: ${err.message} (${err.name})`)); } else if (elem.mozRequestFullScreen) { elem.mozRequestFullScreen(); } else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); } else if (elem.msRequestFullscreen) { elem.msRequestFullscreen(); } else { console.error("Fullscreen API is not supported."); } }
+            function openFullscreen(elem) { if (!elem) return; initializeAudio(); /* Try init on FS enter */ if (elem.requestFullscreen) { elem.requestFullscreen().catch(err => console.error(`FS Error: ${err.message} (${err.name})`)); } else if (elem.mozRequestFullScreen) { elem.mozRequestFullScreen(); } else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); } else if (elem.msRequestFullscreen) { elem.msRequestFullscreen(); } else { console.error("Fullscreen API is not supported."); } }
             function closeFullscreen() { if (document.exitFullscreen) { document.exitFullscreen(); } else if (document.mozCancelFullScreen) { document.mozCancelFullScreen(); } else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); } else if (document.msExitFullscreen) { document.msExitFullscreen(); } }
-
-             // --- CORRECTED: Update Fullscreen Button Visuals ---
             function updateFullscreenButtonVisuals() {
                 if (fullscreenButton) {
                     if (isFullscreenActive()) {
@@ -144,7 +367,11 @@
                         fullscreenButton.title = 'Enter Fullscreen';
                     }
                     // Enable/disable based on support
-                    fullscreenButton.disabled = !(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled);
+                    const fsEnabled = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled);
+                    fullscreenButton.disabled = !fsEnabled;
+                    if (!fsEnabled) {
+                         fullscreenButton.title = "Fullscreen not supported";
+                    }
                 }
             }
 
@@ -153,10 +380,12 @@
 
             // Fullscreen Button Listener
             fullscreenButton.addEventListener('click', () => {
-                if (!isFullscreenActive()) {
-                    openFullscreen(fullscreenWrapper); // Target the wrapper
-                } else {
-                    closeFullscreen();
+                if (!fullscreenButton.disabled) { // Check if enabled
+                     if (!isFullscreenActive()) {
+                          openFullscreen(fullscreenWrapper); // Target the wrapper
+                     } else {
+                          closeFullscreen();
+                     }
                 }
             });
 
@@ -166,23 +395,68 @@
             document.addEventListener('mozfullscreenchange', updateFullscreenButtonVisuals);
             document.addEventListener('MSFullscreenChange', updateFullscreenButtonVisuals);
 
+            // --- Mute Button Listener ---
+            muteButton.addEventListener('click', () => {
+                initializeAudio(); // Try init if mute is first interaction
+                isMuted = !isMuted; // Toggle mute state
+
+                // Mute/unmute all audio elements
+                if(bgMusic) bgMusic.muted = isMuted;
+                if(successSfx) successSfx.muted = isMuted;
+                if(failSfx) failSfx.muted = isMuted;
+                if(gameOverSfx) gameOverSfx.muted = isMuted;
+
+                muteButton.innerHTML = isMuted ? '🔇' : '🔊'; // Update icon
+                muteButton.title = isMuted ? 'Unmute' : 'Mute Sound';
+
+                // If unmuting and music should be playing, start it (if initialized)
+                if (!isMuted && !isGameOver && audioInitialized) {
+                    startMusic();
+                } else if (isMuted) {
+                     // Pause music immediately if muted
+                     if(bgMusic) bgMusic.pause();
+                }
+            });
+
+
             // --- Start/Restart Button Listeners ---
             function handleStartRestartClick(event) {
-                event.preventDefault();
-                if (isStartingOrRestarting) return; isStartingOrRestarting = true;
-                event.target.style.transform = 'scale(0.97)';
+                event.preventDefault(); // Prevent potential double actions on mobile
+                if (isStartingOrRestarting) return; // Prevent double clicks/taps
+                isStartingOrRestarting = true;
+
+                // *** Crucial: Attempt to unlock audio context on this first user interaction ***
+                initializeAudio();
+
+                // Visual feedback for the button press
+                if(event.target) event.target.style.transform = 'scale(0.97)';
+
+                // Use a short delay to allow visual feedback before heavy logic
                 setTimeout(() => {
-                    startGame();
-                    setTimeout(() => { if(event.target) event.target.style.transform = 'scale(1)'; }, 150);
-                }, 50);
+                     startGame(); // startGame now handles selecting and starting the music
+
+                    // Reset button scale after game start logic + short delay
+                    setTimeout(() => {
+                         if(event.target) event.target.style.transform = 'scale(1)';
+                         isStartingOrRestarting = false; // Allow clicking again *after* animation/delay
+                    }, 150);
+                }, 50); // 50ms delay before starting game logic
             }
+
+            // Attach listeners
             startButton.addEventListener('click', handleStartRestartClick);
             startButton.addEventListener('touchstart', handleStartRestartClick, { passive: false });
             restartButton.addEventListener('click', handleStartRestartClick);
             restartButton.addEventListener('touchstart', handleStartRestartClick, { passive: false });
 
-            // --- Call initial button update ---
-            updateFullscreenButtonVisuals(); // Set initial icon/state
+            // --- Initial UI Updates ---
+            updateFullscreenButtonVisuals(); // Set initial fullscreen icon/state
+            // Set initial mute button state based on default (unmuted)
+            muteButton.innerHTML = isMuted ? '🔇' : '🔊';
+            muteButton.title = isMuted ? 'Unmute' : 'Mute Sound';
+
+
+            console.log("Game setup complete. Waiting for user interaction.");
 
         }); // End of DOMContentLoaded listener
     </script>
