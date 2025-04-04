@@ -3,40 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Medieval Math Duel - Scroll Fix</title> <!-- Version Bump -->
+    <title>Medieval Math Duel - Scroll Fix v2</title> <!-- Version Bump -->
     <style>
         /* Basic resets and body setup */
         html, body {
             height: 100%; margin: 0; padding: 0;
-            overflow: auto; /* Ensure scrolling is allowed for the page within iframe */
+            overflow: auto; /* ALLOW scrolling for the main page content within iframe */
             font-family: 'Verdana', sans-serif;
-            /* Smooth scrolling for the whole page/iframe */
             scroll-behavior: smooth;
         }
         body {
             display: flex; justify-content: center; align-items: center;
             background-color: #5d6a5a; color: #eee;
-            min-height: 100%; /* Ensure body takes at least full height */
+            min-height: 100%; /* Ensure body tries to take full height */
+            /* Padding added to body might help prevent content sticking to edges */
+            /* padding: 5px 0; */ /* Optional: Add slight vertical padding if needed */
         }
 
         /* Game container */
         #game-container {
-            position: relative; width: 95%; max-width: 550px;
-            /* Let height be determined by content, but set max */
-            min-height: 450px; max-height: 98vh;
+            position: relative; /* Keep for absolute positioning children */
+            width: 95%; max-width: 550px;
+            /* Let height be determined by content naturally */
+            min-height: 450px; /* Can keep a min-height if desired */
+            /* REMOVED max-height: 98vh; */
             padding: clamp(10px, 3vw, 20px); background-color: #8d7163;
             border: 5px solid #4b3f31; border-radius: 8px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.4);
             text-align: center;
-             /* Internal scroll only if content overflows container height severely */
-             overflow-y: auto;
+            /* REMOVED overflow-y: auto; Let body handle scroll */
+            margin: 10px 0; /* Add some margin top/bottom to ensure body can scroll */
         }
 
         /* Fullscreen Button */
-        #fullscreen-button { position: absolute; top: 8px; right: 8px; width: 35px; height: 35px; font-size: clamp(1.1em, 3vw, 1.6em); line-height: 33px; text-align: center; background: rgba(75, 63, 49, 0.6); border: 1px solid #eee; color: #eee; border-radius: 5px; cursor: pointer; z-index: 50; }
+        #fullscreen-button {
+            position: absolute; top: 8px; right: 8px; /* Stays relative to game-container */
+            width: 35px; height: 35px; font-size: clamp(1.1em, 3vw, 1.6em);
+            line-height: 33px; text-align: center;
+            background: rgba(75, 63, 49, 0.6); border: 1px solid #eee; color: #eee;
+            border-radius: 5px; cursor: pointer; z-index: 50;
+        }
         #fullscreen-button:hover { background: rgba(75, 63, 49, 0.8); }
-        #game-container:fullscreen { max-width: none; max-height: none; width: 100%; height: 100%; border: none; border-radius: 0; overflow-y: auto; }
+        /* Fullscreen state still applies to game-container */
+        #game-container:fullscreen {
+            max-width: none; max-height: none; width: 100%; height: 100%;
+            border: none; border-radius: 0;
+             /* Allow scrolling within fullscreen container too */
+             overflow-y: auto;
+             margin: 0; /* Remove margin in fullscreen */
+        }
 
+        /* Rest of the styles remain unchanged */
         h1 { font-size: clamp(1.5em, 5vw, 2.2em); margin-bottom: 15px; color: #fff; text-shadow: 2px 2px #2a231b; }
         #duel-area { display: flex; justify-content: space-around; align-items: flex-end; height: clamp(140px, 25vh, 180px); margin-bottom: 15px; border-bottom: 3px dashed #4b3f31; padding-bottom: 15px; }
         .character { display: flex; flex-direction: column; align-items: center; }
@@ -98,7 +115,7 @@
     </div> <!-- End of game-container -->
 
     <script>
-        // --- DOM Elements ---
+        // DOM Elements and Config remain the same as previous version...
         const gameContainer = document.getElementById('game-container');
         const knightSprite = document.getElementById('knight-sprite');
         const goblinSprite = document.getElementById('goblin-sprite');
@@ -124,7 +141,6 @@
         const buyPotionButton = document.getElementById('buy-potion-button');
         const buySharpenButton = document.getElementById('buy-sharpen-button');
 
-        // --- Game Config ---
         const KNIGHT_MAX_HP_BASE = 20; const GOBLIN_MAX_HP_BASE = 15;
         const KNIGHT_ATTACK_BASE = 3; const GOBLIN_ATTACK_BASE = 2;
         const KNIGHT_HP_PER_LEVEL = 5; const KNIGHT_ATK_PER_LEVEL = 1;
@@ -137,10 +153,9 @@
         const BASE_XP_TO_LEVEL = 15; const XP_LEVEL_SCALING_FACTOR = 1.5;
         const POTION_COST = 15; const POTION_HEAL_AMOUNT = 10;
         const SHARPEN_COST = 20; const SHARPEN_BONUS_ATTACK = 2;
-        const FEEDBACK_DURATION = 2000; // ms for temporary feedback messages
-        const SCROLL_DELAY = 300; // ms delay before scrolling input into view
+        const FEEDBACK_DURATION = 2000;
+        const SCROLL_DELAY = 300;
 
-        // --- Game State ---
         let knightMaxHp = KNIGHT_MAX_HP_BASE; let knightAttack = KNIGHT_ATTACK_BASE;
         let goblinMaxHp = GOBLIN_MAX_HP_BASE; let goblinAttack = GOBLIN_ATTACK_BASE;
         let knightHp = KNIGHT_MAX_HP_BASE; let goblinHp = GOBLIN_MAX_HP_BASE;
@@ -170,41 +185,34 @@
 
         function startNewDuel() {
             console.log("Starting New Duel...");
-            updatePlayerStatsForLevel(false); // Update stats but DON'T heal
+            updatePlayerStatsForLevel(false);
 
-            isGameOver = false;
-            processingAnswer = false;
-            clearTemporaryFeedback();
+            isGameOver = false; processingAnswer = false; clearTemporaryFeedback();
 
             updateHpDisplay('knight'); updateHpDisplay('goblin');
             knightSprite.classList.remove('attack', 'level-up');
-            goblinSprite.classList.remove('attack', 'defeat');
-            goblinSprite.style.opacity = 1;
+            goblinSprite.classList.remove('attack', 'defeat'); goblinSprite.style.opacity = 1;
 
-            answerInput.value = '';
-            submitButton.disabled = false; answerInput.disabled = false;
+            answerInput.value = ''; submitButton.disabled = false; answerInput.disabled = false;
 
-            xpToNextLevel = calculateXpNeeded(playerLevel);
-            updateStatusDisplay(); // Includes button state update
+            xpToNextLevel = calculateXpNeeded(playerLevel); updateStatusDisplay();
             generateProblem(); displayProblem();
 
             startScreen.style.display = 'none'; gameOverScreen.style.display = 'none';
 
-            setTimeout(() => { if(!isGameOver) answerInput.focus(); /* Focus handled separately now */ }, 100);
+            setTimeout(() => { if(!isGameOver) answerInput.focus(); }, 100);
             console.log(`Duel Started. Lvl:${playerLevel}, XP:${playerXP}/${xpToNextLevel}, Gold:${playerGold}, Sharpened:${isSwordSharpened}`);
         }
 
         function resetGameFull() {
              playerLevel = 1; playerXP = 0; playerGold = 0; isSwordSharpened = false;
              xpToNextLevel = calculateXpNeeded(playerLevel);
-             knightHp = KNIGHT_MAX_HP_BASE; // Reset HP explicitly on full reset
+             knightHp = KNIGHT_MAX_HP_BASE; // Reset HP
              startNewDuel();
         }
 
         function updateStatusDisplay() {
-            levelDisplay.textContent = `Level: ${playerLevel}`;
-            xpDisplay.textContent = `XP: ${playerXP} / ${xpToNextLevel}`;
-            goldDisplay.textContent = `Gold: ${playerGold}`;
+            levelDisplay.textContent = `Level: ${playerLevel}`; xpDisplay.textContent = `XP: ${playerXP} / ${xpToNextLevel}`; goldDisplay.textContent = `Gold: ${playerGold}`;
             sharpenIndicator.style.display = isSwordSharpened ? 'inline' : 'none';
             if (isSwordSharpened) sharpenIndicator.classList.add('sharpened'); else sharpenIndicator.classList.remove('sharpened');
             updatePurchaseButtonStates();
@@ -214,49 +222,23 @@
         function displayProblem() { const op = currentProblem.operator === '*' ? '×' : currentProblem.operator; mathProblemDisplay.textContent = `Solve: ${currentProblem.num1} ${op} ${currentProblem.num2} = ?`; }
         function updateHpDisplay(char) { let cur, max, bar, txt; if(char==='knight'){cur=knightHp;max=knightMaxHp;bar=knightHpBar;txt=knightHpText;}else{cur=goblinHp;max=goblinMaxHp;bar=goblinHpBar;txt=goblinHpText;} const pct=Math.max(0,(cur/max)*100); bar.style.width=`${pct}%`; txt.textContent=`HP: ${Math.max(0,cur)}/${max}`; updatePurchaseButtonStates(); }
         function triggerAnimation(el, anim) { if(el.classList.contains('defeat')&&anim!=='defeat')return; if(el.classList.contains('level-up')&&anim!=='level-up')return; el.classList.remove('attack','level-up'); el.classList.add(anim); let delay=(anim==='level-up')?1000:200; if(anim!=='defeat'){setTimeout(()=>{if(el)el.classList.remove(anim);},delay);} }
-
-        function showTemporaryFeedback(message, typeClass = '', duration = FEEDBACK_DURATION) {
-            clearTemporaryFeedback(); feedbackArea.textContent = message; feedbackArea.className = typeClass;
-            feedbackTimeoutId = setTimeout(() => { if (feedbackArea.textContent === message) { feedbackArea.textContent = ''; feedbackArea.className = ''; } }, duration);
-        }
+        function showTemporaryFeedback(message, typeClass = '', duration = FEEDBACK_DURATION) { clearTemporaryFeedback(); feedbackArea.textContent = message; feedbackArea.className = typeClass; feedbackTimeoutId = setTimeout(() => { if (feedbackArea.textContent === message) { feedbackArea.textContent = ''; feedbackArea.className = ''; } }, duration); }
         function clearTemporaryFeedback() { if (feedbackTimeoutId) { clearTimeout(feedbackTimeoutId); feedbackTimeoutId = null; } }
-
-        function updatePurchaseButtonStates() {
-            if (!buyPotionButton || !buySharpenButton) return;
-            buyPotionButton.disabled = (playerGold < POTION_COST || knightHp >= knightMaxHp || isGameOver || processingAnswer);
-            buySharpenButton.disabled = (playerGold < SHARPEN_COST || isSwordSharpened || isGameOver || processingAnswer);
-        }
-
-        function buyPotion() {
-            if (buyPotionButton.disabled) return;
-            playerGold -= POTION_COST;
-            const healAmount = Math.min(POTION_HEAL_AMOUNT, knightMaxHp - knightHp);
-            knightHp += healAmount;
-            console.log(`Bought Potion. Healed ${healAmount}. HP: ${knightHp}/${knightMaxHp}. Gold: ${playerGold}`);
-            showTemporaryFeedback(`Used Potion! +${healAmount} HP.`, 'feedback-purchase');
-            updateStatusDisplay(); updateHpDisplay('knight');
-        }
-         function buySharpen() {
-             if (buySharpenButton.disabled) return;
-             playerGold -= SHARPEN_COST; isSwordSharpened = true;
-             console.log(`Bought Sharpening. Buff active! Gold: ${playerGold}`);
-             showTemporaryFeedback(`Sword Sharpened! +${SHARPEN_BONUS_ATTACK} ATK next turn.`, 'feedback-purchase');
-             updateStatusDisplay();
-         }
+        function updatePurchaseButtonStates() { if (!buyPotionButton || !buySharpenButton) return; buyPotionButton.disabled = (playerGold < POTION_COST || knightHp >= knightMaxHp || isGameOver || processingAnswer); buySharpenButton.disabled = (playerGold < SHARPEN_COST || isSwordSharpened || isGameOver || processingAnswer); }
+        function buyPotion() { if (buyPotionButton.disabled) return; playerGold -= POTION_COST; const healAmount = Math.min(POTION_HEAL_AMOUNT, knightMaxHp - knightHp); knightHp += healAmount; console.log(`Bought Potion. Healed ${healAmount}. HP: ${knightHp}/${knightMaxHp}. Gold: ${playerGold}`); showTemporaryFeedback(`Used Potion! +${healAmount} HP.`, 'feedback-purchase'); updateStatusDisplay(); updateHpDisplay('knight'); }
+        function buySharpen() { if (buySharpenButton.disabled) return; playerGold -= SHARPEN_COST; isSwordSharpened = true; console.log(`Bought Sharpening. Buff active! Gold: ${playerGold}`); showTemporaryFeedback(`Sword Sharpened! +${SHARPEN_BONUS_ATTACK} ATK next turn.`, 'feedback-purchase'); updateStatusDisplay(); }
 
         function handleSubmit() {
             if (isGameOver || processingAnswer) return;
             processingAnswer = true; submitButton.disabled = true; answerInput.disabled = true;
-            updatePurchaseButtonStates(); // Disable shop buttons
-            clearTemporaryFeedback();
+            updatePurchaseButtonStates(); clearTemporaryFeedback();
 
             const playerAnswerStr = answerInput.value.trim(); const playerAnswer = parseInt(playerAnswerStr);
 
             if (playerAnswerStr === '' || isNaN(playerAnswer)) {
                 showTemporaryFeedback('Please enter a valid number!', 'feedback-incorrect');
                 processingAnswer = false; submitButton.disabled = false; answerInput.disabled = false;
-                updatePurchaseButtonStates(); // Re-enable shop buttons
-                answerInput.focus(); answerInput.select(); return;
+                updatePurchaseButtonStates(); answerInput.focus(); answerInput.select(); return;
             }
 
             let actualKnightAttack = knightAttack;
@@ -288,7 +270,7 @@
                  setTimeout(() => { // Delay updates
                      updateHpDisplay('knight'); console.log("Incorrect. K HP:", Math.max(0, knightHp));
                      if (knightHp <= 0) { // Knight Defeated
-                        setTimeout(() => gameOver(false), 600); processingAnswer = false; // Allow restart
+                        setTimeout(() => gameOver(false), 600); processingAnswer = false;
                      } else { // Continue round
                         generateProblem(); displayProblem(); answerInput.value = '';
                         submitButton.disabled = false; answerInput.disabled = false; processingAnswer = false;
@@ -325,37 +307,28 @@
              } else { console.error("gameOver(true) called unexpectedly!"); }
          }
 
-        function toggleFullscreen() { /* ... no change ... */ if(!gameContainer)return; try{if(!document.fullscreenElement){if(gameContainer.requestFullscreen)gameContainer.requestFullscreen().catch(err=>console.error(`FS request failed: ${err.message}`,err));}else{if(document.exitFullscreen)document.exitFullscreen().catch(err=>console.error(`Exit FS failed: ${err.message}`,err));}}catch(error){console.error("Error toggling fullscreen:",error);} }
+        function toggleFullscreen() { if(!gameContainer)return; try{if(!document.fullscreenElement){if(gameContainer.requestFullscreen)gameContainer.requestFullscreen().catch(err=>console.error(`FS request failed: ${err.message}`,err));}else{if(document.exitFullscreen)document.exitFullscreen().catch(err=>console.error(`Exit FS failed: ${err.message}`,err));}}catch(error){console.error("Error toggling fullscreen:",error);} }
 
         // --- Event Listeners ---
         submitButton.addEventListener('click', handleSubmit);
         answerInput.addEventListener('keyup', function(event) { if (event.key === 'Enter' && !submitButton.disabled && !processingAnswer) { event.preventDefault(); handleSubmit(); } });
         startButton.onclick = () => { resetGameFull(); };
-        restartButton.onclick = () => { resetGameFull(); }; // Restart button on loss does FULL reset
+        restartButton.onclick = () => { resetGameFull(); }; // Make restart on loss a FULL reset
         if (fullscreenButton) { fullscreenButton.addEventListener('click', toggleFullscreen); } else { console.error("FS button not found!"); }
         document.addEventListener('fullscreenchange', () => { if (fullscreenButton) { fullscreenButton.textContent = document.fullscreenElement ? '✕' : '⛶'; fullscreenButton.title = document.fullscreenElement ? 'Exit FS' : 'Enter FS'; } });
         document.addEventListener('keydown', function(event) { if (isGameOver && gameOverScreen.style.display === 'flex') { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); resetGameFull(); } } });
-
-        // Shop Button Listeners
         buyPotionButton.addEventListener('click', buyPotion);
         buySharpenButton.addEventListener('click', buySharpen);
-
-        // *** ADDED: Input Focus Listener for Scrolling ***
+        // Input Focus Listener for Scrolling
         answerInput.addEventListener('focus', () => {
             console.log("Answer input focused, scheduling scroll...");
-            // Use a setTimeout to allow the keyboard animation to start/finish
             setTimeout(() => {
-                 // Check if game is still running and input is focused
                  if (!isGameOver && document.activeElement === answerInput) {
                      console.log("Scrolling input into view...");
                      answerInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                 } else {
-                     console.log("Scroll cancelled (game over or input lost focus).");
-                 }
+                 } else { console.log("Scroll cancelled."); }
             }, SCROLL_DELAY);
         });
-        // *** END ADDED LISTENER ***
-
 
         // --- Initial Setup on Load ---
          window.onload = () => {
@@ -364,7 +337,6 @@
              updatePlayerStatsForLevel(true); // Set initial Lvl 1 stats & FULLY HEAL
              xpToNextLevel = calculateXpNeeded(playerLevel); updateStatusDisplay();
              if (!fullscreenButton) console.warn("FS button element not found during init.");
-             // Set initial text on buttons dynamically
              buyPotionButton.innerHTML = `Potion (${POTION_COST}g)<br/>+${POTION_HEAL_AMOUNT} HP`;
              buySharpenButton.innerHTML = `Sharpen (${SHARPEN_COST}g)<br/>+${SHARPEN_BONUS_ATTACK} ATK (Next Turn)`;
              updatePurchaseButtonStates(); // Set initial disabled state
