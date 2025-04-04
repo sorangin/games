@@ -32,10 +32,35 @@
         .overlay h2 { margin-bottom: 10px; } .overlay p { margin-bottom: 20px; }
         .overlay button { padding: 12px 25px; font-size: 1.1em; cursor: pointer; border: none; border-radius: 5px; background-color: #4CAF50; color: white; transition: background-color 0.2s ease, transform 0.1s ease; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
         .overlay button:hover { background-color: #45a049; } .overlay button:active { transform: scale(0.97); }
-        #fullscreen-btn { position: absolute; top: 8px; right: 8px; z-index: 30; padding: 5px 8px; font-size: 10px; cursor: pointer; background-color: rgba(255, 255, 255, 0.6); color: #333; border: 1px solid #999; border-radius: 4px; font-weight: bold; line-height: 1; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
-        #fullscreen-btn:hover { background-color: rgba(255, 255, 255, 0.8); } #fullscreen-btn:active { transform: scale(0.95); }
 
-        /* NO :fullscreen overrides needed for #game-container */
+        /* --- Fullscreen Button --- */
+        #fullscreen-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            z-index: 30;
+            padding: 3px 6px; /* Adjusted padding */
+            font-size: 1.6em; /* Increased font size for icon */
+            cursor: pointer;
+            background-color: rgba(255, 255, 255, 0.6);
+            color: #333;
+            border: 1px solid #999;
+            border-radius: 4px;
+            font-weight: normal; /* Normal weight often looks better for icons */
+            line-height: 1;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none; -webkit-user-select: none;
+            /* Ensure minimum size */
+            min-width: 25px;
+            min-height: 25px;
+            display: inline-flex; /* Use flex to center */
+            justify-content: center;
+            align-items: center;
+        }
+        #fullscreen-btn:hover { background-color: rgba(255, 255, 255, 0.8); }
+        #fullscreen-btn:active { transform: scale(0.95); }
+        #fullscreen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
 
     </style>
 </head>
@@ -47,7 +72,8 @@
             <div id="score-display">Score: 0</div>
             <div id="game-area"></div>
             <div id="controls"></div>
-            <button id="fullscreen-btn">FS</button>
+             <!-- Initial text removed, JS will set the icon -->
+            <button id="fullscreen-btn" title="Toggle Fullscreen" disabled></button>
 
             <!-- Overlays are inside game-container -->
             <div id="start-screen" class="overlay">
@@ -75,54 +101,50 @@
             const scoreDisplay = document.getElementById('score-display');
             const startScreen = document.getElementById('start-screen');
             const gameOverScreen = document.getElementById('game-over-screen');
-            const startButton = document.getElementById('start-button'); // Direct reference
-            const restartButton = document.getElementById('restart-button'); // Direct reference
+            const startButton = document.getElementById('start-button');
+            const restartButton = document.getElementById('restart-button');
             const finalScoreDisplay = document.getElementById('final-score');
             const fullscreenButton = document.getElementById('fullscreen-btn');
 
-             // --- Basic Check ---
              if (!fullscreenWrapper || !gameContainer || !fullscreenButton || !startButton || !restartButton ) {
-                console.error("Error: Critical elements missing.");
-                return;
+                console.error("Error: Critical elements missing."); return;
              }
 
             // --- Game Config, State Vars, Game Logic Functions ---
-            // --- NO CHANGES HERE - KEEP ALL GAME LOGIC THE SAME ---
             const colors = ['#FF5733', '#33FF57', '#3357FF', '#FF33A1', '#F1C40F'];
             const initialFallSpeed = 3; const speedIncrement = 0.15; let score = 0; let currentBlock = null;
             let currentBlockColor = ''; let fallSpeed = initialFallSpeed; let isGameOver = true;
             let animationFrameId = null; let isStartingOrRestarting = false;
             function getRandomColor() { return colors[Math.floor(Math.random() * colors.length)]; }
             function getRandomPositionX() { const w = gameArea.offsetWidth, bW = 40; return Math.max(0, Math.min(w - bW, Math.floor(Math.random() * (w - bW)))); }
-            function createBlock() { if (currentBlock && currentBlock.parentNode) { currentBlock.parentNode.removeChild(currentBlock); } const b = document.createElement('div'); b.classList.add('block'); currentBlockColor = getRandomColor(); b.style.backgroundColor = currentBlockColor; b.style.left = `${getRandomPositionX()}px`; b.style.top = '-50px'; gameArea.appendChild(b); currentBlock = b; }
+            function createBlock() { if (currentBlock && currentBlock.parentNode) currentBlock.remove(); const b = document.createElement('div'); b.classList.add('block'); currentBlockColor = getRandomColor(); b.style.backgroundColor = currentBlockColor; b.style.left = `${getRandomPositionX()}px`; b.style.top = '-50px'; gameArea.appendChild(b); currentBlock = b; }
             function gameLoop() { if (isGameOver) return; moveBlock(); animationFrameId = requestAnimationFrame(gameLoop); }
-            function moveBlock() { if (!currentBlock || isGameOver) return; let t = parseFloat(currentBlock.style.top || -50); t += fallSpeed; currentBlock.style.top = `${t}px`; const gH = gameArea.offsetHeight, bH = 40; if (t + bH >= gH - 5) { endGame(); } }
-            function handleColorSelection(selectedColor) { if (isGameOver || !currentBlock) return; if (selectedColor === currentBlockColor) { score++; scoreDisplay.textContent = `Score: ${score}`; fallSpeed += speedIncrement; if (currentBlock.parentNode) { currentBlock.parentNode.removeChild(currentBlock); } currentBlock = null; currentBlockColor = ''; setTimeout(createBlock, 10); } else { flashScreen('#FF0000'); } }
+            function moveBlock() { if (!currentBlock || isGameOver) return; let t = parseFloat(currentBlock.style.top || -50); t += fallSpeed; currentBlock.style.top = `${t}px`; const gH = gameArea.offsetHeight, bH = 40; if (t + bH >= gH - 5) endGame(); }
+            function handleColorSelection(selectedColor) { if (isGameOver || !currentBlock) return; if (selectedColor === currentBlockColor) { score++; scoreDisplay.textContent = `Score: ${score}`; fallSpeed += speedIncrement; currentBlock.remove(); currentBlock = null; currentBlockColor = ''; setTimeout(createBlock, 10); } else { flashScreen('#FF0000'); } }
             function handleControlClick(event) { const c = event.target.dataset.color; if (c) handleColorSelection(c); }
             function handleControlTouch(event) { event.preventDefault(); const el = event.target; const c = el.dataset.color; if (c) { handleColorSelection(c); el.classList.add('active-touch'); const rm = () => { el.classList.remove('active-touch'); el.removeEventListener('touchend', rm); el.removeEventListener('touchcancel', rm); }; el.addEventListener('touchend', rm); el.addEventListener('touchcancel', rm); } }
             function flashScreen(color) { if (!gameContainer) return; gameContainer.style.transition = 'background-color 0.1s ease-out'; gameContainer.style.backgroundColor = color; setTimeout(() => { gameContainer.style.backgroundColor = '#333'; setTimeout(() => gameContainer.style.transition = '', 100); }, 100); }
             function setupControls() { controlsDiv.innerHTML = ''; colors.forEach(c => { const btn = document.createElement('button'); btn.classList.add('control-button'); btn.style.backgroundColor = c; btn.dataset.color = c; btn.addEventListener('click', handleControlClick); btn.addEventListener('touchstart', handleControlTouch, { passive: false }); controlsDiv.appendChild(btn); }); }
             function startGame() { score = 0; fallSpeed = initialFallSpeed; scoreDisplay.textContent = `Score: ${score}`; isGameOver = false; isStartingOrRestarting = false; gameArea.innerHTML = ''; currentBlock = null; currentBlockColor = ''; startScreen.style.display = 'none'; gameOverScreen.style.display = 'none'; if (animationFrameId) cancelAnimationFrame(animationFrameId); createBlock(); animationFrameId = requestAnimationFrame(gameLoop); }
             function endGame() { if (isGameOver) return; isGameOver = true; if (animationFrameId) cancelAnimationFrame(animationFrameId); animationFrameId = null; flashScreen('#AA0000'); finalScoreDisplay.textContent = `Your Score: ${score}`; gameOverScreen.style.display = 'flex'; }
-            // --- End of unchanged JS ---
 
-
-            // --- Fullscreen API Logic --- (Keep as is)
-            function isFullscreenActive() { return document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement; }
+            // --- Fullscreen API Logic ---
+            function isFullscreenActive() { return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement); }
             function openFullscreen(elem) { if (!elem) return; if (elem.requestFullscreen) { elem.requestFullscreen().catch(err => console.error(`FS Error: ${err.message} (${err.name})`)); } else if (elem.mozRequestFullScreen) { elem.mozRequestFullScreen(); } else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); } else if (elem.msRequestFullscreen) { elem.msRequestFullscreen(); } else { console.error("Fullscreen API is not supported."); } }
             function closeFullscreen() { if (document.exitFullscreen) { document.exitFullscreen(); } else if (document.mozCancelFullScreen) { document.mozCancelFullScreen(); } else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); } else if (document.msExitFullscreen) { document.msExitFullscreen(); } }
+
+             // --- CORRECTED: Update Fullscreen Button Visuals ---
             function updateFullscreenButtonVisuals() {
                 if (fullscreenButton) {
-                    // *** CHANGE THESE LINES ***
                     if (isFullscreenActive()) {
                         fullscreenButton.innerHTML = '✕'; // Set to '✕' (Exit)
-                        fullscreenButton.title = 'Exit Fullscreen'; // Update title too
+                        fullscreenButton.title = 'Exit Fullscreen';
                     } else {
                         fullscreenButton.innerHTML = '⛶'; // Set to '⛶' (Expand)
-                         fullscreenButton.title = 'Enter Fullscreen'; // Update title too
+                        fullscreenButton.title = 'Enter Fullscreen';
                     }
-                    // Enable/disable based on support (optional, but good practice)
-                     fullscreenButton.disabled = !(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled);
+                    // Enable/disable based on support
+                    fullscreenButton.disabled = !(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled);
                 }
             }
 
@@ -144,42 +166,23 @@
             document.addEventListener('mozfullscreenchange', updateFullscreenButtonVisuals);
             document.addEventListener('MSFullscreenChange', updateFullscreenButtonVisuals);
 
-
-            // --- NEW: Event Listeners attached DIRECTLY to Start/Restart Buttons ---
+            // --- Start/Restart Button Listeners ---
             function handleStartRestartClick(event) {
-                event.preventDefault(); // Prevent default for click/touch
-
-                if (isStartingOrRestarting) { // Prevent double taps
-                    console.log("Start/Restart already in progress, ignoring event.");
-                    return;
-                }
-                isStartingOrRestarting = true;
-
-                // Visual feedback (optional but nice)
+                event.preventDefault();
+                if (isStartingOrRestarting) return; isStartingOrRestarting = true;
                 event.target.style.transform = 'scale(0.97)';
-
-                // Call startGame after a short delay
                 setTimeout(() => {
                     startGame();
-                    // Reset button visuals slightly later
-                    setTimeout(() => {
-                        if(event.target) event.target.style.transform = 'scale(1)';
-                    }, 150);
-                }, 50); // 50ms delay
+                    setTimeout(() => { if(event.target) event.target.style.transform = 'scale(1)'; }, 150);
+                }, 50);
             }
-
-            // Attach listeners to Start Button
             startButton.addEventListener('click', handleStartRestartClick);
             startButton.addEventListener('touchstart', handleStartRestartClick, { passive: false });
-
-            // Attach listeners to Restart Button
             restartButton.addEventListener('click', handleStartRestartClick);
             restartButton.addEventListener('touchstart', handleStartRestartClick, { passive: false });
 
-            // --- REMOVED: Old Overlay Listeners ---
-            // startScreen.addEventListener(...)
-            // gameOverScreen.addEventListener(...)
-
+            // --- Call initial button update ---
+            updateFullscreenButtonVisuals(); // Set initial icon/state
 
         }); // End of DOMContentLoaded listener
     </script>
