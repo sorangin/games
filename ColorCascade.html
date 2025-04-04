@@ -111,7 +111,20 @@
             function isFullscreenActive() { return document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement; }
             function openFullscreen(elem) { if (!elem) return; if (elem.requestFullscreen) { elem.requestFullscreen().catch(err => console.error(`FS Error: ${err.message} (${err.name})`)); } else if (elem.mozRequestFullScreen) { elem.mozRequestFullScreen(); } else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); } else if (elem.msRequestFullscreen) { elem.msRequestFullscreen(); } else { console.error("Fullscreen API is not supported."); } }
             function closeFullscreen() { if (document.exitFullscreen) { document.exitFullscreen(); } else if (document.mozCancelFullScreen) { document.mozCancelFullScreen(); } else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); } else if (document.msExitFullscreen) { document.msExitFullscreen(); } }
-            function updateFullscreenButtonVisuals() { if (fullscreenButton) { fullscreenButton.textContent = isFullscreenActive() ? 'Exit' : 'FS'; } }
+            function updateFullscreenButtonVisuals() {
+                if (fullscreenButton) {
+                    // *** CHANGE THESE LINES ***
+                    if (isFullscreenActive()) {
+                        fullscreenButton.innerHTML = '✕'; // Set to '✕' (Exit)
+                        fullscreenButton.title = 'Exit Fullscreen'; // Update title too
+                    } else {
+                        fullscreenButton.innerHTML = '⛶'; // Set to '⛶' (Expand)
+                         fullscreenButton.title = 'Enter Fullscreen'; // Update title too
+                    }
+                    // Enable/disable based on support (optional, but good practice)
+                     fullscreenButton.disabled = !(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled);
+                }
+            }
 
             // --- Initialization and Event Listeners ---
             setupControls();
