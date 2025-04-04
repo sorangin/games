@@ -1,27 +1,22 @@
     <style>
-        /* Basic resets and body setup */
+        /* Basic resets */
         html {
-            height: 100%; margin: 0; padding: 0;
-            overflow: hidden; /* Prevent scroll on HTML element itself */
+            margin: 0; padding: 0;
+            overflow: hidden; /* Prevent scroll on HTML */
             font-family: 'Verdana', sans-serif;
             scroll-behavior: smooth;
+            /* REMOVED height: 100%; */
         }
         body {
-           /* --- RE-APPLY FLEXBOX --- */
-            display: flex;
-            flex-direction: column; /* Stack children vertically */
-            justify-content: flex-start; /* Align container to top */
-            align-items: center; /* Center container horizontally */
-           /* --- End Flexbox --- */
-
-            min-height: 100%; /* Ensure body can be at least viewport height */
-            height: auto; /* Allow body height to grow */
+            /* REMOVED display: flex and related properties */
+            /* REMOVED min-height: 100%; */
+            /* REMOVED height: auto; */
             margin: 0;
             background-color: #5d6a5a; color: #eee;
             overflow-y: auto; /* BODY is the main scroller */
-            overflow-x: hidden;
-             /* Add padding back if needed for spacing */
-             padding: 10px 0;
+            overflow-x: hidden; /* Prevent horizontal scroll */
+             /* Add padding FOR SPACING, not essential for scrolling mechanism */
+             padding: 15px 0; /* Increased padding */
              box-sizing: border-box;
         }
 
@@ -29,16 +24,15 @@
         #game-container {
             position: relative; /* Keep for absolute positioning children */
             width: 95%; max-width: 550px;
-            min-height: 450px;
             /* Height is determined by content */
+            /* REMOVED min-height: 450px; */ /* Let content define height */
             padding: clamp(10px, 3vw, 20px); background-color: #8d7163;
             border: 5px solid #4b3f31; border-radius: 8px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.4);
             text-align: center;
-             /* REMOVED margin: 0 auto; - Flex handles centering */
-             /* Add back margin if needed for spacing from body padding */
-             /* margin: 10px 0; */
-             flex-shrink: 0; /* Prevent container from shrinking if body flexes */
+             /* REMOVED overflow-y: auto; */
+             /* Center the container within the scrolling body */
+             margin: 0 auto; /* Auto horizontal margins */
         }
 
         /* Fullscreen Button - Stays relative to game-container */
@@ -55,7 +49,7 @@
             max-width: none; max-height: none; width: 100%; height: 100%;
             border: none; border-radius: 0;
             overflow-y: auto; /* Allow scrolling WHEN fullscreen */
-            margin: 0; /* Remove margin in fullscreen */
+            margin: 0;
         }
 
         /* ... rest of styles ... */
@@ -205,6 +199,7 @@
 
             startScreen.style.display = 'none'; gameOverScreen.style.display = 'none';
 
+            // Scroll attempt handled by focus listener now
             setTimeout(() => { if(!isGameOver) answerInput.focus(); }, 100);
             console.log(`Duel Started. Lvl:${playerLevel}, XP:${playerXP}/${xpToNextLevel}, Gold:${playerGold}, Sharpened:${isSwordSharpened}`);
         }
@@ -329,8 +324,6 @@
             setTimeout(() => {
                  if (!isGameOver && document.activeElement === answerInput) {
                      console.log("Scrolling input into view...");
-                     // Use scrollIntoView on a parent element if input is too low
-                     // document.getElementById('problem-area').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                      answerInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
                  } else { console.log("Scroll cancelled."); }
             }, SCROLL_DELAY);
