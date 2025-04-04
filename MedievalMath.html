@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medieval Math Duel</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #5d6a5a; /* Earthy green/brown */
+            font-family: 'Verdana', sans-serif; /* Slightly less blocky font */
+            margin: 0;
+            color: #eee;
+        }
+
+        #game-container {
+            width: 550px; /* Slightly wider */
+            padding: 20px;
+            background-color: #8d7163; /* Castle floor stone */
+            border: 5px solid #4b3f31; /* Darker stone border */
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+            text-align: center;
+        }
+
+        #duel-area {
+            display: flex;
+            justify-content: space-around; /* Space out Knight and Goblin */
+            align-items: flex-end; /* Align bases */
+            height: 180px; /* Adjust as needed */
+            margin-bottom: 15px; /* Reduced margin */
+            border-bottom: 3px dashed #4b3f31;
+            padding-bottom: 15px;
+        }
+
+        .character {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .sprite {
+            width: 80px; /* Adjust size as needed */
+            height: 80px; /* Adjust size as needed */
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            /* Use pixelated rendering for crisp pixel art */
+            image-rendering: -moz-crisp-edges;         /* Firefox */
+            image-rendering: -webkit-optimize-contrast;/* Webkit (Chrome, Safari) */
+            image-rendering: pixelated;              /* Standard */
+            margin-bottom: 5px;
+            position: relative; /* For animation */
+            transition: transform 0.15s ease-in-out; /* Smooth attack anim */
+            /* background-color: #777; */ /* Background removed */
+        }
+
+        /* --- !! IMPORTANT !! --- */
+        /* Make sure you have a 'sprites' folder next to this HTML file */
+        /* containing Knight.png and Goblin.png, or update these paths! */
+        #knight-sprite {
+             background-image: url('./sprites/Knight.png');
+        }
+        #goblin-sprite {
+             background-image: url('./sprites/Goblin.png');
+        }
+        /* --- End Sprite Paths --- */
+
+
+        #knight-sprite.attack {
+            transform: translateX(15px) scale(1.05); /* Simple lunge */
+        }
+        #knight-sprite.level-up { /* Simple level up visual */
+             filter: drop-shadow(0 0 5px yellow);
+        }
+
+
+        #goblin-sprite.attack {
+            transform: translateX(-15px) scale(1.05); /* Simple lunge */
+        }
+         #goblin-sprite.defeat {
+            transform: rotate(-90deg) translateY(20px);
+            opacity: 0.6;
+            transition: transform 0.3s ease-in, opacity 0.3s ease-in;
+        }
+
+
+        .hp-bar-container {
+            width: 100px;
+            height: 15px;
+            background-color: #555;
+            border: 1px solid #222;
+            border-radius: 3px;
+            overflow: hidden; /* Keep inner bar contained */
+            margin-bottom: 3px;
+        }
+
+        .hp-bar {
+            height: 100%;
+            background-color: #d0021b; /* Red */
+            width: 100%; /* Start full */
+            transition: width 0.3s ease-out;
+        }
+        .hp-bar.knight {
+             background-color: #4a90e2; /* Blue */
+        }
+
+
+        .hp-text {
+            font-size: 0.9em;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 1px 1px #111;
+        }
+
+        /* --- Status Area --- */
+        #status-area {
+            display: flex;
+            justify-content: space-evenly;
+            padding: 8px;
+            margin-bottom: 15px;
+            background-color: #6b4f41;
+            border-radius: 4px;
+            border: 1px solid #4b3f31;
+            font-size: 0.9em;
+        }
+        #status-area span {
+            margin: 0 10px;
+            font-weight: bold;
+            color: #fff;
+             text-shadow: 1px 1px #111;
+        }
+        /* ----------------------- */
+
+
+        #problem-area {
+            background-color: #6b4f41; /* Slightly different stone */
+            padding: 15px;
+            border-radius: 5px;
+            border: 2px solid #4b3f31;
+            margin-bottom: 15px;
+        }
+
+        #math-problem {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #fff;
+            text-shadow: 1px 1px #222;
+        }
+
+        #answer-input {
+            width: 80px;
+            padding: 8px;
+            font-size: 1.5em;
+            text-align: center;
+            border: 2px solid #4b3f31;
+            border-radius: 4px;
+            margin-right: 10px;
+            /* Remove spinners on number input */
+            -moz-appearance: textfield;
+        }
+        #answer-input::-webkit-outer-spin-button,
+        #answer-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+
+        #submit-button {
+            padding: 9px 18px;
+            font-size: 1.2em;
+            background-color: #a0522d; /* Sienna */
+            border: 2px solid #1a0f0c;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #submit-button:hover {
+            background-color: #8B4513; /* SaddleBrown */
+        }
+        #submit-button:disabled {
+            background-color: #888;
+            cursor: not-allowed;
+        }
+
+        #feedback-area {
+            margin-top: 10px;
+            min-height: 20px; /* Reserve space */
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+        .feedback-correct {
+            color: #33FF57; /* Green */
+             text-shadow: 1px 1px #114411;
+        }
+        .feedback-incorrect {
+            color: #FF5733; /* Orange-Red */
+             text-shadow: 1px 1px #441111;
+        }
+        .feedback-levelup { /* Style for level up messages */
+            color: #ffd700; /* Gold */
+             text-shadow: 1px 1px #443300;
+        }
+
+        /* Overlay Styles */
+        .overlay {
+            position: fixed; /* Cover whole screen */
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            z-index: 100;
+            padding: 20px;
+            box-sizing: border-box;
+            font-family: 'Verdana', sans-serif;
+        }
+         .overlay h2 { color: #ffd700; margin-bottom: 20px; text-shadow: 2px 2px #553300;}
+         .overlay p { margin-bottom: 25px; font-size: 1.1em; line-height: 1.5;}
+         .overlay button {
+             padding: 12px 25px; font-size: 1.1em; cursor: pointer;
+             background-color: #a0522d; border: 3px solid #1a0f0c; color: white;
+             border-radius: 5px; font-family: 'Verdana', sans-serif;
+             transition: background-color 0.2s; box-shadow: 3px 3px 0px #1a0f0c;
+         }
+         .overlay button:hover { background-color: #8B4513; }
+          .overlay button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0px #1a0f0c; }
+
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>Medieval Math Duel</h1>
+
+        <div id="duel-area">
+            <div class="character" id="knight">
+                <div class="sprite" id="knight-sprite"></div>
+                <div class="hp-bar-container">
+                    <div class="hp-bar knight" id="knight-hp-bar"></div>
+                </div>
+                <div class="hp-text" id="knight-hp-text">HP: 20/20</div>
+            </div>
+            <div class="character" id="goblin">
+                <div class="sprite" id="goblin-sprite"></div>
+                 <div class="hp-bar-container">
+                    <div class="hp-bar" id="goblin-hp-bar"></div>
+                </div>
+                <div class="hp-text" id="goblin-hp-text">HP: 15/15</div>
+            </div>
+        </div>
+
+        <!-- Status Area -->
+        <div id="status-area">
+            <span id="level-display">Level: 1</span>
+            <span id="xp-display">XP: 0 / 15</span>
+            <span id="gold-display">Gold: 0</span>
+        </div>
+        <!-- End Status Area -->
+
+        <div id="problem-area">
+            <div id="math-problem"> Solve: 5 + 3 = ?</div>
+            <input type="number" id="answer-input" autofocus>
+            <button id="submit-button">Attack!</button>
+        </div>
+
+        <div id="feedback-area"></div>
+
+    </div>
+
+    <!-- Overlays -->
+    <div id="start-screen" class="overlay">
+        <h2>Math Duel!</h2>
+        <p>Your Knight faces a fearsome Goblin!<br>Solve the math problems correctly to attack.<br>An incorrect answer lets the Goblin strike!<br>Defeat Goblins to gain XP, Gold and Level Up!<br>Problems get harder as you level!</p>
+        <button id="start-button">Begin Duel!</button>
+    </div>
+    <div id="game-over-screen" class="overlay" style="display: none;">
+         <h2 id="game-over-title">Victory!</h2>
+         <p id="game-over-message">The Goblin is vanquished!</p>
+         <button id="restart-button">Duel Again?</button>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const knightSprite = document.getElementById('knight-sprite');
+        const goblinSprite = document.getElementById('goblin-sprite');
+        const knightHpBar = document.getElementById('knight-hp-bar');
+        const knightHpText = document.getElementById('knight-hp-text');
+        const goblinHpBar = document.getElementById('goblin-hp-bar');
+        const goblinHpText = document.getElementById('goblin-hp-text');
+        const mathProblemDisplay = document.getElementById('math-problem');
+        const answerInput = document.getElementById('answer-input');
+        const submitButton = document.getElementById('submit-button');
+        const feedbackArea = document.getElementById('feedback-area');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const startButton = document.getElementById('start-button');
+        const restartButton = document.getElementById('restart-button');
+        const gameOverTitle = document.getElementById('game-over-title');
+        const gameOverMessage = document.getElementById('game-over-message');
+        const levelDisplay = document.getElementById('level-display');
+        const xpDisplay = document.getElementById('xp-display');
+        const goldDisplay = document.getElementById('gold-display');
+
+
+        // --- Game Config ---
+        const KNIGHT_MAX_HP = 20;
+        const GOBLIN_MAX_HP = 15;
+        const KNIGHT_ATTACK = 3;
+        const GOBLIN_ATTACK = 2;
+        // --- Difficulty Config ---
+        const BASE_MAX_NUMBER = 10;
+        const NUMBER_INCREASE_PER_LEVEL = 5;
+        const MULTIPLICATION_UNLOCK_LEVEL = 3;
+        const MAX_MULTIPLICATION_FACTOR = 5;
+        const MULT_FACTOR_INCREASE_PER_LEVEL = 2;
+        // --- Other Config ---
+        const XP_PER_GOBLIN = 10;
+        const GOLD_PER_GOBLIN = 5;
+        const BASE_XP_TO_LEVEL = 15;
+
+
+        // --- Game State ---
+        let knightHp = KNIGHT_MAX_HP;
+        let goblinHp = GOBLIN_MAX_HP;
+        let currentProblem = { num1: 0, num2: 0, operator: '+', answer: 0 };
+        let isGameOver = true;
+        let processingAnswer = false;
+        let playerLevel = 1;
+        let playerXP = 0;
+        let xpToNextLevel = BASE_XP_TO_LEVEL;
+        let playerGold = 0;
+
+
+        // --- Functions ---
+
+        function calculateXpNeeded(level) {
+            return BASE_XP_TO_LEVEL * level;
+        }
+
+        function initGame() {
+            console.log("Initializing Duel...");
+            knightHp = KNIGHT_MAX_HP;
+            goblinHp = GOBLIN_MAX_HP;
+            isGameOver = false;
+            processingAnswer = false;
+            feedbackArea.textContent = '';
+            feedbackArea.className = '';
+            xpToNextLevel = calculateXpNeeded(playerLevel);
+
+            updateHpDisplay('knight');
+            updateHpDisplay('goblin');
+            knightSprite.classList.remove('attack', 'level-up');
+            goblinSprite.classList.remove('attack', 'defeat');
+            answerInput.value = '';
+            submitButton.disabled = false;
+            answerInput.disabled = false;
+
+            updateStatusDisplay();
+            generateProblem();
+            displayProblem();
+
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            answerInput.focus();
+            console.log("Duel Started. Level:", playerLevel, "XP:", playerXP, "/", xpToNextLevel, "Gold:", playerGold);
+        }
+
+        function updateStatusDisplay() {
+            levelDisplay.textContent = `Level: ${playerLevel}`;
+            xpDisplay.textContent = `XP: ${playerXP} / ${xpToNextLevel}`;
+            goldDisplay.textContent = `Gold: ${playerGold}`;
+        }
+
+
+        function generateProblem() {
+            let num1, num2, operator, answer;
+            const currentAddSubMax = BASE_MAX_NUMBER + (playerLevel - 1) * NUMBER_INCREASE_PER_LEVEL;
+            let allowedOperators = ['+', '-'];
+            if (playerLevel >= MULTIPLICATION_UNLOCK_LEVEL) {
+                allowedOperators.push('*');
+            }
+            operator = allowedOperators[Math.floor(Math.random() * allowedOperators.length)];
+
+            switch (operator) {
+                case '+':
+                    num1 = Math.floor(Math.random() * (currentAddSubMax + 1));
+                    num2 = Math.floor(Math.random() * (currentAddSubMax + 1));
+                    answer = num1 + num2;
+                    break;
+                case '-':
+                    num1 = Math.floor(Math.random() * (currentAddSubMax + 1));
+                    num2 = Math.floor(Math.random() * (num1 + 1));
+                    answer = num1 - num2;
+                    break;
+                case '*':
+                    let levelFactorBonus = Math.max(0, playerLevel - MULTIPLICATION_UNLOCK_LEVEL);
+                    const currentMultMax = MAX_MULTIPLICATION_FACTOR + levelFactorBonus * MULT_FACTOR_INCREASE_PER_LEVEL;
+                    num1 = Math.floor(Math.random() * (currentMultMax + 1));
+                    const num2Max = Math.max(2, Math.floor(currentMultMax * 0.9));
+                    num2 = Math.floor(Math.random() * (num2Max + 1));
+                    if (num2 === 0 && currentMultMax > 3 && Math.random() > 0.3) {
+                         num2 = 1;
+                    }
+                     if (num1 === 0 && currentMultMax > 2 && Math.random() > 0.3) {
+                         num1 = 1;
+                     }
+                    answer = num1 * num2;
+                    break;
+            }
+
+            currentProblem.num1 = num1;
+            currentProblem.num2 = num2;
+            currentProblem.operator = operator;
+            currentProblem.answer = answer;
+
+            console.log(`Level ${playerLevel} Problem: ${num1} ${operator} ${num2} = ? (Ans: ${answer}) Add/Sub Max: ${currentAddSubMax}`);
+        }
+
+        function displayProblem() {
+             const displayOperator = currentProblem.operator === '*' ? '×' : currentProblem.operator;
+            mathProblemDisplay.textContent = `Solve: ${currentProblem.num1} ${displayOperator} ${currentProblem.num2} = ?`;
+        }
+
+        function updateHpDisplay(character) {
+            let currentHp, maxHp, hpBar, hpText;
+
+            if (character === 'knight') {
+                currentHp = knightHp;
+                maxHp = KNIGHT_MAX_HP;
+                hpBar = knightHpBar;
+                hpText = knightHpText;
+            } else { // goblin
+                currentHp = goblinHp;
+                maxHp = GOBLIN_MAX_HP;
+                hpBar = goblinHpBar;
+                hpText = goblinHpText;
+            }
+
+            const percentage = Math.max(0, (currentHp / maxHp) * 100);
+            hpBar.style.width = `${percentage}%`;
+            hpText.textContent = `HP: ${currentHp}/${maxHp}`;
+        }
+
+        function triggerAnimation(element, animationClass) {
+             element.classList.remove('level-up');
+             element.classList.add(animationClass);
+
+            if (animationClass !== 'defeat' && animationClass !== 'level-up') {
+                 setTimeout(() => {
+                    element.classList.remove(animationClass);
+                 }, 200);
+            }
+             if (animationClass === 'level-up') {
+                  setTimeout(() => {
+                     element.classList.remove(animationClass);
+                  }, 1000);
+             }
+        }
+
+
+        function handleSubmit() {
+            if (isGameOver || processingAnswer) return;
+
+            processingAnswer = true;
+            submitButton.disabled = true;
+            feedbackArea.textContent = '';
+            feedbackArea.className = '';
+
+            const playerAnswer = parseInt(answerInput.value);
+
+            if (isNaN(playerAnswer)) {
+                feedbackArea.textContent = 'Please enter a number!';
+                feedbackArea.className = 'feedback-incorrect';
+                 processingAnswer = false;
+                 submitButton.disabled = false;
+                 answerInput.focus();
+                 answerInput.select();
+                return;
+            }
+
+            let problemOutcomeDelay = 500;
+            let leveledUpThisTurn = false;
+
+            if (playerAnswer === currentProblem.answer) {
+                // Correct Answer
+                feedbackArea.textContent = 'Correct! Knight attacks!';
+                feedbackArea.className = 'feedback-correct';
+                triggerAnimation(knightSprite, 'attack');
+                goblinHp -= KNIGHT_ATTACK;
+                if (goblinHp < 0) goblinHp = 0;
+                updateHpDisplay('goblin');
+                console.log("Player Correct. Goblin HP:", goblinHp);
+
+                if (goblinHp <= 0) {
+                    console.log("Goblin Defeated!");
+                    triggerAnimation(goblinSprite, 'defeat');
+                    playerXP += XP_PER_GOBLIN;
+                    playerGold += GOLD_PER_GOBLIN;
+                    console.log(`Gained ${XP_PER_GOBLIN} XP (Now ${playerXP}), ${GOLD_PER_GOBLIN} Gold (Now ${playerGold})`);
+                    leveledUpThisTurn = checkLevelUp();
+                    updateStatusDisplay();
+                    problemOutcomeDelay = 800;
+                }
+
+            } else {
+                // Incorrect Answer
+                feedbackArea.textContent = `Incorrect! The answer was ${currentProblem.answer}. Goblin attacks!`;
+                feedbackArea.className = 'feedback-incorrect';
+                triggerAnimation(goblinSprite, 'attack');
+                knightHp -= GOBLIN_ATTACK;
+                if (knightHp < 0) knightHp = 0;
+                 updateHpDisplay('knight');
+                 console.log("Player Incorrect. Knight HP:", knightHp);
+            }
+
+            setTimeout(() => {
+                 if (checkWinLoss()) {
+                     processingAnswer = false;
+                 } else {
+                    generateProblem();
+                    displayProblem();
+                    answerInput.value = '';
+                    processingAnswer = false;
+                    submitButton.disabled = false;
+                    if (!isGameOver) answerInput.focus();
+                 }
+            }, problemOutcomeDelay);
+        }
+
+        function checkLevelUp() {
+            console.log(`Checking level up: XP=${playerXP}, Needed=${xpToNextLevel}`);
+            let leveledUp = false;
+            while (playerXP >= xpToNextLevel) {
+                leveledUp = true;
+                let xpUsedForLevel = xpToNextLevel;
+                playerLevel++;
+                playerXP -= xpUsedForLevel;
+                xpToNextLevel = calculateXpNeeded(playerLevel);
+
+                console.log(`%cLEVEL UP! Reached Level ${playerLevel}! XP Remaining: ${playerXP}, Next Lvl At: ${xpToNextLevel}`, "color: yellow; font-weight: bold;");
+                feedbackArea.textContent = `LEVEL UP! Reached Level ${playerLevel}!`;
+                feedbackArea.className = 'feedback-levelup';
+                triggerAnimation(knightSprite, 'level-up');
+                console.log("Stat boosts could be applied here.");
+            }
+            if(leveledUp) console.log(`Level up check complete. New state: Level ${playerLevel}, XP ${playerXP}/${xpToNextLevel}`);
+            return leveledUp;
+        }
+
+
+        function checkWinLoss() {
+            if (goblinHp <= 0) {
+                gameOver(true);
+                return true;
+            }
+            if (knightHp <= 0) {
+                gameOver(false);
+                return true;
+            }
+            return false;
+        }
+
+        function gameOver(playerWon) {
+             console.log("--- Game Over --- Player Won:", playerWon);
+             isGameOver = true;
+             submitButton.disabled = true;
+             answerInput.disabled = true;
+             xpToNextLevel = calculateXpNeeded(playerLevel); // Ensure correct value for final message
+
+             if (playerWon) {
+                 gameOverTitle.textContent = "Victory!";
+                 gameOverMessage.textContent = `Thou hast vanquished the Goblin! Final Stats: Level ${playerLevel}, XP ${playerXP}/${xpToNextLevel}, Gold ${playerGold}.`;
+             } else {
+                 gameOverTitle.textContent = "Defeat!";
+                 gameOverMessage.textContent = `Alas, the Goblin overcame thy Knight! Final Stats: Level ${playerLevel}, XP ${playerXP}/${xpToNextLevel}, Gold ${playerGold}.`;
+             }
+             gameOverScreen.style.display = 'flex';
+             // Do not focus input here, wait for user interaction (key press or button click)
+         }
+
+
+        // --- Event Listeners ---
+        submitButton.addEventListener('click', handleSubmit);
+        answerInput.addEventListener('keyup', function(event) {
+            if (event.key === 'Enter' && !submitButton.disabled) {
+                event.preventDefault();
+                handleSubmit();
+            }
+        });
+
+        startButton.onclick = () => { initGame(); };
+        restartButton.onclick = () => { initGame(); };
+
+        // --- Event Listener for Game Over Screen Key Press ---
+        document.addEventListener('keydown', function(event) {
+            // Check if the game over screen is currently displayed AND the game is actually over
+            if (!isGameOver) return; // Don't do anything if the game isn't in the 'over' state
+            if (gameOverScreen.style.display === 'flex') {
+                console.log("Key pressed on Game Over screen. Restarting...");
+                event.preventDefault(); // Prevent potential default actions
+                initGame(); // Restart the game
+            }
+        });
+        // --- End Game Over Key Press Listener ---
+
+
+        // --- Initial Setup on Load ---
+         window.onload = () => {
+             startScreen.style.display = 'flex';
+             gameOverScreen.style.display = 'none';
+             answerInput.disabled = true;
+             submitButton.disabled = true;
+             isGameOver = true; // Game starts in a 'not playing' state
+             xpToNextLevel = calculateXpNeeded(playerLevel);
+             updateStatusDisplay();
+             console.log("Game loaded. Waiting for player to start.");
+         };
+
+    </script>
+</body>
+</html>

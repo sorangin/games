@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Goblin Siege Defense</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #2c1e1a; /* Dark brown earth */
+            font-family: 'Courier New', Courier, monospace; /* Pixel-ish font */
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #game-container {
+            width: 400px;
+            height: 550px;
+            background-color: #6b4f41; /* Lighter brown stone */
+            border: 5px solid #1a0f0c; /* Darkest border */
+            border-radius: 3px; /* Slightly less rounded */
+            position: relative;
+            overflow: hidden;
+            box-shadow: 5px 5px 0px #1a0f0c; /* Simple block shadow */
+            display: flex;
+            flex-direction: column;
+        }
+
+        #game-area {
+            flex-grow: 1;
+            position: relative;
+            background-color: #8d7163; /* Castle floor color */
+            /* Optional simple background pattern */
+            background-image: linear-gradient(45deg, #7a5f51 25%, transparent 25%),
+                              linear-gradient(-45deg, #7a5f51 25%, transparent 25%),
+                              linear-gradient(45deg, transparent 75%, #7a5f51 75%),
+                              linear-gradient(-45deg, transparent 75%, #7a5f51 75%);
+            background-size: 20px 20px;
+            image-rendering: pixelated; /* Helps keep patterns sharp */
+        }
+
+        #hoard {
+            width: 60px;
+            height: 40px;
+            background-color: #ffd700; /* Gold */
+            border: 3px solid #b8860b; /* Darker gold border */
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 2px;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.3);
+            z-index: 5; /* Above floor pattern */
+            /* Simple sparkle effect? */
+            /* animation: sparkle 1.5s infinite alternate; */
+        }
+        /* @keyframes sparkle { 0% { box-shadow: inset 0 0 5px rgba(255,255,255,0.5); } 100% { box-shadow: inset 0 0 5px rgba(0,0,0,0.3); } } */
+
+
+        .goblin {
+            width: 40px;
+            height: 40px;
+            position: absolute;
+			background-image: url('./sprites/Goblin.png'); /* Correct path to your sprite */
+			background-size: contain; /* Or 'cover', 'contain' fits the whole image */
+			background-repeat: no-repeat;
+			background-position: center;
+            top: -45px; /* Start off screen */
+            border-radius: 3px;
+            cursor: pointer; /* Indicate clickable */
+            z-index: 10;
+            transition: transform 0.05s ease-out; /* For click feedback */
+            image-rendering: pixelated; /* Keep edges sharp */
+        }
+
+        .goblin:active {
+            transform: scale(1.1); /* Slight grow on click */
+        }
+
+        /* Simple visual effect on goblin defeat */
+        .poof {
+            width: 30px;
+            height: 30px;
+            background-color: #888; /* Smoke gray */
+            border-radius: 50%;
+            position: absolute;
+            opacity: 0.7;
+            animation: fadeOut 0.3s forwards;
+            z-index: 15;
+            pointer-events: none; /* Don't block clicks */
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 0.7; transform: scale(1); }
+            to { opacity: 0; transform: scale(0.5); }
+        }
+
+        #score-display {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            color: #fff;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 1.1em;
+            border: 2px solid #1a0f0c;
+            z-index: 20;
+        }
+
+        /* Overlays */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            z-index: 50;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .overlay h2 {
+            margin-bottom: 15px;
+            color: #ffd700; /* Gold text */
+            text-shadow: 2px 2px #8B4513; /* Brown shadow */
+        }
+        .overlay p {
+            margin-bottom: 25px;
+            line-height: 1.4;
+        }
+        .overlay button {
+            padding: 12px 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            border: 3px solid #1a0f0c;
+            border-radius: 3px;
+            background-color: #a0522d; /* Sienna button */
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+            transition: background-color 0.2s ease;
+            box-shadow: 3px 3px 0px #1a0f0c;
+        }
+        .overlay button:hover {
+             background-color: #8B4513; /* Saddle Brown */
+        }
+         .overlay button:active {
+             transform: translate(2px, 2px);
+             box-shadow: 1px 1px 0px #1a0f0c;
+         }
+
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="score-display">SCORE: 0</div>
+        <div id="game-area">
+            <div id="hoard"></div>
+            <!-- Goblins will be added here -->
+        </div>
+
+        <!-- Start Screen Overlay -->
+        <div id="start-screen" class="overlay">
+            <h2>Goblin Siege Defense!</h2>
+            <p>Protect the King's Hoard!<br>Click the invading Goblins before they reach the treasure!</p>
+            <button id="start-button">Defend the Realm!</button>
+        </div>
+
+        <!-- Game Over Overlay -->
+        <div id="game-over-screen" class="overlay" style="display: none;">
+             <h2>Thy Castle Has Fallen!</h2>
+             <p id="final-score">Goblins Vanquished: 0</p>
+             <button id="restart-button">Try Again?</button>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const gameArea = document.getElementById('game-area');
+        const hoard = document.getElementById('hoard');
+        const scoreDisplay = document.getElementById('score-display');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const startButton = document.getElementById('start-button');
+        const restartButton = document.getElementById('restart-button');
+        const finalScoreDisplay = document.getElementById('final-score');
+
+        // --- Game Configuration ---
+        const initialEnemySpeed = 1.5; // Pixels per frame update
+        const speedIncrement = 0.05;   // How much speed increases per goblin clicked
+        const initialSpawnInterval = 1800; // Milliseconds
+        const minSpawnInterval = 400;   // Fastest spawn rate
+        const spawnIntervalDecrement = 25; // How much spawn interval decreases
+
+        // --- Game State Variables ---
+        let score = 0;
+        let enemySpeed = initialEnemySpeed;
+        let currentSpawnInterval = initialSpawnInterval;
+        let enemies = []; // Array to hold enemy elements and data
+        let gameLoopInterval = null;
+        let spawnTimeout = null;
+        let isGameOver = true;
+        const gameAreaWidth = gameArea.offsetWidth;
+        const hoardTopPosition = hoard.offsetTop;
+
+
+        // --- Functions ---
+
+        function getRandomPositionX() {
+            const goblinWidth = 40; // Match CSS
+            return Math.floor(Math.random() * (gameAreaWidth - goblinWidth));
+        }
+
+        function createGoblin() {
+            if (isGameOver) return;
+
+            const goblin = document.createElement('div');
+            goblin.classList.add('goblin');
+            goblin.style.left = `${getRandomPositionX()}px`;
+            goblin.style.top = '-40px'; // Start above the screen
+
+            // Add click listener to defeat goblin
+            goblin.addEventListener('click', () => defeatGoblin(goblin), { once: true }); // {once: true} auto-removes listener
+
+            gameArea.appendChild(goblin);
+            enemies.push(goblin); // Add to our tracking array
+        }
+
+        function defeatGoblin(goblinElement) {
+            if (isGameOver) return;
+
+            // Create 'poof' effect
+            const poof = document.createElement('div');
+            poof.classList.add('poof');
+            poof.style.left = goblinElement.style.left;
+            poof.style.top = goblinElement.style.top;
+            gameArea.appendChild(poof);
+            // Remove poof element after animation
+            setTimeout(() => {
+                if (poof.parentNode) poof.parentNode.removeChild(poof);
+            }, 300); // Match animation duration
+
+            // Remove goblin from DOM
+            if (goblinElement.parentNode) {
+                goblinElement.parentNode.removeChild(goblinElement);
+            }
+
+            // Remove goblin from the tracking array
+            enemies = enemies.filter(enemy => enemy !== goblinElement);
+
+            // Update score and difficulty
+            score++;
+            scoreDisplay.textContent = `SCORE: ${score}`;
+            enemySpeed += speedIncrement;
+            if (currentSpawnInterval > minSpawnInterval) {
+                currentSpawnInterval -= spawnIntervalDecrement;
+            }
+        }
+
+
+        function moveEnemies() {
+            if (isGameOver) return;
+
+            // Iterate backwards for safe removal while iterating
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const goblin = enemies[i];
+                let currentTop = parseFloat(goblin.style.top || -40);
+                currentTop += enemySpeed;
+                goblin.style.top = `${currentTop}px`;
+
+                // Check if goblin reached the hoard
+                const goblinBottom = currentTop + goblin.offsetHeight;
+                if (goblinBottom >= hoardTopPosition) {
+                    endGame();
+                    return; // Stop checking once game is over
+                }
+            }
+        }
+
+        function spawnLoop() {
+            if (isGameOver) return;
+
+            createGoblin();
+
+            // Schedule the next spawn with potentially updated interval
+            spawnTimeout = setTimeout(spawnLoop, currentSpawnInterval);
+        }
+
+        function startGame() {
+            // Reset state
+            score = 0;
+            enemySpeed = initialEnemySpeed;
+            currentSpawnInterval = initialSpawnInterval;
+            scoreDisplay.textContent = `SCORE: ${score}`;
+            isGameOver = false;
+
+            // Clear previous game elements and timers
+            enemies.forEach(enemy => {
+                if (enemy.parentNode) enemy.parentNode.removeChild(enemy);
+            });
+            enemies = [];
+            document.querySelectorAll('.poof').forEach(p => p.remove()); // Clear leftover poofs
+            if (gameLoopInterval) clearInterval(gameLoopInterval);
+            if (spawnTimeout) clearTimeout(spawnTimeout);
+
+            // Hide overlays
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+
+            // Start game loops
+            gameLoopInterval = setInterval(moveEnemies, 1000 / 60); // ~60 FPS movement update
+            spawnLoop(); // Start the spawn cycle
+        }
+
+        function endGame() {
+            if (isGameOver) return; // Prevent multiple calls
+
+            isGameOver = true;
+            clearInterval(gameLoopInterval);
+            clearTimeout(spawnTimeout);
+            gameLoopInterval = null;
+            spawnTimeout = null;
+
+            // Add a visual cue maybe - flash screen?
+             gameContainer.style.transition = 'background-color 0.1s ease-out';
+             gameContainer.style.backgroundColor = '#8B0000'; // Dark Red flash
+             setTimeout(() => {
+                 gameContainer.style.backgroundColor = '#6b4f41'; // Revert
+                 setTimeout(() => gameContainer.style.transition = '', 100);
+             }, 150);
+
+
+            finalScoreDisplay.textContent = `Goblins Vanquished: ${score}`;
+            gameOverScreen.style.display = 'flex';
+
+             // Optional: Stop goblins visually
+             enemies.forEach(g => g.style.animationPlayState = 'paused');
+        }
+
+        // --- Initialization ---
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', startGame);
+
+        // Make sure hoard position is calculated after layout
+        // window.onload = () => {
+        //     hoardTopPosition = hoard.offsetTop;
+        // };
+         // Using offsetTop directly might be sufficient in this simple layout,
+         // but window.onload is safer if complex CSS affects layout timing.
+
+
+    </script>
+</body>
+</html>
