@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Castle Conquest Tactics</title>
+    <style>
+        :root {
+            --grid-cols: 8;
+            --grid-rows: 10;
+            --board-aspect-ratio: var(--grid-cols) / var(--grid-rows);
+            /* Base font size using vmin - scales with smaller viewport dimension */
+            font-size: clamp(8px, 1.8vmin, 16px); /* Adjust base/max as needed */
+        }
+
+        html, body {
+            height: 100%; /* Ensure body takes full height */
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent body scrollbars */
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #3a4a3a;
+            font-family: 'Courier New', Courier, monospace;
+            color: #eee;
+            padding: 5px; /* Small padding around the container */
+            box-sizing: border-box;
+        }
+
+        #game-container {
+            display: flex;
+            /* Max size relative to body padding */
+            max-width: 100%;
+            max-height: 100%;
+            width: 100%;   /* Try to fill padded body space */
+            height: 100%;
+            border: clamp(2px, 0.5vmin, 5px) solid #1e281e;
+            background-color: #5a6a5a;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            flex-direction: row;
+             /* --- Key for Row Layout --- */
+            align-items: stretch; /* Stretch children vertically */
+            justify-content: center; /* Center children horizontally */
+            padding: clamp(3px, 1vmin, 10px);
+            box-sizing: border-box;
+            gap: clamp(5px, 1vmin, 10px);
+        }
+
+        #game-board {
+            display: grid;
+            border: clamp(1px, 0.3vmin, 2px) solid #1e281e;
+            position: relative;
+            /* Sizing: Let aspect ratio + container constraints dominate */
+            flex-grow: 0;    /* Don't grow horizontally beyond aspect ratio */
+            flex-shrink: 1;  /* Allow shrinking */
+            grid-template-columns: repeat(var(--grid-cols), 1fr);
+            grid-template-rows: repeat(var(--grid-rows), 1fr);
+            aspect-ratio: var(--board-aspect-ratio);
+             /* Max size relative to container's padding box */
+            max-width: 100%;
+            max-height: 100%;
+            /* Margin auto not needed if container centers */
+            box-sizing: border-box;
+             overflow: hidden; /* Hide potential overflow during resize */
+            /* Add min size to prevent collapse */
+            min-width: 160px;
+            min-height: calc(160px / var(--board-aspect-ratio));
+        }
+
+        #game-board.spell-targeting { cursor: crosshair; }
+        #game-board.spell-targeting .grid-cell:hover { background-color: rgba(255, 100, 100, 0.3); }
+
+        .grid-cell {
+            border: 1px solid #7a8a7a;
+            background-color: #6a7a6a;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            box-sizing: border-box;
+            image-rendering: pixelated;
+            min-width: 1px; /* Absolute minimum */
+            min-height: 1px;
+            overflow: hidden;
+        }
+
+        .grid-cell.valid-move { background-color: #aaeaaa; opacity: 0.8; }
+        .grid-cell.valid-attack { background-color: #ffaaaa; opacity: 0.8; }
+
+        .unit {
+            position: absolute;
+            border-radius: 3px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            z-index: 10;
+            transition: top 0.2s ease-out, left 0.2s ease-out, filter 0.2s, box-shadow 0.2s, width 0.1s, height 0.1s;
+            box-sizing: border-box;
+            background-color: transparent;
+            image-rendering: pixelated;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            pointer-events: none;
+        }
+         #game-board .unit {
+             pointer-events: auto;
+         }
+
+        .unit.selected { box-shadow: 0 0 0 clamp(1px, 0.5vmin, 3px) yellow; z-index: 11; }
+
+        #ui-panel {
+            /* Width is flexible but constrained */
+            width: clamp(180px, 28vmin, 240px); /* Width based on vmin + clamp */
+            flex-shrink: 0; /* Don't shrink width */
+            /* Height will stretch due to container's align-items: stretch */
+            /* height: 100%; */ /* Not needed if stretching */
+            max-height: 100%; /* Prevent exceeding container */
+            padding: clamp(0.8rem, 1.5vmin, 1.5rem); /* Padding uses rem (relative to root vmin) */
+            background-color: #4a5a4a;
+            border-left: clamp(1px, 0.4vmin, 3px) solid #1e281e;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow-y: auto; /* Allow scrolling if content overflows */
+            font-size: 1.4rem; /* Relative to root font size */
+            box-sizing: border-box;
+        }
+
+
+        /* UI Panel Elements - use rem for font sizes to scale with root */
+        #level-display { text-align: center; margin-bottom: 1rem; font-weight: bold; color: #ffd700; background-color:#5a6a5a; padding: 0.5rem; border: 1px solid #1e281e; border-radius: 3px; font-size: 1.6rem; }
+        #unit-info, #turn-info { background-color: #5a6a5a; padding: 1rem; margin-bottom: 1.5rem; border: 1px solid #1e281e; border-radius: 3px; min-height: 7rem; }
+        #unit-info h3, #turn-info h3 { margin-top: 0; margin-bottom: 0.8rem; border-bottom: 1px solid #7a8a7a; padding-bottom: 0.5rem; color: #eee; font-size: 1.5rem; }
+        #unit-info p, #turn-info p { margin: 0.4rem 0; font-size: 1.3rem; color: #ddd; line-height: 1.4; }
+        #spell-area { margin-top: auto; margin-bottom: 1.5rem; padding: 0.8rem 0.5rem; background-color:#5a6a5a; border: 1px solid #1e281e; border-radius: 3px; min-height: 5rem; display: none; align-items: center; justify-content: center; flex-wrap: wrap; }
+        #spell-area.visible { display: flex; }
+        .spell-icon { display: inline-block; width: clamp(30px, 5vmin, 45px); height: clamp(30px, 5vmin, 45px); border: clamp(1px, 0.3vmin, 2px) solid #333; border-radius: 4px; background-color: #444; background-size: contain; background-repeat: no-repeat; background-position: center; cursor: pointer; margin: 0 0.5rem; transition: border-color 0.2s, box-shadow 0.2s, filter 0.2s; image-rendering: pixelated; vertical-align: middle; }
+        #fireball-spell { background-image: url('./sprites/sFireball1.png'); }
+        .spell-label { font-size: 1.3rem; margin-left: 0.8rem; font-weight: bold; color: #eee; text-shadow: 1px 1px #111; }
+        /* ... other spell icon states ... */
+        .spell-icon.unavailable { filter: grayscale(90%) brightness(60%); cursor: not-allowed; border-color: #555; }
+        .spell-icon.available { filter: none; cursor: pointer; border-color: #888; }
+        .spell-icon.available:hover { border-color: #eee; }
+        .spell-icon.selected { border-color: yellow; box-shadow: 0 0 8px yellow; }
+        #feedback-area { margin-bottom: 1rem; min-height: 2rem; font-size: 1.4rem; font-weight: bold; color: #fff; text-align: center; }
+        .feedback-levelup { color: #ffd700; text-shadow: 1px 1px #443300; }
+        #end-turn-button { padding: 1rem 1.5rem; background-color: #a0522d; border: 2px solid #1e281e; color: white; font-family: 'Courier New', Courier, monospace; cursor: pointer; font-size: 1.4rem; border-radius: 3px; text-align: center; transition: background-color 0.2s; width: 100%; box-sizing: border-box;}
+        /* ... end turn button states ... */
+        #end-turn-button:hover { background-color: #8B4513; }
+        #end-turn-button.disabled { background-color: #888; cursor: not-allowed; color: #bbb; }
+        .damage-popup { position: absolute; color: red; font-size: clamp(1.2rem, 2vmin, 1.8rem); /* Use rem/vmin */ font-weight: bold; animation: moveUpFadeOut 1s forwards; z-index: 20; pointer-events: none; text-shadow: 1px 1px white; }
+        @keyframes moveUpFadeOut { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-30px); } }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; z-index: 50; padding: 20px; box-sizing: border-box; }
+        /* Use rem for overlay text */
+        .overlay h2 { color: #ffd700; margin-bottom: 2rem; font-size: 2.5rem; }
+        .overlay p { font-size: 1.5rem; line-height: 1.6; margin-bottom: 2rem;}
+        .overlay button { padding: 1rem 2rem; font-size: 1.6rem; cursor: pointer; background-color: #a0522d; border: 2px solid #1e281e; color: white; font-family: 'Courier New', Courier, monospace; border-radius: 3px; }
+        .overlay button:hover { background-color: #8B4513; }
+
+        /* Media Query for stacking UI */
+        /* Trigger when portrait-like or narrow */
+        @media (max-width: 700px), (max-aspect-ratio: 1/1) {
+             #game-container {
+                flex-direction: column;
+                justify-content: flex-start; /* Align items top */
+                align-items: stretch; /* Stretch items width */
+                 /* Ensure gap works in column direction */
+                 gap: clamp(5px, 1vmin, 10px);
+             }
+             #game-board {
+                width: 100%; /* Board takes full available width */
+                height: auto; /* IMPORTANT: Height is determined *only* by width + aspect-ratio */
+                flex-shrink: 1; /* Allow shrinking if needed */
+                flex-grow: 0;   /* Do not allow growing vertically beyond aspect ratio */
+                margin: 0;      /* Remove margins */
+                /* REMOVED max-height: vh - let aspect ratio rule */
+                /* min-height still useful */
+                min-height: calc(160px / var(--board-aspect-ratio)); /* Use fallback min-width */
+             }
+            #ui-panel {
+                width: 100%; /* UI takes full width */
+                height: auto; /* Let content and flex determine height */
+                flex-grow: 1; /* Allow UI to fill remaining vertical space */
+                flex-shrink: 1; /* Allow shrinking if space is tight */
+                border-left: none;
+                border-top: clamp(1px, 0.4vmin, 3px) solid #1e281e; /* Use clamp for border */
+                 /* Add a min-height to prevent collapse */
+                 min-height: 100px; /* Adjust as needed */
+                 /* Keep max-height to prevent excessive growth */
+                 max-height: 40vh; /* Limit UI panel height */
+                font-size: 1.3rem;
+            }
+             /* Adjust text sizes further if needed */
+             #unit-info h3, #turn-info h3 { font-size: 1.4rem;}
+             #unit-info p, #turn-info p { font-size: 1.2rem;}
+        }
+
+    </style>
+</head>
+<body>
+    <!-- HTML structure -->
+    <div id="game-container">
+        <div id="game-board"> <!-- Cells added by JS --> </div>
+        <div id="ui-panel">
+            <div id="level-display">Level: 1</div>
+            <div id="turn-info"> <h3>Turn Info</h3> <p id="current-turn">Turn: Player</p> <p id="actions-left">Actions Left: 0</p> </div>
+            <div id="unit-info"> <h3>Unit Info</h3> <p id="unit-name">Name: -</p> <p id="unit-hp">HP: -/-</p> <p id="unit-atk">ATK: -</p> <p id="unit-mov">MOV: -</p> </div>
+            <div id="spell-area"> <div id="fireball-spell" class="spell-icon unavailable"></div> <span class="spell-label">Fireball</span> </div>
+            <div id="feedback-area"></div>
+            <button id="end-turn-button">End Turn</button>
+        </div>
+        <div id="start-screen" class="overlay"> <h2>Castle Conquest Tactics</h2> <p>Lead Knights vs Goblins!<br>Defeat all Goblins to advance levels.<br>Unlock Fireball at Lvl 4! (1 use/level)</p> <button id="start-button">Begin Conquest!</button> </div>
+        <div id="game-over-screen" class="overlay" style="display: none;"> <h2 id="game-over-title">Defeat!</h2> <p id="game-over-message"></p> <button id="restart-button">Play Again? (Lvl 1)</button> </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const gameContainer = document.getElementById('game-container');
+        const gameBoard = document.getElementById('game-board'); const levelDisplayElement = document.getElementById('level-display'); const spellAreaElement = document.getElementById('spell-area'); const fireballElement = document.getElementById('fireball-spell'); const turnInfo = document.getElementById('turn-info'); const unitInfo = document.getElementById('unit-info'); const currentTurnDisplay = document.getElementById('current-turn'); const actionsLeftDisplay = document.getElementById('actions-left'); const unitNameDisplay = document.getElementById('unit-name'); const unitHpDisplay = document.getElementById('unit-hp'); const unitAtkDisplay = document.getElementById('unit-atk'); const unitMovDisplay = document.getElementById('unit-mov'); const feedbackArea = document.getElementById('feedback-area'); const endTurnButton = document.getElementById('end-turn-button'); const startScreen = document.getElementById('start-screen'); const gameOverScreen = document.getElementById('game-over-screen'); const startButton = document.getElementById('start-button'); const restartButton = document.getElementById('restart-button'); const gameOverTitle = document.getElementById('game-over-title'); const gameOverMessage = document.getElementById('game-over-message');
+
+        // --- Game Config ---
+        const GRID_COLS = 8; const GRID_ROWS = 10;
+        let currentCellSize = 30; // Start with a fallback minimum
+        const FIREBALL_UNLOCK_LEVEL = 4; const FIREBALL_DAMAGE = 2;
+        const UNIT_DATA = { knight: { name: "Knight", hp: 6, atk: 1, mov: 3, team: 'player', spriteUrl: './sprites/Knight.png'}, goblin: { name: "Goblin", hp: 2, atk: 1, mov: 4, team: 'enemy', spriteUrl: './sprites/Goblin.png'} };
+
+        // --- Game State ---
+        let units = []; let selectedUnit = null; let currentTurn = 'player'; let validMoves = []; let validAttacks = []; let unitCounter = 0; let isProcessing = false; let currentLevel = 1; let clickedUnitObject = null; let hasFireball = false; let fireballSelected = false;
+        let resizeTimeout = null; // Store timeout ID for debouncing
+        let winCheckTimeout = null;
+
+        // --- Helper: Debounce ---
+        // (Not strictly needed for rAF approach, but doesn't hurt)
+        function debounce(func, wait) {
+             let timeout;
+             return function executedFunction(...args) {
+                 const later = () => { clearTimeout(timeout); func(...args); };
+                 clearTimeout(timeout); timeout = setTimeout(later, wait);
+             };
+        }
+
+        // --- Calculate Cell Size ---
+        function calculateCellSize() {
+            const boardWidth = gameBoard.clientWidth; // Use clientWidth (content box)
+            const boardHeight = gameBoard.clientHeight;
+
+             // Check if board has valid dimensions (important during rapid resize)
+             if (boardWidth > 1 && boardHeight > 1) {
+                 const cellWidth = boardWidth / GRID_COLS;
+                 const cellHeight = boardHeight / GRID_ROWS;
+                 // Use the smaller dimension calculation to ensure cells fit
+                 currentCellSize = Math.floor(Math.min(cellWidth, cellHeight));
+
+                 // *** ADD LOGGING FOR DEBUGGING MEDIA QUERY ***
+                 const direction = window.getComputedStyle(gameContainer).flexDirection;
+                 // Only log if size is calculated reasonably
+                 if (currentCellSize > 10) {
+                     // console.log(`Dir: ${direction}, Board: ${boardWidth}x${boardHeight}, CellW: ${cellWidth.toFixed(1)}, CellH: ${cellHeight.toFixed(1)} => CellSize: ${currentCellSize}`);
+                 }
+
+             } else {
+                 // Fallback if dimensions are zero or invalid during resize transition
+                 // Try using previous size, or a hard minimum
+                 currentCellSize = Math.max(currentCellSize, 20); // Keep previous or fallback to 20px
+                 console.warn(`Using fallback/previous cell size: ${currentCellSize}px (Board: ${boardWidth}x${boardHeight})`);
+             }
+             // Ensure a minimum usable size
+             currentCellSize = Math.max(currentCellSize, 10);
+        }
+
+        // --- Apply Calculated Size to Units and Highlights ---
+        function applyLayout() {
+             if (currentCellSize < 10) {
+                 console.warn("Skipping layout application due to small cell size:", currentCellSize);
+                 return; // Avoid applying tiny/invalid layout
+             }
+            units.forEach(unit => {
+                if (unit.element) {
+                    updateUnitPosition(unit, true); // Force size update based on new cell size
+                }
+            });
+            if (selectedUnit) {
+                highlightMoves(selectedUnit); // Re-apply highlights based on new cell size
+            }
+        }
+
+
+        // --- Recalculate Layout on Resize ---
+        const handleResize = () => {
+            // Clear any pending timeout
+            if (resizeTimeout) { clearTimeout(resizeTimeout); }
+            // Set a new timeout
+            resizeTimeout = setTimeout(() => {
+                if (isGameOver() || startScreen.style.display !== 'none') return;
+                // console.log("Debounced Resize Triggered");
+                requestAnimationFrame(() => { // Schedule within animation frame
+                     calculateCellSize(); // Measure
+                     applyLayout();       // Apply
+                     // console.log("Resize layout applied within rAF.");
+                });
+            }, 100); // Shortened debounce time slightly
+        };
+
+
+        // --- Initialization & Setup ---
+        function initGame() {
+            console.log("Init Game..."); isProcessing = true;
+            units = []; unitCounter = 0; selectedUnit = null; validMoves = []; validAttacks = []; currentTurn = 'player'; currentLevel = 1; clickedUnitObject = null; hasFireball = false; fireballSelected = false;
+            if(winCheckTimeout) clearTimeout(winCheckTimeout); if(resizeTimeout) clearTimeout(resizeTimeout);
+            console.clear(); console.log(`Start Game - Lvl ${currentLevel}`);
+
+            setupBoard();
+
+            updateLevelDisplay(); updateSpellAreaVisibility(); updateSpellUI(); updateTurnDisplay(); updateUnitInfo(null);
+            feedbackArea.textContent = ''; feedbackArea.className = ''; endTurnButton.classList.remove('disabled'); endTurnButton.disabled = false; gameOverScreen.style.display = 'none'; startScreen.style.display = 'none';
+            // Add listener only once game starts
+            window.addEventListener('resize', handleResize, { passive: true });
+
+            requestAnimationFrame(() => {
+                 calculateCellSize(); // Initial calculation
+                 spawnInitialUnits();
+                 renderAllUnits(); // Renders and applies initial layout
+                 isProcessing = false;
+                 console.log("Init Complete and first render done.");
+            });
+        }
+
+        function setupBoard() {
+            gameBoard.innerHTML = ''; gameBoard.className = '';
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    const cell = document.createElement('div'); cell.classList.add('grid-cell'); cell.dataset.x = c; cell.dataset.y = r;
+                    cell.addEventListener('click', handleCellClick); gameBoard.appendChild(cell);
+                }
+            }
+            gameBoard.addEventListener('mouseover', handleMouseEnterOnBoard);
+            gameBoard.addEventListener('mouseout', handleMouseLeaveOnBoard);
+        }
+
+        function spawnInitialUnits() { /* ... same logic ... */
+             const occupied = new Set(); const knightsPos = [{x:1,y:8},{x:5,y:8},{x:3,y:9},{x:7,y:8},{x:0,y:8},{x:2,y:9},{x:4,y:9},{x:6,y:9}]; let knights = 3+Math.floor(currentLevel/6); knights=Math.min(knights,knightsPos.length);
+             for(let i=0;i<knights;i++){const p=knightsPos[i];createUnit('knight',p.x,p.y);occupied.add(`${p.x},${p.y}`);}
+             const goblins=3+currentLevel; const rows=3; let spawnedGoblins=0;
+             for(let i=0;i<goblins;i++){ let spawned=false; let att=0; const maxAtt=GRID_COLS*rows*3; while(!spawned&&att<maxAtt){att++; const x=Math.floor(Math.random()*GRID_COLS); const y=Math.floor(Math.random()*rows); const k=`${x},${y}`; if(!occupied.has(k)){createUnit('goblin',x,y); occupied.add(k); spawned=true; spawnedGoblins++;}} if(!spawned) console.warn(`Goblin spawn fail ${i+1}`);}
+             console.log(`Spawned ${knights} knights, ${spawnedGoblins} goblins.`); updateTurnDisplay();
+        }
+        function createUnit(type, x, y) { const data = UNIT_DATA[type]; if (!data) return; const unit = { id: unitCounter++, type, x, y, hp: data.hp, maxHp: data.hp, atk: data.atk, mov: data.mov, team: data.team, acted: false, element: null }; units.push(unit); }
+
+        // --- Rendering ---
+        function renderAllUnits() { document.querySelectorAll('#game-board .unit').forEach(el => el.remove()); units.forEach(unit => renderUnit(unit)); console.log(`Rendered ${units.length} units.`); }
+        function renderUnit(unit) {
+            if (unit.element?.parentNode) { unit.element.parentNode.removeChild(unit.element); } // Optional chaining
+            const element = document.createElement('div'); element.classList.add('unit', unit.team); element.dataset.id = unit.id;
+            const unitData = UNIT_DATA[unit.type]; if (unitData.spriteUrl) { element.style.backgroundImage = `url('${unitData.spriteUrl}')`; }
+            element.classList.toggle('selected', selectedUnit?.id === unit.id); // Optional chaining
+            element.addEventListener('click', (event) => { handleUnitClick(event, unit); }); element.style.pointerEvents = 'auto';
+            unit.element = element; gameBoard.appendChild(element);
+            updateUnitPosition(unit, true); // Apply initial position and size
+        }
+        function updateUnitPosition(unit, forceUpdateSize = false) {
+             if (!unit.element || currentCellSize < 10) return;
+             const unitSize = Math.floor(currentCellSize * 0.8); const unitOffset = Math.floor((currentCellSize - unitSize) / 2);
+             const finalSize = Math.max(unitSize, 1); const finalOffset = Math.max(unitOffset, 0);
+             const newLeft = `${Math.floor(unit.x * currentCellSize + finalOffset)}px`; const newTop = `${Math.floor(unit.y * currentCellSize + finalOffset)}px`; const newWidth = `${finalSize}px`; const newHeight = `${finalSize}px`;
+             if (unit.element.style.left !== newLeft) unit.element.style.left = newLeft;
+             if (unit.element.style.top !== newTop) unit.element.style.top = newTop;
+             if (forceUpdateSize || unit.element.style.width !== newWidth) { unit.element.style.width = newWidth; unit.element.style.height = newHeight; }
+        }
+        function clearHighlights() { document.querySelectorAll('.grid-cell.valid-move, .grid-cell.valid-attack').forEach(c => c.classList.remove('valid-move', 'valid-attack')); validMoves = []; validAttacks = []; }
+        function highlightMoves(unit) {
+            clearHighlights(); if (!unit || currentCellSize < 10) return;
+            validMoves = getValidMoves(unit); validAttacks = getValidAttacks(unit);
+            validMoves.forEach(p => { const c=getCellElement(p.x, p.y); if (c) c.classList.add('valid-move'); });
+            validAttacks.forEach(id => { const t=units.find(u=>u.id===id); if (t) { const c=getCellElement(t.x, t.y); if(c) c.classList.add('valid-attack'); } });
+        }
+        function showDamagePopup(x, y, damage) { const p=document.createElement('div'); p.classList.add('damage-popup'); p.textContent=`-${damage}`; const px = Math.round(x*currentCellSize+currentCellSize/2-10); const py = Math.round(y*currentCellSize+currentCellSize/2-15); p.style.left=`${px}px`; p.style.top=`${py}px`; gameBoard.appendChild(p); setTimeout(()=>p.remove(),1000); } // Use remove()
+
+        // --- UI Update Functions --- (Keep simple)
+        function updateLevelDisplay() { if (levelDisplayElement) levelDisplayElement.textContent = `Level: ${currentLevel}`; }
+        function updateSpellAreaVisibility() { if (spellAreaElement) spellAreaElement.classList.toggle('visible', currentLevel >= FIREBALL_UNLOCK_LEVEL); }
+        function updateSpellUI() { if(!fireballElement) return; fireballElement.className = 'spell-icon'; if(hasFireball){ fireballElement.classList.add('available'); if(fireballSelected) fireballElement.classList.add('selected'); fireballElement.title="Fireball (Available)";} else { fireballElement.classList.add('unavailable'); fireballElement.title=(currentLevel<FIREBALL_UNLOCK_LEVEL)?`Unlock Lvl ${FIREBALL_UNLOCK_LEVEL}`:"Used this level";} gameBoard.classList.toggle('spell-targeting', fireballSelected); }
+        function updateTurnDisplay() { currentTurnDisplay.textContent=`Turn: ${currentTurn==='player'?'Player':'Enemy'}`; if(currentTurn==='player'){ const rem=units.filter(u=>u.team==='player'&&!u.acted).length; actionsLeftDisplay.textContent=`Actions Left: ${rem}`; endTurnButton.disabled=false; endTurnButton.classList.remove('disabled'); } else { actionsLeftDisplay.textContent=`AI Thinking...`; endTurnButton.disabled=true; endTurnButton.classList.add('disabled'); } }
+        function updateUnitInfo(unit) { clickedUnitObject = unit; if(unit){ const d=UNIT_DATA[unit.type]; unitNameDisplay.textContent=`${d.name}(${unit.id})`; unitHpDisplay.textContent=`HP:${unit.hp}/${unit.maxHp}`; unitAtkDisplay.textContent=`ATK:${unit.atk}`; unitMovDisplay.textContent=`MOV:${unit.mov}`; } else { unitNameDisplay.textContent='-'; unitHpDisplay.textContent='-/-'; unitAtkDisplay.textContent='-'; unitMovDisplay.textContent='-'; } }
+
+        // --- Game Logic Handlers --- (Keep same logic)
+        function handleCellClick(event) { if (event.target.classList.contains('unit') || isProcessing) return; const cell = event.currentTarget; const x = parseInt(cell.dataset.x); const y = parseInt(cell.dataset.y); const unitOnCell = getUnitAt(x, y); if (fireballSelected) { fireballSelected = false; updateSpellUI(); updateUnitInfo(null); return; } if (currentTurn === 'player') { if (selectedUnit) { if (validMoves.some(p => p.x === x && p.y === y)) { moveUnit(selectedUnit, x, y); deselectUnit(); finishAction(selectedUnit); updateUnitInfo(null); } else { deselectUnit(); updateUnitInfo(unitOnCell); } } else { updateUnitInfo(unitOnCell); } } else { updateUnitInfo(unitOnCell); } }
+        function handleUnitClick(event, clickedUnit) { event.stopPropagation(); if (isProcessing) return; if (fireballSelected) { if (clickedUnit.team === 'enemy') { castFireball(clickedUnit); hasFireball = false; fireballSelected = false; updateSpellUI(); updateUnitInfo(null); } else { fireballSelected = false; updateSpellUI(); updateUnitInfo(clickedUnit); } return; } updateUnitInfo(clickedUnit); if (currentTurn === 'player') { if (selectedUnit) { if (clickedUnit.team === 'enemy' && validAttacks.includes(clickedUnit.id)) { attackUnit(selectedUnit, clickedUnit); deselectUnit(); finishAction(selectedUnit); } else if (clickedUnit.team === 'player' && clickedUnit.id !== selectedUnit.id && !clickedUnit.acted) { selectUnit(clickedUnit); } else if (clickedUnit.id === selectedUnit.id) { deselectUnit(); updateUnitInfo(null); } else { deselectUnit(); updateUnitInfo(clickedUnit); } } else { if (clickedUnit.team === 'player' && !clickedUnit.acted) { selectUnit(clickedUnit); } } } else { updateUnitInfo(clickedUnit); } }
+        function handleMouseEnterOnBoard(event) { if (event.target.classList.contains('unit')) { const unit = units.find(u => u.id === parseInt(event.target.dataset.id)); if(unit) updateUnitInfo(unit); } }
+        function handleMouseLeaveOnBoard(event) { if (event.target.classList.contains('unit')) { updateUnitInfo(selectedUnit || null); } }
+
+        // --- Game Logic Actions --- (Keep same logic)
+        function handleFireballClick() { if(isProcessing||currentTurn!=='player'||!hasFireball) return; fireballSelected=!fireballSelected; if(fireballSelected && selectedUnit) deselectUnit(); updateSpellUI(); }
+        function selectUnit(unit) { if(!unit||unit.acted||unit.team!=='player'||currentTurn!=='player') return; if (fireballSelected) { fireballSelected = false; updateSpellUI(); } deselectUnit(); selectedUnit=unit; if(unit.element) unit.element.classList.add('selected'); highlightMoves(unit); updateUnitInfo(unit); }
+        function deselectUnit() { if(selectedUnit?.element) selectedUnit.element.classList.remove('selected'); selectedUnit=null; clearHighlights(); } // Optional chaining
+        function finishAction(unit) { if(!unit) return; unit.acted=true; updateTurnDisplay(); checkWinLossConditions(); }
+        function moveUnit(unit, targetX, targetY) { if(!unit) return; unit.x=targetX; unit.y=targetY; updateUnitPosition(unit); }
+        function attackUnit(attacker, defender) { if(!attacker||!defender) return; const dmg=attacker.atk; defender.hp-=dmg; if(defender.hp<0) defender.hp=0; showDamagePopup(defender.x,defender.y,dmg); if(defender.element){ defender.element.style.filter='brightness(1.8)'; setTimeout(()=>{if(defender.element) defender.element.style.filter='';},150); } updateUnitInfo(defender); if(defender.hp<=0){ removeUnit(defender); } checkWinLossConditions(); }
+        function castFireball(targetUnit) { if(!targetUnit||targetUnit.team!=='enemy') return; isProcessing=true; if(targetUnit.element){ targetUnit.element.style.filter='sepia(1) saturate(3) hue-rotate(-40deg) brightness(1.2)'; setTimeout(()=>{if(targetUnit.element)targetUnit.element.style.filter='';},250); } setTimeout(()=>{ targetUnit.hp-=FIREBALL_DAMAGE; if(targetUnit.hp<0)targetUnit.hp=0; showDamagePopup(targetUnit.x,targetUnit.y,FIREBALL_DAMAGE); updateUnitInfo(targetUnit); if(targetUnit.hp<=0){ removeUnit(targetUnit); } checkWinLossConditions(); isProcessing=false; },100); }
+        function removeUnit(unit) { if(!unit) return; unit.element?.remove(); units=units.filter(u=>u.id!==unit.id); if(selectedUnit?.id===unit.id){ deselectUnit(); updateUnitInfo(null); } else if (clickedUnitObject?.id === unit.id) { updateUnitInfo(null); } updateTurnDisplay(); checkWinLossConditions(); } // Use element.remove()
+        function getUnitAt(x, y) { return units.find(unit => unit.x === x && unit.y === y); }
+        function getCellElement(x,y) { return gameBoard.querySelector(`.grid-cell[data-x='${x}'][data-y='${y}']`); }
+        function getDistance(unitA, unitB) { if (!unitA || !unitB) return Infinity; return Math.abs(unitA.x-unitB.x) + Math.abs(unitA.y-unitB.y); }
+        function getValidMoves(unit) { if (!unit) return []; const m=[]; const q=[{x:unit.x,y:unit.y,d:0}]; const v=new Set([`${unit.x},${unit.y}`]); while(q.length>0){const c=q.shift(); const n=[{x:c.x,y:c.y-1},{x:c.x,y:c.y+1},{x:c.x-1,y:c.y},{x:c.x+1,y:c.y}]; for(const nb of n){const k=`${nb.x},${nb.y}`; if(nb.x<0||nb.x>=GRID_COLS||nb.y<0||nb.y>=GRID_ROWS||v.has(k)) continue; const nD=c.d+1; if(nD>unit.mov) continue; if(getUnitAt(nb.x,nb.y)) continue; m.push({x:nb.x,y:nb.y}); v.add(k); q.push({x:nb.x,y:nb.y,d:nD});}} return m; }
+        function getValidAttacks(unit) { const a=[]; if(!unit) return a; units.forEach(t=>{if(t.team!==unit.team&&t.hp>0&&getDistance(unit,t)===1) a.push(t.id);}); return a;}
+
+        // --- Turn Management & AI --- (Keep same logic)
+        function endTurn() { if (currentTurn === 'player' && isProcessing) return; deselectUnit(); fireballSelected = false; updateSpellUI(); updateUnitInfo(null); feedbackArea.textContent = ''; feedbackArea.className = ''; if (currentTurn === 'player') { isProcessing = true; currentTurn = 'enemy'; units.filter(u => u.team === 'enemy').forEach(u => u.acted = false); updateTurnDisplay(); setTimeout(runAITurn, 50); } else if (currentTurn === 'enemy') { currentTurn = 'player'; units.filter(u => u.team === 'player').forEach(u => u.acted = false); updateTurnDisplay(); isProcessing = false; } }
+        endTurnButton.addEventListener('click', () => { if (currentTurn === 'player' && !isProcessing) endTurn(); });
+        function runAITurn() { isProcessing = true; const toAct = units.filter(u=>u.team==='enemy'&&u.hp>0&&!u.acted); let done=0; const total=toAct.length; const interval=350; let delay=0; function checkDone(){ done++; if(done>=total) setTimeout(()=>{if(!isGameOver()) endTurn(); else isProcessing = false;}, 50);} if(total===0){ setTimeout(endTurn, 100); return; } toAct.forEach(u=>{ setTimeout(()=>{ if(isGameOver()){checkDone(); return;} try { const stillValid=units.find(un=>un.id===u.id&&un.hp>0&&!un.acted); if(stillValid) performAIAction(stillValid); else if(u) u.acted=true;} catch(e){console.error(`AI Error ${u?.id}:`,e); if(u) u.acted=true;} finally {checkDone();} }, delay); delay+=interval; }); } // Slightly faster AI?
+        function performAIAction(unit) { const targets=units.filter(u=>u.team==='player'&&u.hp>0); if(targets.length===0){unit.acted=true; return;} let attackTarget=null; const attacks=getValidAttacks(unit); if(attacks.length>0){let lowHP=Infinity; attacks.forEach(id=>{const t=units.find(u=>u.id===id); if(t && t.hp < lowHP) {lowHP=t.hp; attackTarget=t;}}); } if(attackTarget){attackUnit(unit,attackTarget); unit.acted=true; return;} let nearest=null; let minDist=Infinity; targets.forEach(t=>{const d=getDistance(unit,t); if(d<minDist){minDist=d; nearest=t;}}); if(nearest){ const moves=getValidMoves(unit); if(moves.length > 0){let bestMove=null; let closest=minDist; moves.forEach(m=>{const d = Math.abs(m.x-nearest.x)+Math.abs(m.y-nearest.y); if(d<closest){closest=d; bestMove=m;}}); if(bestMove && (bestMove.x!==unit.x || bestMove.y !== unit.y)){moveUnit(unit,bestMove.x,bestMove.y); unit.acted=true; return;}}} unit.acted=true;}
+
+        // --- Win/Loss & Level Progression ---
+        function checkWinLossConditions() {
+             if (winCheckTimeout) clearTimeout(winCheckTimeout);
+             winCheckTimeout = setTimeout(() => {
+                 if (isGameOver() || isProcessing) return;
+                 const playerUnitsLeft = units.some(u => u.team === 'player' && u.hp > 0);
+                 const enemyUnitsLeft = units.some(u => u.team === 'enemy' && u.hp > 0);
+                 if (!enemyUnitsLeft && playerUnitsLeft) { console.log(`Level ${currentLevel} Cleared!`); isProcessing = true; setTimeout(startNextLevel, 500); }
+                 else if (!playerUnitsLeft) { gameOver(false); }
+             }, 150); // Slightly longer debounce for win check
+        }
+
+        function startNextLevel() {
+            currentLevel++; console.log(`--- Start Lvl ${currentLevel} ---`);
+            feedbackArea.textContent=`Lvl ${currentLevel} Start!`; feedbackArea.className='feedback-levelup';
+            setTimeout(()=>{ if(!isGameOver()){ feedbackArea.textContent=''; feedbackArea.className=''; }}, 2000);
+            hasFireball = (currentLevel >= FIREBALL_UNLOCK_LEVEL);
+            fireballSelected=false; units=[]; unitCounter=0; selectedUnit=null; validMoves=[]; validAttacks=[]; currentTurn='player';
+            document.querySelectorAll('#game-board .unit, #game-board .damage-popup').forEach(el=>el.remove()); clearHighlights();
+            updateLevelDisplay(); updateSpellAreaVisibility(); updateSpellUI(); updateTurnDisplay(); updateUnitInfo(null);
+            endTurnButton.disabled = false; endTurnButton.classList.remove('disabled');
+            requestAnimationFrame(() => { // Render after layout pass
+                 calculateCellSize(); spawnInitialUnits(); renderAllUnits(); isProcessing = false; console.log(`Lvl ${currentLevel} ready.`);
+            });
+        }
+        function isGameOver() { return gameOverScreen.style.display !== 'none'; }
+        function gameOver(playerWon) { if(playerWon) return; console.log(`--- Game Over Lvl ${currentLevel} ---`); isProcessing = true; deselectUnit(); updateUnitInfo(null); endTurnButton.disabled = true; endTurnButton.classList.add('disabled'); gameOverTitle.textContent="Defeat!"; gameOverMessage.textContent=`Fallen on Level ${currentLevel}!`; gameOverScreen.style.display='flex'; window.removeEventListener('resize', handleResize); if(winCheckTimeout) clearTimeout(winCheckTimeout); if(resizeTimeout) clearTimeout(resizeTimeout); }
+
+        // --- Global Event Listeners ---
+        startButton.addEventListener('click', initGame);
+        restartButton.addEventListener('click', initGame);
+        document.addEventListener('DOMContentLoaded', () => {
+             const fbElement = document.getElementById('fireball-spell');
+             if (fbElement) { fbElement.addEventListener('click', handleFireballClick); }
+             startScreen.style.display='flex'; gameOverScreen.style.display='none';
+             endTurnButton.classList.add('disabled'); endTurnButton.disabled=true;
+             updateUnitInfo(null); updateLevelDisplay(); updateSpellAreaVisibility(); updateSpellUI(); updateTurnDisplay();
+             setupBoard();
+             requestAnimationFrame(() => { calculateCellSize(); }); // Initial calc
+        });
+        // Cheat Code
+        window.addEventListener('keydown', function(event) { if (event.shiftKey && event.code === 'KeyT') { if (isGameOver() || startScreen.style.display !== 'none' || isProcessing || currentTurn === 'enemy') return; console.warn("CHEAT: Skip Level!"); isProcessing = true; setTimeout(startNextLevel, 50); } });
+
+    </script>
+</body>
+</html>
