@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Knights Vs Goblins</title>
+    <style>
+        :root {
+            --grid-cols: 8;
+            --grid-rows: 10;
+            --board-aspect-ratio: var(--grid-cols) / var(--grid-rows);
+            font-size: clamp(8px, 1.8vmin, 16px);
+        }
+        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+        body { display: flex; justify-content: center; align-items: center; background-color: #3a4a3a; font-family: 'Courier New', Courier, monospace; color: #eee; padding: 5px; box-sizing: border-box; }
+        #game-container { display: flex; max-width: 100%; max-height: 100%; width: 100%; height: 100%; border: clamp(2px, 0.5vmin, 5px) solid #1e281e; background-color: #1e281e; box-shadow: 0 0 15px rgba(0,0,0,0.5); flex-direction: row; align-items: stretch; justify-content: center; padding: clamp(3px, 1vmin, 10px); box-sizing: border-box; gap: clamp(5px, 1vmin, 10px); }
+        #game-container:fullscreen { padding: 0; border: none; gap: 5px; width: 100vw; height: 100vh; max-width: 100vw; max-height: 100vh; }
+        #game-container:fullscreen > #ui-panel { border-left-color: #333; }
+
+        #game-board { display: grid; border: clamp(1px, 0.3vmin, 2px) solid #1e281e; position: relative; flex-grow: 0; flex-shrink: 1; grid-template-columns: repeat(var(--grid-cols), 1fr); grid-template-rows: repeat(var(--grid-rows), 1fr); aspect-ratio: var(--board-aspect-ratio); max-width: 100%; max-height: 100%; box-sizing: border-box; min-width: 160px; min-height: calc(160px / var(--board-aspect-ratio)); overflow: hidden; }
+        /* --- Ensure Fireball Targeting Styles Exist --- */
+        #game-board.spell-targeting { cursor: crosshair !important; } /* Added !important just in case */
+        #game-board.spell-targeting .grid-cell:hover {
+             background-color: rgba(255, 100, 100, 0.4) !important; /* Increased alpha slightly, added !important */
+             box-shadow: inset 0 0 0 2px rgba(255, 0, 0, 0.7); /* Alternative visual */
+        }
+
+        .grid-cell { border: 1px solid #7a8a7a; background-color: #6a7a6a; position: relative; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: background-color 0.2s, box-shadow 0.2s; box-sizing: border-box; image-rendering: pixelated; min-width: 1px; min-height: 1px; overflow: hidden; }
+        .grid-cell.valid-move { background-color: #aaeaaa; opacity: 0.8; }
+        .grid-cell.valid-attack { background-color: #ffaaaa; opacity: 0.8; }
+        .unit { position: absolute; border-radius: 3px; display: flex; justify-content: center; align-items: center; font-weight: bold; z-index: 10; transition: top 0.2s ease-out, left 0.2s ease-out, filter 0.2s, box-shadow 0.2s, width 0.1s, height 0.1s; box-sizing: border-box; background-color: transparent; image-rendering: pixelated; background-size: contain; background-repeat: no-repeat; background-position: center; pointer-events: none; }
+        #game-board .unit { pointer-events: auto; }
+        .unit.selected { box-shadow: 0 0 0 clamp(1px, 0.5vmin, 3px) yellow; z-index: 11; }
+        #ui-panel { width: clamp(180px, 28vmin, 240px); flex-shrink: 0; max-height: 100%; padding: clamp(0.8rem, 1.5vmin, 1.5rem); background-color: #4a5a4a; border-left: clamp(1px, 0.4vmin, 3px) solid #1e281e; display: flex; flex-direction: column; justify-content: space-between; overflow-y: auto; font-size: 1.4rem; box-sizing: border-box; position: relative; }
+        #fullscreen-button { position: absolute; top: 5px; right: 5px; padding: 3px 5px; background-color: rgba(30, 40, 30, 0.6); border: 1px solid #7a8a7a; color: #eee; font-size: 1.6rem; line-height: 1; border-radius: 3px; cursor: pointer; z-index: 5; transition: background-color 0.2s; }
+        #fullscreen-button:hover { background-color: rgba(60, 80, 60, 0.8); }
+        #fullscreen-button:disabled { opacity: 0.5; cursor: not-allowed; }
+        #level-display { text-align: center; margin-bottom: 1rem; font-weight: bold; color: #ffd700; background-color:#5a6a5a; padding: 0.5rem; border: 1px solid #1e281e; border-radius: 3px; font-size: 1.6rem; }
+        #unit-info, #turn-info { background-color: #5a6a5a; padding: 1rem; margin-bottom: 1.5rem; border: 1px solid #1e281e; border-radius: 3px; min-height: 7rem; }
+        #unit-info h3, #turn-info h3 { margin-top: 0; margin-bottom: 0.8rem; border-bottom: 1px solid #7a8a7a; padding-bottom: 0.5rem; color: #eee; font-size: 1.5rem; }
+        #unit-info p, #turn-info p { margin: 0.4rem 0; font-size: 1.3rem; color: #ddd; line-height: 1.4; }
+        #spell-area { margin-top: auto; margin-bottom: 1.5rem; padding: 0.8rem 0.5rem; background-color:#5a6a5a; border: 1px solid #1e281e; border-radius: 3px; min-height: 5rem; display: none; align-items: center; justify-content: center; flex-wrap: wrap; }
+        #spell-area.visible { display: flex; }
+        .spell-icon { display: inline-block; width: clamp(30px, 5vmin, 45px); height: clamp(30px, 5vmin, 45px); border: clamp(1px, 0.3vmin, 2px) solid #333; border-radius: 4px; background-color: #444; background-size: contain; background-repeat: no-repeat; background-position: center; cursor: pointer; margin: 0 0.5rem; transition: border-color 0.2s, box-shadow 0.2s, filter 0.2s; image-rendering: pixelated; vertical-align: middle; }
+        #fireball-spell { background-image: url('./sprites/sFireball1.png'); }
+        .spell-label { font-size: 1.3rem; margin-left: 0.8rem; font-weight: bold; color: #eee; text-shadow: 1px 1px #111; }
+        .spell-icon.unavailable { filter: grayscale(90%) brightness(60%); cursor: not-allowed; border-color: #555; }
+        .spell-icon.available { filter: none; cursor: pointer; border-color: #888; }
+        .spell-icon.available:hover { border-color: #eee; }
+        .spell-icon.selected { border-color: yellow; box-shadow: 0 0 8px yellow; }
+        #feedback-area { margin-bottom: 1rem; min-height: 2rem; font-size: 1.4rem; font-weight: bold; color: #fff; text-align: center; }
+        .feedback-levelup { color: #ffd700; text-shadow: 1px 1px #443300; }
+        #end-turn-button { padding: 1rem 1.5rem; background-color: #a0522d; border: 2px solid #1e281e; color: white; font-family: 'Courier New', Courier, monospace; cursor: pointer; font-size: 1.4rem; border-radius: 3px; text-align: center; transition: background-color 0.2s; width: 100%; box-sizing: border-box;}
+        #end-turn-button:hover { background-color: #8B4513; }
+        #end-turn-button.disabled { background-color: #888; cursor: not-allowed; color: #bbb; }
+        .damage-popup { position: absolute; color: red; font-size: clamp(1.2rem, 2vmin, 1.8rem); font-weight: bold; animation: moveUpFadeOut 1s forwards; z-index: 20; pointer-events: none; text-shadow: 1px 1px white; }
+        @keyframes moveUpFadeOut { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-30px); } }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; z-index: 50; padding: 20px; box-sizing: border-box; }
+        .overlay h2 { color: #ffd700; margin-bottom: 2rem; font-size: 2.5rem; }
+        .overlay p { font-size: 1.5rem; line-height: 1.6; margin-bottom: 2rem;}
+        .overlay button { padding: 1rem 2rem; font-size: 1.6rem; cursor: pointer; background-color: #a0522d; border: 2px solid #1e281e; color: white; font-family: 'Courier New', Courier, monospace; border-radius: 3px; }
+        .overlay button:hover { background-color: #8B4513; }
+
+        /* Media Query */
+        @media (max-width: 700px), (max-aspect-ratio: 1/1) {
+             #game-container { flex-direction: column; justify-content: flex-start; align-items: stretch; }
+             #game-board { width: 100%; height: auto; margin: 0; min-height: calc(160px / var(--board-aspect-ratio)); }
+             #ui-panel { width: 100%; height: auto; flex-grow: 1; flex-shrink: 1; border-left: none; border-top: clamp(1px, 0.4vmin, 3px) solid #1e281e; min-height: 100px; max-height: 40vh; font-size: 1.3rem; }
+             #fullscreen-button { top: 3px; right: 3px; font-size: 1.4rem; }
+             #unit-info h3, #turn-info h3 { font-size: 1.4rem;}
+             #unit-info p, #turn-info p { font-size: 1.2rem;}
+             #game-container:fullscreen > #ui-panel { border-top-color: #333; }
+        }
+    </style>
+</head>
+<body>
+    <!-- HTML structure -->
+    <div id="game-container">
+        <div id="game-board"> <!-- Cells added by JS --> </div>
+        <div id="ui-panel">
+            <button id="fullscreen-button" title="Toggle Fullscreen" disabled>&#x26F6;</button>
+            <div id="level-display">Level: 1</div>
+            <div id="turn-info"> <h3>Turn Info</h3> <p id="current-turn">Turn: Player</p> <p id="actions-left">Actions Left: 0</p> </div>
+            <div id="unit-info"> <h3>Unit Info</h3> <p id="unit-name">Name: -</p> <p id="unit-hp">HP: -/-</p> <p id="unit-atk">ATK: -</p> <p id="unit-mov">MOV: -</p> </div>
+            <div id="spell-area"> <div id="fireball-spell" class="spell-icon unavailable"></div> <span class="spell-label">Fireball</span> </div>
+            <div id="feedback-area"></div>
+            <button id="end-turn-button">End Turn</button>
+        </div>
+        <div id="start-screen" class="overlay"> <h2>Knights Vs Goblins</h2> <p>Defeat all Goblins to advance levels.<br>Unlock Fireball at Lvl 4!</p> <button id="start-button">Begin Conquest!</button> </div>
+        <div id="game-over-screen" class="overlay" style="display: none;"> <h2 id="game-over-title">Defeat!</h2> <p id="game-over-message"></p> <button id="restart-button">Play Again? (Lvl 1)</button> </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const gameContainer = document.getElementById('game-container');
+        const gameBoard = document.getElementById('game-board'); const uiPanel = document.getElementById('ui-panel'); const levelDisplayElement = document.getElementById('level-display'); const spellAreaElement = document.getElementById('spell-area'); const fireballElement = document.getElementById('fireball-spell'); const turnInfo = document.getElementById('turn-info'); const unitInfo = document.getElementById('unit-info'); const currentTurnDisplay = document.getElementById('current-turn'); const actionsLeftDisplay = document.getElementById('actions-left'); const unitNameDisplay = document.getElementById('unit-name'); const unitHpDisplay = document.getElementById('unit-hp'); const unitAtkDisplay = document.getElementById('unit-atk'); const unitMovDisplay = document.getElementById('unit-mov'); const feedbackArea = document.getElementById('feedback-area'); const endTurnButton = document.getElementById('end-turn-button'); const startScreen = document.getElementById('start-screen'); const gameOverScreen = document.getElementById('game-over-screen'); const startButton = document.getElementById('start-button'); const restartButton = document.getElementById('restart-button'); const gameOverTitle = document.getElementById('game-over-title'); const gameOverMessage = document.getElementById('game-over-message'); const fullscreenButton = document.getElementById('fullscreen-button');
+
+        // --- Game Config ---
+        const GRID_COLS = 8; const GRID_ROWS = 10;
+        let currentCellSize = 30;
+        const FIREBALL_UNLOCK_LEVEL = 4; const FIREBALL_DAMAGE = 2;
+        const UNIT_DATA = { knight: { name: "Knight", hp: 6, atk: 1, mov: 3, team: 'player', spriteUrl: './sprites/Knight.png'}, goblin: { name: "Goblin", hp: 2, atk: 1, mov: 4, team: 'enemy', spriteUrl: './sprites/Goblin.png'} };
+
+        // --- Game State ---
+        let units = []; let selectedUnit = null; let currentTurn = 'player'; let validMoves = []; let validAttacks = []; let unitCounter = 0; let isProcessing = false; let currentLevel = 1; let clickedUnitObject = null; let hasFireball = false; let fireballSelected = false;
+        let resizeTimeout = null; let winCheckTimeout = null;
+
+        // --- Calculate Cell Size ---
+        function calculateCellSize() { const bw=gameBoard.clientWidth; const bh=gameBoard.clientHeight; if(bw>1&&bh>1){ const cw=bw/GRID_COLS; const ch=bh/GRID_ROWS; currentCellSize=Math.floor(Math.min(cw,ch)); } else { currentCellSize=Math.max(currentCellSize,20); } currentCellSize=Math.max(currentCellSize,10); }
+
+        // --- Apply Calculated Size ---
+        function applyLayout() { if (currentCellSize<10) return; units.forEach(u=>{if(u.element)updateUnitPosition(u,true);}); if(selectedUnit)highlightMoves(selectedUnit); }
+
+        // --- Resize Handler ---
+        const handleResize = () => { if(resizeTimeout) clearTimeout(resizeTimeout); resizeTimeout=setTimeout(()=>{if(isGameOver()||startScreen.style.display!=='none') return; requestAnimationFrame(()=>{calculateCellSize(); applyLayout();});},100);};
+
+        // --- Fullscreen API Logic ---
+        function isFullscreen() { return !!(document.fullscreenElement||document.webkitFullscreenElement||document.mozFullScreenElement||document.msFullscreenElement); }
+        function toggleFullscreen() { if(!(document.fullscreenEnabled||document.webkitFullscreenEnabled||document.mozFullScreenEnabled||document.msFullscreenEnabled)) return; if(!isFullscreen()){const el=gameContainer; if(el.requestFullscreen) el.requestFullscreen(); else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen(); else if(el.mozRequestFullScreen) el.mozRequestFullScreen(); else if(el.msRequestFullscreen) el.msRequestFullscreen();} else {if(document.exitFullscreen) document.exitFullscreen(); else if(document.webkitExitFullscreen) document.webkitExitFullscreen(); else if(document.mozCancelFullScreen) document.mozCancelFullScreen(); else if(document.msExitFullscreen) document.msExitFullscreen();}}
+        function updateFullscreenButton() { if(fullscreenButton){ if(isFullscreen()){fullscreenButton.innerHTML='&#x2715;'; fullscreenButton.title='Exit Fullscreen';} else {fullscreenButton.innerHTML='&#x26F6;'; fullscreenButton.title='Enter Fullscreen';} fullscreenButton.disabled=!(document.fullscreenEnabled||document.webkitFullscreenEnabled||document.mozFullScreenEnabled||document.msFullscreenEnabled);} }
+
+        // --- Initialization & Setup ---
+        function initGame() {
+            console.log("Init Game CALLED.");
+            isProcessing = true;
+            units = []; unitCounter = 0; selectedUnit = null; validMoves = []; validAttacks = []; currentTurn = 'player'; currentLevel = 1; clickedUnitObject = null; hasFireball = false; fireballSelected = false;
+            if(winCheckTimeout) clearTimeout(winCheckTimeout); if(resizeTimeout) clearTimeout(resizeTimeout);
+            console.clear(); console.log(`Start Game - Lvl ${currentLevel}`);
+
+            try {
+                setupBoard();
+                updateLevelDisplay(); updateSpellAreaVisibility(); updateSpellUI(); updateUnitInfo(null);
+                feedbackArea.textContent = ''; feedbackArea.className = ''; endTurnButton.classList.remove('disabled'); endTurnButton.disabled = false; gameOverScreen.style.display = 'none'; startScreen.style.display = 'none';
+                window.addEventListener('resize', handleResize, { passive: true });
+                document.addEventListener('fullscreenchange', updateFullscreenButton); document.addEventListener('webkitfullscreenchange', updateFullscreenButton); document.addEventListener('mozfullscreenchange', updateFullscreenButton); document.addEventListener('MSFullscreenChange', updateFullscreenButton);
+                updateFullscreenButton();
+
+                console.log("Scheduling final setup...");
+                requestAnimationFrame(() => {
+                    console.log("rAF executing...");
+                    try {
+                        calculateCellSize();
+                        spawnInitialUnits();
+                        updateTurnDisplay(); // Update actions left *after* spawning
+                        renderAllUnits();
+                        console.log("Init setup inside rAF complete.");
+                    } catch(rafError) { console.error("Error during initGame rAF:", rafError); }
+                    finally { isProcessing = false; console.log("Processing unlocked."); }
+                });
+            } catch (initError) { console.error("Error during sync initGame:", initError); isProcessing = false; }
+        }
+
+        function setupBoard() { gameBoard.innerHTML=''; gameBoard.className=''; for(let r=0;r<GRID_ROWS;r++){ for(let c=0;c<GRID_COLS;c++){ const cell=document.createElement('div'); cell.classList.add('grid-cell'); cell.dataset.x=c; cell.dataset.y=r; cell.addEventListener('click',handleCellClick); gameBoard.appendChild(cell);}} gameBoard.addEventListener('mouseover',handleMouseEnterOnBoard); gameBoard.addEventListener('mouseout',handleMouseLeaveOnBoard); }
+        function spawnInitialUnits() { const o=new Set(); const kP=[{x:1,y:8},{x:5,y:8},{x:3,y:9},{x:7,y:8},{x:0,y:8},{x:2,y:9},{x:4,y:9},{x:6,y:9}]; let k=3+Math.floor(currentLevel/6); k=Math.min(k,kP.length); for(let i=0;i<k;i++){const p=kP[i];createUnit('knight',p.x,p.y);o.add(`${p.x},${p.y}`);} const g=3+currentLevel; const r=3; let sG=0; for(let i=0;i<g;i++){ let s=false; let a=0; const mA=GRID_COLS*r*3; while(!s&&a<mA){a++; const x=Math.floor(Math.random()*GRID_COLS); const y=Math.floor(Math.random()*r); const key=`${x},${y}`; if(!o.has(key)){createUnit('goblin',x,y); o.add(key); s=true; sG++;}} if(!s) console.warn(`G spawn fail ${i+1}`);} console.log(`Spawned ${k}k, ${sG}g.`); }
+        function createUnit(type, x, y) { const data = UNIT_DATA[type]; if(!data) return; const unit={id:unitCounter++,type,x,y,hp:data.hp,maxHp:data.hp,atk:data.atk,mov:data.mov,team:data.team,acted:false,element:null}; units.push(unit); }
+
+        // --- Rendering ---
+        function renderAllUnits() { document.querySelectorAll('#game-board .unit').forEach(el => el.remove()); units.forEach(unit => renderUnit(unit)); }
+        function renderUnit(unit) { if(unit.element?.parentNode) unit.element.parentNode.removeChild(unit.element); const el=document.createElement('div'); el.classList.add('unit',unit.team); el.dataset.id=unit.id; const d=UNIT_DATA[unit.type]; if(d.spriteUrl) el.style.backgroundImage=`url('${d.spriteUrl}')`; el.classList.toggle('selected',selectedUnit?.id===unit.id); el.addEventListener('click',(ev)=>{handleUnitClick(ev,unit);}); el.style.pointerEvents='auto'; unit.element=el; gameBoard.appendChild(el); updateUnitPosition(unit,true); }
+        function updateUnitPosition(unit, forceUpdateSize = false) { if (!unit.element||currentCellSize<10) return; const uS=Math.floor(currentCellSize*0.8); const uO=Math.floor((currentCellSize-uS)/2); const fS=Math.max(uS,1); const fO=Math.max(uO,0); const nL=`${Math.floor(unit.x*currentCellSize+fO)}px`; const nT=`${Math.floor(unit.y*currentCellSize+fO)}px`; const nW=`${fS}px`; const nH=`${fS}px`; if(unit.element.style.left!==nL) unit.element.style.left=nL; if(unit.element.style.top!==nT) unit.element.style.top=nT; if(forceUpdateSize||unit.element.style.width!==nW){unit.element.style.width=nW; unit.element.style.height=nH;} }
+        function clearHighlights() { document.querySelectorAll('.grid-cell.valid-move, .grid-cell.valid-attack').forEach(c=>c.classList.remove('valid-move','valid-attack')); validMoves=[]; validAttacks=[]; }
+        function highlightMoves(unit) { clearHighlights(); if(!unit||currentCellSize<10) return; validMoves=getValidMoves(unit); validAttacks=getValidAttacks(unit); validMoves.forEach(p=>{const c=getCellElement(p.x,p.y); if(c) c.classList.add('valid-move');}); validAttacks.forEach(id=>{const t=units.find(u=>u.id===id); if(t){const c=getCellElement(t.x,t.y); if(c) c.classList.add('valid-attack');}}); }
+        function showDamagePopup(x, y, damage) { const p=document.createElement('div'); p.classList.add('damage-popup'); p.textContent=`-${damage}`; const px=Math.round(x*currentCellSize+currentCellSize/2-10); const py=Math.round(y*currentCellSize+currentCellSize/2-15); p.style.left=`${px}px`; p.style.top=`${py}px`; gameBoard.appendChild(p); setTimeout(()=>p.remove(),1000); }
+
+        // --- UI Update Functions ---
+        function updateLevelDisplay() { if(levelDisplayElement) levelDisplayElement.textContent=`Level: ${currentLevel}`; }
+        function updateSpellAreaVisibility() { if(spellAreaElement) spellAreaElement.classList.toggle('visible',currentLevel>=FIREBALL_UNLOCK_LEVEL); }
+        // --- CORRECTED updateSpellUI ---
+        function updateSpellUI() {
+            if (!fireballElement) return;
+            fireballElement.className = 'spell-icon'; // Reset classes
+            if (hasFireball) {
+                fireballElement.classList.add('available');
+                if (fireballSelected) fireballElement.classList.add('selected');
+                fireballElement.title = "Fireball (Available)";
+            } else {
+                fireballElement.classList.add('unavailable');
+                fireballElement.title = (currentLevel < FIREBALL_UNLOCK_LEVEL) ? `Unlock Lvl ${FIREBALL_UNLOCK_LEVEL}` : "Used this level";
+            }
+            // Toggle targeting class on gameBoard
+            gameBoard.classList.toggle('spell-targeting', fireballSelected);
+             // console.log(`Spell UI Update: fireballSelected=${fireballSelected}, board has class: ${gameBoard.classList.contains('spell-targeting')}`); // Debug log
+        }
+        function updateTurnDisplay() { if(!currentTurnDisplay||!actionsLeftDisplay) return; currentTurnDisplay.textContent=`Turn: ${currentTurn==='player'?'Player':'Enemy'}`; if(currentTurn==='player'){const rem=units.filter(u=>u.team==='player'&&!u.acted).length; actionsLeftDisplay.textContent=`Actions Left: ${rem}`; endTurnButton.disabled=false; endTurnButton.classList.remove('disabled');} else {actionsLeftDisplay.textContent=`AI Thinking...`; endTurnButton.disabled=true; endTurnButton.classList.add('disabled');}}
+        function updateUnitInfo(unit) { clickedUnitObject=unit; if(unit){const d=UNIT_DATA[unit.type]; unitNameDisplay.textContent=`${d.name}(${unit.id})`; unitHpDisplay.textContent=`HP:${unit.hp}/${unit.maxHp}`; unitAtkDisplay.textContent=`ATK:${unit.atk}`; unitMovDisplay.textContent=`MOV:${unit.mov}`;} else {unitNameDisplay.textContent='-'; unitHpDisplay.textContent='-/-'; unitAtkDisplay.textContent='-'; unitMovDisplay.textContent='-';}}
+
+        // --- Game Logic Handlers ---
+        function handleCellClick(event) { if(event.target.classList.contains('unit')||isProcessing) return; const cell=event.currentTarget; const x=parseInt(cell.dataset.x); const y=parseInt(cell.dataset.y); const uO=getUnitAt(x,y); if(fireballSelected){fireballSelected=false; updateSpellUI(); updateUnitInfo(null); return;} if(currentTurn==='player'){if(selectedUnit){if(validMoves.some(p=>p.x===x&&p.y===y)){ const unitMoved=selectedUnit; moveUnit(unitMoved,x,y); deselectUnit(); finishAction(unitMoved); updateUnitInfo(null); } else { deselectUnit(); updateUnitInfo(uO);}}else{updateUnitInfo(uO);}}else{updateUnitInfo(uO);}}
+        function handleUnitClick(event, clickedUnit) { event.stopPropagation(); if(isProcessing) return; if(fireballSelected){if(clickedUnit.team==='enemy'){castFireball(clickedUnit); hasFireball=false; fireballSelected=false; updateSpellUI(); updateUnitInfo(null);}else{fireballSelected=false; updateSpellUI(); updateUnitInfo(clickedUnit);}return;} updateUnitInfo(clickedUnit); if(currentTurn==='player'){if(selectedUnit){if(clickedUnit.team==='enemy'&&validAttacks.includes(clickedUnit.id)){const attacker=selectedUnit; attackUnit(attacker,clickedUnit); deselectUnit(); finishAction(attacker);}else if(clickedUnit.team==='player'&&clickedUnit.id!==selectedUnit.id&&!clickedUnit.acted){selectUnit(clickedUnit);}else if(clickedUnit.id===selectedUnit.id){deselectUnit(); updateUnitInfo(null);}else{deselectUnit(); updateUnitInfo(clickedUnit);}}else{if(clickedUnit.team==='player'&&!clickedUnit.acted){selectUnit(clickedUnit);}}}else{updateUnitInfo(clickedUnit);}}
+        function handleMouseEnterOnBoard(event) { if(event.target.classList.contains('unit')){const u=units.find(un=>un.id===parseInt(event.target.dataset.id)); if(u) updateUnitInfo(u);}}
+        function handleMouseLeaveOnBoard(event) { if(event.target.classList.contains('unit')){updateUnitInfo(selectedUnit||null);}}
+
+        // --- Game Logic Actions ---
+        // --- CORRECTED handleFireballClick ---
+        function handleFireballClick() {
+            if (isProcessing || currentTurn !== 'player' || !hasFireball) return;
+            fireballSelected = !fireballSelected; // Toggle state
+            if (fireballSelected && selectedUnit) {
+                deselectUnit(); // Deselect action unit if selecting spell
+            }
+            console.log(`Fireball toggled: ${fireballSelected}`); // Debug
+            updateSpellUI(); // Update UI (includes toggling board class)
+        }
+        function selectUnit(unit) { if(!unit||unit.acted||unit.team!=='player'||currentTurn!=='player') return; if(fireballSelected){fireballSelected=false; updateSpellUI();} deselectUnit(); selectedUnit=unit; if(unit.element) unit.element.classList.add('selected'); highlightMoves(unit); updateUnitInfo(unit); }
+        function deselectUnit() { if(selectedUnit?.element) selectedUnit.element.classList.remove('selected'); selectedUnit=null; clearHighlights(); }
+        function finishAction(unit) { if(!unit||unit.acted) return; unit.acted=true; console.log(`Action finished for ${unit.id}, acted=${unit.acted}`); updateTurnDisplay(); checkWinLossConditions(); }
+        function moveUnit(unit, targetX, targetY) { if(!unit) return; unit.x=targetX; unit.y=targetY; updateUnitPosition(unit); }
+        function attackUnit(attacker, defender) { if(!attacker||!defender) return; const dmg=attacker.atk; defender.hp-=dmg; if(defender.hp<0) defender.hp=0; showDamagePopup(defender.x,defender.y,dmg); if(defender.element){ defender.element.style.filter='brightness(1.8)'; setTimeout(()=>{if(defender.element) defender.element.style.filter='';},150); } updateUnitInfo(defender); if(defender.hp<=0){ removeUnit(defender); } checkWinLossConditions(); }
+        function castFireball(targetUnit) { if(!targetUnit||targetUnit.team!=='enemy') return; isProcessing=true; if(targetUnit.element){ targetUnit.element.style.filter='sepia(1) saturate(3) hue-rotate(-40deg) brightness(1.2)'; setTimeout(()=>{if(targetUnit.element)targetUnit.element.style.filter='';},250); } setTimeout(()=>{ targetUnit.hp-=FIREBALL_DAMAGE; if(targetUnit.hp<0)targetUnit.hp=0; showDamagePopup(targetUnit.x,targetUnit.y,FIREBALL_DAMAGE); updateUnitInfo(targetUnit); if(targetUnit.hp<=0){ removeUnit(targetUnit); } checkWinLossConditions(); isProcessing=false; },100); }
+        function removeUnit(unit) { if(!unit) return; unit.element?.remove(); units=units.filter(u=>u.id!==unit.id); if(selectedUnit?.id===unit.id){ deselectUnit(); updateUnitInfo(null); } else if (clickedUnitObject?.id === unit.id) { updateUnitInfo(null); } updateTurnDisplay(); checkWinLossConditions(); }
+        function getUnitAt(x, y) { return units.find(unit => unit.x === x && unit.y === y); }
+        function getCellElement(x,y) { return gameBoard.querySelector(`.grid-cell[data-x='${x}'][data-y='${y}']`); }
+        function getDistance(unitA, unitB) { if (!unitA || !unitB) return Infinity; return Math.abs(unitA.x-unitB.x) + Math.abs(unitA.y-unitB.y); }
+        function getValidMoves(unit) { if(!unit) return []; const m=[]; const q=[{x:unit.x,y:unit.y,d:0}]; const v=new Set([`${unit.x},${unit.y}`]); while(q.length>0){const c=q.shift(); const n=[{x:c.x,y:c.y-1},{x:c.x,y:c.y+1},{x:c.x-1,y:c.y},{x:c.x+1,y:c.y}]; for(const nb of n){const k=`${nb.x},${nb.y}`; if(nb.x<0||nb.x>=GRID_COLS||nb.y<0||nb.y>=GRID_ROWS||v.has(k)) continue; const nD=c.d+1; if(nD>unit.mov||getUnitAt(nb.x,nb.y)) continue; m.push({x:nb.x,y:nb.y}); v.add(k); q.push({x:nb.x,y:nb.y,d:nD});}} return m; }
+        function getValidAttacks(unit) { const a=[]; if(!unit) return a; units.forEach(t=>{if(t.team!==unit.team&&t.hp>0&&getDistance(unit,t)===1) a.push(t.id);}); return a;}
+
+        // --- Turn Management & AI ---
+        function endTurn() { if(currentTurn==='player'&&isProcessing) return; deselectUnit(); fireballSelected=false; updateSpellUI(); updateUnitInfo(null); feedbackArea.textContent=''; feedbackArea.className=''; if(currentTurn==='player'){isProcessing=true; currentTurn='enemy'; units.filter(u=>u.team==='enemy').forEach(u=>u.acted=false); updateTurnDisplay(); setTimeout(runAITurn,50);}else if(currentTurn==='enemy'){currentTurn='player'; units.filter(u=>u.team==='player').forEach(u=>u.acted=false); updateTurnDisplay(); isProcessing=false;}}
+        endTurnButton.addEventListener('click', () => { if(currentTurn==='player'&&!isProcessing) endTurn(); });
+        function runAITurn() { isProcessing=true; const toAct=units.filter(u=>u.team==='enemy'&&u.hp>0&&!u.acted); let done=0; const total=toAct.length; const interval=350; let delay=0; function checkDone(){ done++; if(done>=total) setTimeout(()=>{if(!isGameOver()) endTurn(); else isProcessing = false;}, 50);} if(total===0){ setTimeout(endTurn, 100); return; } toAct.forEach(u=>{ setTimeout(()=>{ if(isGameOver()){checkDone(); return;} try { const stillValid=units.find(un=>un.id===u.id&&un.hp>0&&!un.acted); if(stillValid) performAIAction(stillValid); else if(u) u.acted=true;} catch(e){console.error(`AI Error ${u?.id}:`,e); if(u) u.acted=true;} finally {checkDone();} }, delay); delay+=interval; }); }
+        function performAIAction(unit) { const targets=units.filter(u=>u.team==='player'&&u.hp>0); if(targets.length===0){unit.acted=true; return;} let attackTarget=null; const attacks=getValidAttacks(unit); if(attacks.length>0){let lowHP=Infinity; attacks.forEach(id=>{const t=units.find(u=>u.id===id); if(t && t.hp < lowHP) {lowHP=t.hp; attackTarget=t;}}); } if(attackTarget){attackUnit(unit,attackTarget); unit.acted=true; return;} let nearest=null; let minDist=Infinity; targets.forEach(t=>{const d=getDistance(unit,t); if(d<minDist){minDist=d; nearest=t;}}); if(nearest){ const moves=getValidMoves(unit); if(moves.length > 0){let bestMove=null; let closest=minDist; moves.forEach(m=>{const d = Math.abs(m.x-nearest.x)+Math.abs(m.y-nearest.y); if(d<closest){closest=d; bestMove=m;}}); if(bestMove && (bestMove.x!==unit.x || bestMove.y !== unit.y)){moveUnit(unit,bestMove.x,bestMove.y); unit.acted=true; return;}}} unit.acted=true;}
+
+        // --- Win/Loss & Level Progression ---
+        function checkWinLossConditions() { if(winCheckTimeout) clearTimeout(winCheckTimeout); winCheckTimeout = setTimeout(() => { if(isGameOver()||isProcessing) return; const pLeft=units.some(u=>u.team==='player'&&u.hp>0); const eLeft=units.some(u=>u.team==='enemy'&&u.hp>0); if(!eLeft&&pLeft){console.log(`Level ${currentLevel} Cleared!`); isProcessing=true; setTimeout(startNextLevel,500);} else if(!pLeft){gameOver(false);}}, 150); }
+        function startNextLevel() { currentLevel++; console.log(`--- Start Lvl ${currentLevel} ---`); feedbackArea.textContent=`Lvl ${currentLevel} Start!`; feedbackArea.className='feedback-levelup'; setTimeout(()=>{ if(!isGameOver()){feedbackArea.textContent=''; feedbackArea.className='';}}, 2000); hasFireball=(currentLevel>=FIREBALL_UNLOCK_LEVEL); fireballSelected=false; units=[]; unitCounter=0; selectedUnit=null; validMoves=[]; validAttacks=[]; currentTurn='player'; document.querySelectorAll('#game-board .unit, #game-board .damage-popup').forEach(el=>el.remove()); clearHighlights(); updateLevelDisplay(); updateSpellAreaVisibility(); updateSpellUI(); updateUnitInfo(null); endTurnButton.disabled=false; endTurnButton.classList.remove('disabled'); requestAnimationFrame(() => { calculateCellSize(); spawnInitialUnits(); updateTurnDisplay(); renderAllUnits(); isProcessing=false; console.log(`Lvl ${currentLevel} ready.`); }); }
+        function isGameOver() { return gameOverScreen.style.display !== 'none'; }
+        function gameOver(playerWon) { if(playerWon) return; console.log(`--- Game Over Lvl ${currentLevel} ---`); isProcessing = true; deselectUnit(); updateUnitInfo(null); endTurnButton.disabled = true; endTurnButton.classList.add('disabled'); gameOverTitle.textContent="Defeat!"; gameOverMessage.textContent=`Fallen on Level ${currentLevel}!`; gameOverScreen.style.display='flex'; window.removeEventListener('resize', handleResize); document.removeEventListener('fullscreenchange', updateFullscreenButton); document.removeEventListener('webkitfullscreenchange', updateFullscreenButton); document.removeEventListener('mozfullscreenchange', updateFullscreenButton); document.removeEventListener('MSFullscreenChange', updateFullscreenButton); if(winCheckTimeout) clearTimeout(winCheckTimeout); if(resizeTimeout) clearTimeout(resizeTimeout); }
+
+        // --- Global Event Listeners ---
+        // Start/Restart listeners are attached in DOMContentLoaded now
+        document.addEventListener('DOMContentLoaded', () => {
+             console.log("DOMContentLoaded Fired.");
+             const fbElement = document.getElementById('fireball-spell'); if(fbElement){fbElement.addEventListener('click', handleFireballClick);} else {console.error("FB Spell not found!");}
+             if(fullscreenButton){fullscreenButton.addEventListener('click', toggleFullscreen);} else {console.error("Fullscreen button not found!");}
+             // Attach Start/Restart here
+             if(startButton){startButton.addEventListener('click', initGame);} else {console.error("Start Button not found!");}
+             if(restartButton){restartButton.addEventListener('click', initGame);} else {console.error("Restart Button not found!");}
+
+             startScreen.style.display='flex'; gameOverScreen.style.display='none';
+             endTurnButton.classList.add('disabled'); endTurnButton.disabled=true;
+             updateUnitInfo(null); updateLevelDisplay(); updateSpellAreaVisibility(); updateSpellUI(); updateTurnDisplay();
+             setupBoard();
+             requestAnimationFrame(() => { calculateCellSize(); updateFullscreenButton(); });
+             console.log("Initial setup complete.");
+        });
+        window.addEventListener('keydown', function(event) { if (event.shiftKey && event.code === 'KeyT') { if (isGameOver() || startScreen.style.display !== 'none' || isProcessing || currentTurn === 'enemy') return; console.warn("CHEAT: Skip Level!"); isProcessing = true; setTimeout(startNextLevel, 50); } });
+
+    </script>
+</body>
+</html>
