@@ -1,58 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Medieval Math</title> <!-- Version Bump -->
     <style>
         /* Basic resets */
         html {
-            margin: 0; padding: 0;
+            height: 100%; margin: 0; padding: 0;
             overflow: hidden; /* Prevent scroll on HTML */
             font-family: 'Verdana', sans-serif;
-            scroll-behavior: smooth;
-            /* REMOVED height: 100%; */
         }
         body {
-            /* REMOVED display: flex and related properties */
-            /* REMOVED min-height: 100%; */
-            /* REMOVED height: auto; */
-            margin: 0;
+            height: 100%; /* Fill HTML */
+            margin: 0; padding: 0;
             background-color: #5d6a5a; color: #eee;
-            overflow-y: auto; /* BODY is the main scroller */
-            overflow-x: hidden; /* Prevent horizontal scroll */
-             /* Add padding FOR SPACING, not essential for scrolling mechanism */
-             padding: 15px 0; /* Increased padding */
-             box-sizing: border-box;
+            overflow: hidden; /* Prevent scroll on Body */
+            /* Remove flex from body */
         }
 
-        /* Game container */
+        /* Game container - Acts as viewport for internal scroll */
         #game-container {
-            position: relative; /* Keep for absolute positioning children */
-            width: 95%; max-width: 550px;
-            /* Height is determined by content */
-            /* REMOVED min-height: 450px; */ /* Let content define height */
-            padding: clamp(10px, 3vw, 20px); background-color: #8d7163;
-            border: 5px solid #4b3f31; border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+            position: relative; /* For absolute children (button, overlays) */
+            width: 100%; /* Fill the iframe width provided by Wix wrapper */
+            height: 100%; /* Fill the iframe height provided by Wix wrapper */
+            background-color: #8d7163;
+            /* Remove border/padding here if they interfere with 100% height */
+            /* border: 5px solid #4b3f31; */
+            /* padding: clamp(10px, 3vw, 20px); */
+            box-sizing: border-box;
             text-align: center;
-             /* REMOVED overflow-y: auto; */
-             /* Center the container within the scrolling body */
-             margin: 0 auto; /* Auto horizontal margins */
+            overflow: hidden; /* Clip children like overlays */
+
+            /* Use Flexbox to manage internal layout */
+            display: flex;
+            flex-direction: column;
         }
 
-        /* Fullscreen Button - Stays relative to game-container */
+        /* NEW: Scrollable Content Area */
+        #scrollable-content {
+            flex-grow: 1; /* Take up remaining vertical space */
+            overflow-y: auto; /* THIS element scrolls */
+            overflow-x: hidden;
+            padding: clamp(10px, 3vw, 20px); /* Add padding inside */
+             /* Need min-height 0 for flexbox overflow */
+             min-height: 0;
+             /* Add back border/background if desired */
+             /* background-color: #8d7163; */
+             /* border: 5px solid #4b3f31; */
+             border-radius: 8px; /* Optional */
+             width: 95%; /* Or desired width */
+             max-width: 550px; /* Max width */
+             margin: 0 auto; /* Center horizontally */
+             box-sizing: border-box;
+             scroll-behavior: smooth;
+        }
+
+
+        /* Fullscreen Button - Absolute to game-container */
         #fullscreen-button {
             position: absolute; top: 8px; right: 8px;
             width: 35px; height: 35px; font-size: clamp(1.1em, 3vw, 1.6em);
             line-height: 33px; text-align: center;
-            background: rgba(75, 63, 49, 0.6); border: 1px solid #eee; color: #eee;
-            border-radius: 5px; cursor: pointer; z-index: 50;
+            background: rgba(75, 63, 49, 0.8); /* Slightly less transparent */
+            border: 1px solid #eee; color: #eee;
+            border-radius: 5px; cursor: pointer; z-index: 110; /* Above overlays */
         }
-        #fullscreen-button:hover { background: rgba(75, 63, 49, 0.8); }
-        /* Fullscreen state - make container scrollable ONLY when fullscreen */
-        #game-container:fullscreen {
-            max-width: none; max-height: none; width: 100%; height: 100%;
-            border: none; border-radius: 0;
-            overflow-y: auto; /* Allow scrolling WHEN fullscreen */
-            margin: 0;
+        #fullscreen-button:hover { background: rgba(75, 63, 49, 1); }
+        #game-container:fullscreen { /* Style container when fullscreen */
+             /* When game container itself is fullscreen, it should scroll */
+            overflow-y: auto !important;
         }
+         /* Ensure scrollable content scrolls fine in fullscreen too */
+         #game-container:fullscreen #scrollable-content {
+             /* Usually okay, but ensures overflow if needed */
+             /* overflow-y: auto; */
+         }
 
-        /* ... rest of styles ... */
+
+        /* Overlays - Absolute to game-container */
+        .overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.85); display: flex;
+            flex-direction: column; justify-content: center; align-items: center;
+            color: white; text-align: center; z-index: 100; /* Below fullscreen button */
+            padding: 20px; box-sizing: border-box; font-family: 'Verdana', sans-serif;
+            display: none;
+        }
+        #start-screen { display: flex; }
+        /* Rest of overlay styles are fine */
+         .overlay h2 { color: #ffd700; margin-bottom: 20px; text-shadow: 2px 2px #553300; font-size: clamp(1.8em, 6vw, 2.5em); }
+         .overlay p { margin-bottom: 25px; font-size: clamp(1em, 3vw, 1.2em); line-height: 1.6; max-width: 600px; }
+         .overlay button { padding: clamp(10px, 3vw, 14px) clamp(20px, 5vw, 28px); font-size: clamp(1em, 3.5vw, 1.2em); cursor: pointer; background-color: #a0522d; border: 3px solid #1a0f0c; color: white; border-radius: 5px; font-family: 'Verdana', sans-serif; transition: background-color 0.2s; box-shadow: 3px 3px 0px #1a0f0c; }
+         .overlay button:hover { background-color: #8B4513; }
+         .overlay button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0px #1a0f0c; }
+
+
+        /* Styles for elements INSIDE #scrollable-content */
         h1 { font-size: clamp(1.5em, 5vw, 2.2em); margin-bottom: 15px; color: #fff; text-shadow: 2px 2px #2a231b; }
         #duel-area { display: flex; justify-content: space-around; align-items: flex-end; height: clamp(140px, 25vh, 180px); margin-bottom: 15px; border-bottom: 3px dashed #4b3f31; padding-bottom: 15px; }
         .character { display: flex; flex-direction: column; align-items: center; }
@@ -87,13 +131,6 @@
         .feedback-incorrect { color: #FF5733; text-shadow: 1px 1px #441111; }
         .feedback-levelup { color: #ffd700; text-shadow: 1px 1px #443300; }
         .feedback-purchase { color: #87CEEB; text-shadow: 1px 1px #112233; }
-        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; z-index: 100; padding: 20px; box-sizing: border-box; font-family: 'Verdana', sans-serif; display: none; }
-         .overlay h2 { color: #ffd700; margin-bottom: 20px; text-shadow: 2px 2px #553300; font-size: clamp(1.8em, 6vw, 2.5em); }
-         .overlay p { margin-bottom: 25px; font-size: clamp(1em, 3vw, 1.2em); line-height: 1.6; max-width: 600px; }
-         .overlay button { padding: clamp(10px, 3vw, 14px) clamp(20px, 5vw, 28px); font-size: clamp(1em, 3.5vw, 1.2em); cursor: pointer; background-color: #a0522d; border: 3px solid #1a0f0c; color: white; border-radius: 5px; font-family: 'Verdana', sans-serif; transition: background-color 0.2s; box-shadow: 3px 3px 0px #1a0f0c; }
-         .overlay button:hover { background-color: #8B4513; }
-         .overlay button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0px #1a0f0c; }
-         #start-screen { display: flex; }
 
     </style>
 </head>
@@ -101,22 +138,31 @@
     <!-- Game Container -->
     <div id="game-container">
         <button id="fullscreen-button" title="Toggle Fullscreen">⛶</button>
-        <h1>Medieval Math Duel</h1>
-        <div id="duel-area"> <div class="character" id="knight"> <div class="sprite" id="knight-sprite"></div> <div class="hp-bar-container"><div class="hp-bar knight" id="knight-hp-bar"></div></div> <div class="hp-text" id="knight-hp-text">HP: 20/20</div> </div> <div class="character" id="goblin"> <div class="sprite" id="goblin-sprite"></div> <div class="hp-bar-container"><div class="hp-bar" id="goblin-hp-bar"></div></div> <div class="hp-text" id="goblin-hp-text">HP: 15/15</div> </div> </div>
-        <div id="status-area"> <span id="level-display">Level: 1</span> <span id="xp-display">XP: 0 / 15</span> <span id="gold-display">Gold: 0</span> <span id="sharpen-indicator" style="display: none;">Sword Sharpened!</span></div>
-        <div id="shop-area"> <button id="buy-potion-button">Potion (15g)<br/>+10 HP</button> <button id="buy-sharpen-button">Sharpen (20g)<br/>+2 ATK (Next Turn)</button> </div>
-        <div id="problem-area"> <div id="math-problem"> Solve: 5 + 3 = ?</div> <input type="tel" pattern="[0-9\-]*" inputmode="numeric" id="answer-input" autofocus> <button id="submit-button">Attack!</button> </div>
-        <div id="feedback-area"></div>
 
-        <!-- Overlays moved inside game container -->
+        <!-- NEW: Scrollable Content Wrapper -->
+        <div id="scrollable-content">
+            <h1>Medieval Math Duel</h1>
+            <div id="duel-area"> <div class="character" id="knight"> <div class="sprite" id="knight-sprite"></div> <div class="hp-bar-container"><div class="hp-bar knight" id="knight-hp-bar"></div></div> <div class="hp-text" id="knight-hp-text">HP: 20/20</div> </div> <div class="character" id="goblin"> <div class="sprite" id="goblin-sprite"></div> <div class="hp-bar-container"><div class="hp-bar" id="goblin-hp-bar"></div></div> <div class="hp-text" id="goblin-hp-text">HP: 15/15</div> </div> </div>
+            <div id="status-area"> <span id="level-display">Level: 1</span> <span id="xp-display">XP: 0 / 15</span> <span id="gold-display">Gold: 0</span> <span id="sharpen-indicator" style="display: none;">Sword Sharpened!</span></div>
+            <div id="shop-area"> <button id="buy-potion-button">Potion (15g)<br/>+10 HP</button> <button id="buy-sharpen-button">Sharpen (20g)<br/>+2 ATK (Next Turn)</button> </div>
+            <div id="problem-area"> <div id="math-problem"> Solve: 5 + 3 = ?</div> <input type="tel" pattern="[0-9\-]*" inputmode="numeric" id="answer-input" autofocus> <button id="submit-button">Attack!</button> </div>
+            <div id="feedback-area"></div>
+        </div>
+        <!-- End Scrollable Content Wrapper -->
+
+        <!-- Overlays remain direct children of game-container -->
         <div id="start-screen" class="overlay"> <h2>Math Duel!</h2> <p>Your Knight faces a fearsome Goblin!...<br>Use Gold for Potions or to Sharpen your blade!<br>Defeat Goblins to gain XP, Gold and Level Up!...</p> <button id="start-button">Begin Duel!</button> </div>
         <div id="game-over-screen" class="overlay"> <h2 id="game-over-title">Defeat!</h2> <p id="game-over-message">The Goblin overcame thy Knight!</p> <button id="restart-button">Try Again?</button> </div>
+
     </div> <!-- End of game-container -->
 
     <script>
-        // --- DOM Elements & Config & State (No changes needed here) ---
+        // --- DOM Elements ---
         const gameContainer = document.getElementById('game-container');
+        // Get the new scrollable div
+        const scrollableContent = document.getElementById('scrollable-content');
         const knightSprite = document.getElementById('knight-sprite');
+        // ... rest of the element selections are the same ...
         const goblinSprite = document.getElementById('goblin-sprite');
         const knightHpBar = document.getElementById('knight-hp-bar');
         const knightHpText = document.getElementById('knight-hp-text');
@@ -140,6 +186,7 @@
         const buyPotionButton = document.getElementById('buy-potion-button');
         const buySharpenButton = document.getElementById('buy-sharpen-button');
 
+        // --- Game Config & State (No changes needed) ---
         const KNIGHT_MAX_HP_BASE = 20; const GOBLIN_MAX_HP_BASE = 15;
         const KNIGHT_ATTACK_BASE = 3; const GOBLIN_ATTACK_BASE = 2;
         const KNIGHT_HP_PER_LEVEL = 5; const KNIGHT_ATK_PER_LEVEL = 1;
@@ -165,7 +212,7 @@
         let isSwordSharpened = false;
         let feedbackTimeoutId = null;
 
-        // --- Functions (Most remain unchanged) ---
+        // --- Functions (Most remain unchanged, focus listener slightly adjusted) ---
 
         function calculateXpNeeded(level) { return BASE_XP_TO_LEVEL + Math.floor(Math.pow(level -1, XP_LEVEL_SCALING_FACTOR) * 5); }
 
@@ -199,7 +246,9 @@
 
             startScreen.style.display = 'none'; gameOverScreen.style.display = 'none';
 
-            // Scroll attempt handled by focus listener now
+            // Scroll the inner container to the top when a new duel starts
+            if (scrollableContent) scrollableContent.scrollTop = 0;
+
             setTimeout(() => { if(!isGameOver) answerInput.focus(); }, 100);
             console.log(`Duel Started. Lvl:${playerLevel}, XP:${playerXP}/${xpToNextLevel}, Gold:${playerGold}, Sharpened:${isSwordSharpened}`);
         }
@@ -323,8 +372,11 @@
             console.log("Answer input focused, scheduling scroll...");
             setTimeout(() => {
                  if (!isGameOver && document.activeElement === answerInput) {
-                     console.log("Scrolling input into view...");
+                     console.log("Scrolling input into view (targeting scrollable content)...");
+                     // Scroll the input OR its container within the scrollable div
                      answerInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                     // Alternatively:
+                     // document.getElementById('problem-area').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                  } else { console.log("Scroll cancelled."); }
             }, SCROLL_DELAY);
         });
