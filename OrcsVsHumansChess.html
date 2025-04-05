@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Orcs vs Humans Chess (Responsive)</title>
+    <style>
+        /* --- Global Styles & Setup --- */
+        :root {
+            /* --- Sizing Variables --- */
+            --board-base-size: min(480px, 90vw);
+            --panel-width-side: 180px;
+            --panel-width-side-fullscreen: 240px; /* Wider panel for fullscreen desktop */
+            --panel-height-bottom: 180px; /* Approximate */
+
+            /* --- Colors & Highlights (unchanged) --- */
+            --light-square: #f0d9b5; --dark-square: #b58863; --panel-bg: var(--light-square);
+            --panel-text: #6a4a3a; --panel-border: #d3bfa8; --button-bg: rgba(181, 136, 99, 0.85);
+            --button-bg-hover: var(--dark-square); --button-border: var(--dark-square); --button-text: #ffffff;
+            --container-bg: #ffffff; --body-bg: #dcdcdc; --highlight-selected: rgba(30, 100, 200, 0.7);
+            --highlight-move: rgba(0, 100, 0, 0.4); --highlight-capture: rgba(200, 0, 0, 0.5);
+            --highlight-last-start: rgba(220, 220, 100, 0.35); --highlight-last-end: rgba(180, 220, 100, 0.4);
+            --highlight-check: rgba(255, 0, 0, 0.5);
+            --highlight-drag-over: rgba(70, 130, 180, 0.3);
+            --animation-speed: 0.3s;
+        }
+
+        html, body { height: 100%; overscroll-behavior: none; margin: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box; background-color: var(--body-bg); min-height: 100%; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+        #game-container { display: flex; flex-direction: column; align-items: center; background-color: var(--container-bg); padding: 15px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); transition: all 0.3s ease-in-out; position: relative; width: 100%; max-width: calc(var(--board-base-size) + 30px); box-sizing: border-box; margin: auto; }
+
+        /* --- Mode Selection Styling (Unchanged) --- */
+        #mode-selection { background-color: var(--panel-bg); color: var(--panel-text); border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--panel-border); width: 100%; height: auto; min-height: var(--board-base-size); max-height: 80vh; box-sizing: border-box; box-shadow: inset 0 0 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 15px; overflow-y: auto; }
+        #mode-selection h2 { margin-top: 0; margin-bottom: 15px; color: var(--dark-square); font-weight: 600; font-size: 1.4em; text-align: center;}
+        .mode-type-selection { width: 100%; box-sizing: border-box; text-align: center; }
+        .mode-type-selection button { display: block; width: 80%; max-width: 250px; margin: 8px auto; padding: 10px 15px; font-size: 1.0em; font-weight: 500; cursor: pointer; border: 1px solid var(--button-border); border-radius: 5px; background-color: rgba(255,255,255,0.4); color: var(--panel-text); transition: background-color 0.2s, box-shadow 0.2s; }
+        .mode-type-selection button:hover { background-color: rgba(255,255,255,0.7); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .mode-type-selection button.selected { background-color: var(--button-bg); color: var(--button-text); font-weight: bold; }
+        #cpu-options-container { display: none; flex-direction: column; align-items: center; width: 100%; max-width: 400px; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--panel-border); gap: 15px; transition: opacity 0.3s ease-in-out; }
+        #cpu-options-container.options-disabled { opacity: 0.4; pointer-events: none; cursor: not-allowed; }
+        #cpu-options-container.options-disabled button, #cpu-options-container.options-disabled .side-option { pointer-events: none; cursor: not-allowed; }
+        #difficulty-choice { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        #difficulty-choice h3 { font-size: 0.9em; margin-bottom: 5px; font-weight: 500; text-align: center; }
+        #difficulty-choice button { padding: 6px 12px; width: 120px; font-size: 0.9em; cursor: pointer; border: 1px solid var(--panel-border); border-radius: 4px; background-color: #fff; color: var(--panel-text); transition: background-color 0.2s; }
+        #difficulty-choice button:hover { background-color: #eee; }
+        #difficulty-choice button.selected { background-color: var(--dark-square); color: white; font-weight: bold; border-color: var(--dark-square); }
+        #player-side-choice { width: 100%; text-align: center; }
+        #player-side-choice h3 { font-size: 0.9em; margin-bottom: 8px; font-weight: 500; }
+        .side-option { display: inline-block; margin: 0 10px; padding: 5px; border-radius: 5px; cursor: pointer; transition: background-color 0.2s; text-align: center; vertical-align: top; }
+        .side-option input[type="radio"] { display: none; }
+        .side-option img { width: 35px; height: 35px; display: block; margin: 0 auto 3px auto; pointer-events: none; }
+        .side-option label { font-weight: 500; pointer-events: none; display: block; font-size: 0.85em; }
+        .side-option:hover { background-color: rgba(181, 136, 99, 0.1); }
+        .side-option.selected { background-color: rgba(181, 136, 99, 0.25); }
+        #start-button-container { margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--panel-border); width: 90%; text-align: center; }
+        #start-game-button { padding: 12px 30px; font-size: 1.1em; cursor: pointer; background-color: var(--button-bg); color: var(--button-text); border: 1px solid var(--button-border); border-radius: 5px; transition: background-color 0.2s; font-weight: bold; }
+        #start-game-button:hover:not(:disabled) { background-color: var(--button-bg-hover); }
+        #start-game-button:disabled { background-color: #ccc; border-color: #bbb; color: #777; cursor: not-allowed; opacity: 0.6; }
+
+        /* --- Game Area --- */
+        #game-area { display: none; width: 100%; }
+        #board-and-panels { display: flex; flex-direction: column; align-items: center; width: 100%; }
+        #board {
+            width: var(--board-base-size);
+            height: var(--board-base-size);
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            /* <<< Default (Vertical Layout) Borders - Added Bottom Border */
+            border-top: 2px solid #333;
+            border-left: 2px solid #333;
+            border-right: 2px solid #333;
+            border-bottom: 2px solid #333; /* <<< EXPLICIT bottom border for vertical separation */
+            transition: transform 0.5s ease-in-out;
+            box-sizing: border-box;
+            background-color: #888;
+            position: relative;
+            overflow: hidden;
+            touch-action: none;
+            flex-shrink: 0;
+            z-index: 2; /* Ensure board border is drawn over panel margin if needed */
+        }
+        #board.board-flipped { transform: rotate(180deg); }
+        .square { display: flex; justify-content: center; align-items: center; user-select: none; cursor: pointer; position: relative; transition: background-color 0.15s ease-in-out; background-color: transparent; overflow: hidden; }
+        .light { background-color: var(--light-square); } .dark { background-color: var(--dark-square); }
+        .board-flipped .square { transform: rotate(180deg); }
+        .piece { width: 90%; height: 90%; background-size: contain; background-repeat: no-repeat; background-position: center; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; z-index: 5; cursor: grab; touch-action: none; }
+        .piece.dragging { cursor: grabbing; }
+        .piece.piece-ghost { opacity: 0.3; transition: opacity 0.1s ease-out; }
+        .piece.hidden-during-move { opacity: 0 !important; transition: none !important; }
+
+        /* Highlights (Unchanged) */
+        .selected { outline: 3px solid var(--highlight-selected); outline-offset: -3px; background-color: rgba(80, 140, 220, 0.05) !important; }
+        .highlight::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 25%; height: 25%; background-color: var(--highlight-move); border-radius: 50%; pointer-events: none; z-index: 1; box-sizing: border-box; }
+        .highlight.capture::after { width: 85%; height: 85%; background-color: transparent; border: 5px solid var(--highlight-capture); border-radius: 50%; }
+        .check { box-shadow: inset 0 0 10px 5px var(--highlight-check); }
+        .last-move-start { background-color: var(--highlight-last-start) !important; } .last-move-end { background-color: var(--highlight-last-end) !important; }
+        .drag-over-highlight { background-color: var(--highlight-drag-over) !important; }
+        .moving-piece { background-size: contain; background-repeat: no-repeat; background-position: center; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; transition: transform var(--animation-speed) ease-in-out; touch-action: none; }
+
+        /* Sprites (Unchanged) */
+        .wp { background-image: url('sprites/wPawn.png'); } .wr { background-image: url('sprites/wRook.png'); } .wn { background-image: url('sprites/wKnight.png'); } .wb { background-image: url('sprites/wBishop.png'); } .wq { background-image: url('sprites/wQueen.png'); } .wk { background-image: url('sprites/wKing.png'); }
+        .bp { background-image: url('sprites/bPawn.png'); } .br { background-image: url('sprites/bRook.png'); } .bn { background-image: url('sprites/bKnight.png'); } .bb { background-image: url('sprites/bBishop.png'); } .bq { background-image: url('sprites/bQueen.png'); } .bk { background-image: url('sprites/bKing.png'); }
+
+        /* Panel Styling (Mobile First - Bottom Panel) */
+        #panel {
+            width: var(--board-base-size);
+            height: auto;
+            min-height: var(--panel-height-bottom);
+            background-color: var(--panel-bg);
+            padding: 10px;
+            /* <<< Default (Vertical Layout) Borders - Top border removed */
+            border-top: none; /* <<< Board now provides the separator line */
+            border-left: 2px solid #333;
+            border-right: 2px solid #333;
+            border-bottom: 2px solid #333;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            color: var(--panel-text);
+            /* margin-top: -2px; */ /* <<< Removed negative margin */
+            flex-shrink: 0;
+        }
+        #status { font-size: 1.1em; font-weight: bold; min-height: 1.4em; text-align: center; margin-bottom: 8px; border-bottom: 1px solid var(--panel-border); padding-bottom: 8px; }
+        #captured-heading { margin-top: 5px; margin-bottom: 3px; font-size: 0.85em; font-weight: normal; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: none; padding-bottom: 0; text-align: center; }
+        #captured-pieces-box { background-color: rgba(255, 255, 255, 0.3); border: 1px solid var(--panel-border); border-radius: 4px; padding: 6px; margin-bottom: 10px; min-height: 48px; max-height: 100px; display: flex; flex-direction: column; justify-content: space-between; gap: 4px; overflow-y: auto; flex-grow: 1; }
+        .captured-list { display: flex; flex-wrap: wrap; gap: 3px; min-height: 20px; align-content: flex-start; }
+        .captured-piece { width: 20px; height: 20px; background-size: contain; background-repeat: no-repeat; background-position: center; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; }
+        #panel-buttons { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--panel-border); display: flex; flex-wrap: wrap; justify-content: space-around; gap: 8px; }
+        #panel button { padding: 8px 12px; font-size: 0.9em; cursor: pointer; border: 1px solid var(--button-border); border-radius: 4px; background-color: var(--button-bg); color: var(--button-text); transition: background-color 0.2s, opacity 0.2s; text-align: center; font-weight: bold; flex-basis: calc(50% - 10px); min-width: 100px; box-sizing: border-box; }
+        #panel button svg { width: 14px; height: 14px; vertical-align: middle; fill: currentColor; }
+        #quit-button { flex-basis: 100%; margin-top: 5px; }
+        #panel button:hover:not(:disabled) { background-color: var(--button-bg-hover); }
+        #panel button:disabled { background-color: rgba(181, 136, 99, 0.4); color: #eaddcf; cursor: not-allowed; border-color: rgba(181, 136, 99, 0.5); opacity: 0.7; }
+        #fullscreen-button #fs-exit-icon { display: none; }
+        #fullscreen-button.active #fs-enter-icon { display: none; }
+        #fullscreen-button.active #fs-exit-icon { display: inline-block; }
+
+        /* Computer Thinking State */
+        body.computer-thinking #board { cursor: wait; }
+        body.computer-thinking .square { pointer-events: none !important; }
+        body.computer-thinking .piece { cursor: wait !important; }
+        body.computer-thinking #panel button { pointer-events: none !important; opacity: 0.5 !important; cursor: wait !important; }
+
+        /* Game Over Modal Styles (Unchanged) */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 2000; opacity: 0; transition: opacity 0.3s ease-in-out; padding: 15px; box-sizing: border-box; }
+        .modal-overlay.visible { display: flex; opacity: 1; }
+        .modal-content { background-color: var(--panel-bg); padding: 25px 30px; border-radius: 8px; border: 2px solid var(--dark-square); text-align: center; color: var(--panel-text); box-shadow: 0 8px 25px rgba(0,0,0,0.4); max-width: 350px; width: 95%; transform: scale(0.9); transition: transform 0.3s ease-in-out; }
+        .modal-overlay.visible .modal-content { transform: scale(1.0); }
+        #modal-title { color: var(--dark-square); margin-top: 0; margin-bottom: 15px; font-size: 1.6em; font-weight: bold; }
+        #modal-message { margin-bottom: 25px; font-size: 1.1em; line-height: 1.5; }
+        #new-game-button { padding: 12px 30px; font-size: 1.1em; cursor: pointer; background-color: var(--button-bg); color: var(--button-text); border: 1px solid var(--button-border); border-radius: 5px; transition: background-color 0.2s; font-weight: bold; display: inline-block; }
+        #new-game-button:hover { background-color: var(--button-bg-hover); }
+
+        /* Media Query for Desktop Layout (Side Panel) */
+        @media (min-width: 720px) {
+            #game-container { max-width: calc(var(--board-base-size) + var(--panel-width-side) + 40px); /* Account for panel */ }
+            #board-and-panels { flex-direction: row; align-items: flex-start; }
+            #board {
+                /* <<< Desktop Layout Borders - Adds right separator */
+                border-bottom: 2px solid #333; /* Keep bottom border */
+                border-right: 2px solid #333; /* Separator line */
+                border-top: 2px solid #333;
+                border-left: 2px solid #333;
+                width: var(--board-base-size);
+                height: var(--board-base-size);
+                /* margin-bottom: 0; <<< Reset margin if needed */
+            }
+            #panel {
+                /* <<< Desktop Layout Borders */
+                width: var(--panel-width-side);
+                height: var(--board-base-size);
+                min-height: unset;
+                border-top: 2px solid #333; /* <<< Add top border back for desktop */
+                border-left: none; /* Board provides left separator */
+                border-bottom: 2px solid #333;
+                border-right: 2px solid #333;
+                margin-top: 0;
+                margin-left: 0;
+            }
+            #panel-buttons { flex-direction: column; flex-wrap: nowrap; gap: 6px; }
+            #panel button { flex-basis: auto; width: 100%; min-width: unset; }
+            .button-row { display: flex; justify-content: space-between; gap: 6px; width: 100%; }
+            .button-row button { flex: 1; width: auto; }
+            #quit-button { margin-top: 6px; }
+        }
+
+        /* Fullscreen Scaling */
+        #game-container:fullscreen { padding: 0; border-radius: 0; box-shadow: none; width: 100vw; height: 100vh; max-width: none; display: flex; justify-content: center; align-items: center; overflow: hidden; background-color: var(--body-bg); }
+        #game-container:fullscreen #game-area { width: auto; height: auto; display: contents; }
+        #game-container:fullscreen #board-and-panels { width: auto; height: auto; max-width: 98vw; max-height: 98vh; /* Flex direction controlled by media query */ }
+
+        /* --- Combined Fullscreen Board & Panel Sizing --- */
+        /* Default (Mobile / Stacked Panel) Fullscreen */
+        #game-container:fullscreen #board {
+             width: min(95vw, calc(95vh - var(--panel-height-bottom) - 10px));
+             height: min(95vw, calc(95vh - var(--panel-height-bottom) - 10px));
+             /* <<< Fullscreen Vertical Layout Borders */
+             border-top: 2px solid #333;
+             border-left: 2px solid #333;
+             border-right: 2px solid #333;
+             border-bottom: 2px solid #333; /* <<< Ensure bottom border */
+        }
+        #game-container:fullscreen #panel {
+             width: min(95vw, calc(95vh - var(--panel-height-bottom) - 10px));
+             height: auto;
+             min-height: 100px; max-height: var(--panel-height-bottom);
+             margin-top: 0; /* <<< Reset margin */
+             margin-left: 0;
+             /* <<< Fullscreen Vertical Layout Borders */
+             border-top: none; /* <<< Board provides top separator */
+             border-left: 2px solid #333;
+             border-right: 2px solid #333;
+             border-bottom: 2px solid #333;
+             overflow: auto;
+        }
+
+        /* Desktop (Side Panel) Fullscreen */
+        @media (min-width: 720px) {
+             /* <<< Updated Fullscreen Desktop Sizing with Wider Panel */
+             #game-container:fullscreen #board {
+                  /* Adjust board size calculation to use the WIDER fullscreen panel width */
+                  width: min(calc(95vw - var(--panel-width-side-fullscreen) - 10px), 95vh);
+                  height: min(calc(95vw - var(--panel-width-side-fullscreen) - 10px), 95vh);
+                  /* <<< Fullscreen Desktop Borders */
+                  border: 2px solid #333;
+                  border-right: 2px solid #333; /* Separator line */
+             }
+             #game-container:fullscreen #panel {
+                  width: var(--panel-width-side-fullscreen); /* <<< USE WIDER WIDTH */
+                  /* Adjust panel height calculation to match adjusted board size */
+                  height: min(calc(95vw - var(--panel-width-side-fullscreen) - 10px), 95vh);
+                  min-height: unset; max-height: unset;
+                  margin-left: 0; margin-top: 0; /* Reset margin */
+                  /* <<< Fullscreen Desktop Borders */
+                  border: 2px solid #333;
+                  border-left: none; /* Board provides separator */
+                  border-top: 2px solid #333; /* <<< Ensure top border */
+                  overflow: auto;
+             }
+
+             /* <<< START: MODIFIED SECTION for Fullscreen Desktop Captured Pieces */
+             /* <<< UPDATED: Captured Box Sizing & Piece Size for Fullscreen Desktop */
+             #game-container:fullscreen #panel #captured-pieces-box {
+                  min-height: 220px; /* Increased minimum height to fit ~6 rows total */
+                  max-height: 450px; /* Allow generous maximum height */
+                  flex-grow: 1;    /* Ensure it tries to use available vertical space */
+                  padding: 8px;    /* Slightly more padding */
+                  gap: 6px;        /* Slightly more gap between the two lists */
+             }
+
+             /* <<< ADDED: Larger Captured Pieces for Fullscreen Desktop */
+             #game-container:fullscreen #panel #captured-pieces-box .captured-piece {
+                 width: 28px;  /* Increased size */
+                 height: 28px; /* Increased size */
+             }
+
+             /* <<< ADDED: Adjust gap within lists for larger pieces */
+              #game-container:fullscreen #panel #captured-pieces-box .captured-list {
+                 gap: 4px; /* Slightly larger gap between pieces */
+             }
+             /* <<< END: MODIFIED SECTION */
+        }
+
+        /* Small Screen Fine-tuning (Unchanged) */
+        @media (max-width: 400px) { :root { --board-base-size: 92vw; } #mode-selection h2 { font-size: 1.3em; } .mode-type-selection button { font-size: 0.95em; padding: 8px 12px; } #difficulty-choice button { width: 100px; font-size: 0.85em; padding: 5px 10px;} .side-option img { width: 30px; height: 30px;} #start-game-button { font-size: 1em; padding: 10px 25px;} #status { font-size: 1em; } #captured-heading { font-size: 0.8em; } .captured-piece { width: 18px; height: 18px; } #panel button { font-size: 0.85em; padding: 7px 10px; min-width: 80px;} #modal-title { font-size: 1.5em; } #modal-message { font-size: 1em; } #new-game-button { font-size: 1em; padding: 10px 25px;} }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- Mode Selection (HTML Unchanged) -->
+        <div id="mode-selection">
+            <h2>Orcs vs Humans Chess</h2>
+            <div class="mode-type-selection">
+                <button id="mode-cpu">1 Player</button>
+                <button id="mode-2p">2 Player</button>
+            </div>
+            <div id="cpu-options-container">
+                <div id="difficulty-choice">
+                    <h3>Select Difficulty:</h3>
+                    <button data-difficulty="CPU-easy">Easy</button>
+                    <button data-difficulty="CPU-medium">Medium</button>
+                    <button data-difficulty="CPU-hard">Hard</button>
+                </div>
+                <div id="player-side-choice">
+                    <h3>Choose your side:</h3>
+                    <div class="side-option selected" id="side-human">
+                        <input type="radio" name="playerSide" value="w" id="radio-human" checked>
+                        <img src="sprites/wKing.png" alt="Human King">
+                        <label for="radio-human">Human</label>
+                    </div>
+                    <div class="side-option" id="side-orc">
+                        <input type="radio" name="playerSide" value="b" id="radio-orc">
+                        <img src="sprites/bKing.png" alt="Orc King">
+                        <label for="radio-orc">Orc</label>
+                    </div>
+                </div>
+            </div>
+            <div id="start-button-container">
+                <button id="start-game-button" onclick="startGame()" disabled>Play</button>
+            </div>
+        </div> <!-- End mode-selection -->
+
+        <div id="game-area">
+            <div id="board-and-panels">
+                <div id="board"></div>
+                <div id="panel">
+                    <div id="status">Game Status</div>
+                    <h3 id="captured-heading">Captured</h3>
+                    <div id="captured-pieces-box">
+                        <div id="white-captured" class="captured-list"></div>
+                        <div id="black-captured" class="captured-list"></div>
+                    </div>
+                    <div id="panel-buttons">
+                        <div class="button-row">
+                            <button id="undo-button" onclick="undoMove()" title="Undo Last Move">
+                                Undo
+                            </button>
+                            <button id="fullscreen-button" onclick="toggleFullScreen()" title="Toggle Fullscreen">
+                                <svg id="fs-enter-icon" viewBox="0 0 24 24" style="width: 1em; height: 1em; vertical-align: middle; fill: currentColor;"> <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/> </svg>
+                                <svg id="fs-exit-icon" viewBox="0 0 24 24" style="width: 1em; height: 1em; vertical-align: middle; fill: currentColor;"> <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/> </svg>
+                                <span style="vertical-align: middle;"> Full</span>
+                            </button>
+                        </div>
+                        <button id="quit-button" onclick="quitGame()">Quit</button>
+                    </div>
+                </div>
+            </div>
+        </div> <!-- End game-area -->
+
+        <!-- Game Over Modal HTML (Unchanged) -->
+        <div id="game-over-modal" class="modal-overlay">
+            <div class="modal-content">
+                <h2 id="modal-title">Game Over!</h2>
+                <p id="modal-message">Someone won!</p>
+                <button id="new-game-button">Play Again</button>
+            </div>
+        </div>
+
+    </div> <!-- End game-container -->
+
+    <script>
+        // --- DOM Element References ---
+        // Log element fetching for debugging
+        console.log("Getting DOM elements...");
+        const gameContainer = document.getElementById('game-container');
+        const boardElement = document.getElementById('board');
+        const statusElement = document.getElementById('status');
+        const modeSelectionElement = document.getElementById('mode-selection');
+        const gameAreaElement = document.getElementById('game-area');
+        const panelElement = document.getElementById('panel'); // Use the consistent ID
+        const whiteCapturedElement = document.getElementById('white-captured');
+        const blackCapturedElement = document.getElementById('black-captured');
+        const undoButton = document.getElementById('undo-button');
+        const quitButton = document.getElementById('quit-button');
+        const fullscreenButton = document.getElementById('fullscreen-button');
+        const mode2pButton = document.getElementById('mode-2p');
+        const modeCpuButton = document.getElementById('mode-cpu');
+        const cpuOptionsContainer = document.getElementById('cpu-options-container');
+        const difficultyChoiceDiv = document.getElementById('difficulty-choice');
+        const difficultyButtons = difficultyChoiceDiv ? difficultyChoiceDiv.querySelectorAll('button') : [];
+        const playerSideChoiceDiv = document.getElementById('player-side-choice');
+        const sideOptions = document.querySelectorAll('.side-option');
+        const startGameButton = document.getElementById('start-game-button');
+        const gameOverModal = document.getElementById('game-over-modal');
+        const modalTitleElement = document.getElementById('modal-title');
+        const modalMessageElement = document.getElementById('modal-message');
+        const newGameButton = document.getElementById('new-game-button');
+        console.log("DOM elements fetched.");
+
+        // --- Game State Variables (Unchanged) ---
+        let board = []; let currentPlayer = 'w'; let playerColor = 'w'; let gameMode = null;
+        let selectedSquare = null;
+        let currentlyDragging = { pieceElement: null, startRow: -1, startCol: -1, pieceCode: null, validMoves: [], isDragging: false, touchIdentifier: null, offsetX: 0, offsetY: 0, ghostElement: null };
+        let validMoves = [];
+        let whiteKingPos = null; let blackKingPos = null;
+        let isWhiteInCheck = false; let isBlackInCheck = false;
+        let isComputerTurn = false;
+        let gameOver = false; let capturedPieces = { w: [], b: [] }; let lastMove = { start: null, end: null };
+        let moveHistory = [];
+        let isAnimating = false;
+
+        // --- Constants (Unchanged) ---
+        const pieceValues = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 1000 };
+        const initialBoard = [
+            ['br', 'bn', 'bb', 'bq', 'bk', 'bb', 'bn', 'br'], ['bp', 'bp', 'bp', 'bp', 'bp', 'bp', 'bp', 'bp'],
+            [null, null, null, null, null, null, null, null], [null, null, null, null, null, null, null, null],
+            [null, null, null, null, null, null, null, null], [null, null, null, null, null, null, null, null],
+            ['wp', 'wp', 'wp', 'wp', 'wp', 'wp', 'wp', 'wp'], ['wr', 'wn', 'wb', 'wq', 'wk', 'wb', 'wn', 'wr']
+        ];
+        const pieceOrder = { p: 1, n: 2, b: 3, r: 4, q: 5 };
+        const ANIMATION_DURATION_MS = 300;
+
+        // --- Mode Selection Logic (Unchanged) ---
+        let selectedDifficulty = null; let selectedModeType = null;
+        function updateStartButtonState() {
+            let ready = false;
+            if (selectedModeType === '2P') {
+                ready = true;
+            } else if (selectedModeType === 'CPU' && selectedDifficulty) {
+                ready = true;
+            }
+            if(startGameButton) {
+                console.log(`Updating start button: Mode=${selectedModeType}, Difficulty=${selectedDifficulty}, Ready=${ready}`);
+                startGameButton.disabled = !ready;
+            } else {
+                 console.error("Start game button not found in updateStartButtonState!");
+            }
+        }
+        function setupModeSelectionListeners() {
+             console.log("Setting up mode selection listeners...");
+             // Check essential elements for THIS function
+             if (!mode2pButton || !modeCpuButton || !cpuOptionsContainer || !difficultyChoiceDiv || !playerSideChoiceDiv || !startGameButton || difficultyButtons.length === 0 || sideOptions.length === 0) {
+                console.error("CRITICAL ERROR: One or more mode selection elements not found!");
+                // Provide more specific feedback if possible
+                if (!mode2pButton) console.error("mode-2p button missing");
+                if (!modeCpuButton) console.error("mode-cpu button missing");
+                // etc...
+                alert("Error setting up game modes. Check console.");
+                return; // Stop setup
+            }
+
+             mode2pButton.addEventListener('click', () => {
+                console.log("2 Player mode selected");
+                selectedModeType = '2P'; gameMode = '2P'; selectedDifficulty = null;
+                cpuOptionsContainer.style.display = 'flex'; // Show options container
+                cpuOptionsContainer.classList.add('options-disabled'); // Disable options within
+                modeCpuButton.classList.remove('selected');
+                mode2pButton.classList.add('selected');
+                difficultyButtons.forEach(btn => btn.classList.remove('selected'));
+                updateStartButtonState();
+            });
+             modeCpuButton.addEventListener('click', () => {
+                 console.log("1 Player mode selected");
+                 selectedModeType = 'CPU'; gameMode = null; // Game mode set when difficulty chosen
+                 cpuOptionsContainer.style.display = 'flex'; // Show options container
+                 cpuOptionsContainer.classList.remove('options-disabled'); // Enable options within
+                 mode2pButton.classList.remove('selected');
+                 modeCpuButton.classList.add('selected');
+                 // If no difficulty is selected yet, default to easy
+                 const easyButton = difficultyChoiceDiv.querySelector('[data-difficulty="CPU-easy"]');
+                 const isDifficultySelected = difficultyChoiceDiv.querySelector('.selected');
+                 if (easyButton && !isDifficultySelected) {
+                     console.log("Defaulting to Easy difficulty");
+                     easyButton.click(); // This will trigger its own listener
+                 } else if (!isDifficultySelected) { // Fallback if easyButton not found but no selection
+                     selectedDifficulty = 'CPU-easy'; gameMode = 'CPU-easy';
+                     difficultyButtons.forEach(btn => btn.classList.remove('selected'));
+                     if(easyButton) easyButton.classList.add('selected');
+                     console.log("Fallback: Set difficulty to Easy");
+                 }
+                 // Ensure player side is selected (default to Human/White)
+                 const humanSideOption = playerSideChoiceDiv.querySelector('#side-human');
+                 const isSideSelected = playerSideChoiceDiv.querySelector('.selected');
+                 if(humanSideOption && !isSideSelected) {
+                     humanSideOption.click();
+                 }
+                 updateStartButtonState(); // Update button state after potential changes
+             });
+             difficultyButtons.forEach(button => {
+                 button.addEventListener('click', () => {
+                     selectedDifficulty = button.getAttribute('data-difficulty');
+                     gameMode = selectedDifficulty; // Set gameMode here
+                     console.log(`Difficulty selected: ${gameMode}`);
+                     difficultyButtons.forEach(btn => btn.classList.remove('selected'));
+                     button.classList.add('selected');
+                     updateStartButtonState();
+                 });
+             });
+             sideOptions.forEach(option => {
+                 option.addEventListener('click', () => {
+                     if (cpuOptionsContainer.classList.contains('options-disabled')) return; // Don't allow change if disabled
+                     const radio = option.querySelector('input[type="radio"]');
+                     if (radio) {
+                         radio.checked = true;
+                         sideOptions.forEach(opt => opt.classList.remove('selected'));
+                         option.classList.add('selected');
+                         console.log(`Player side chosen: ${radio.value}`);
+                         // Note: updateStartButtonState() not needed here as side doesn't enable start
+                     }
+                 });
+             });
+             // Initial state setup might be better handled in DOMContentLoaded after listeners are set
+             // document.getElementById('side-human').classList.add('selected'); // Set default side visually
+             // updateStartButtonState(); // Initial check
+             console.log("Mode selection listeners attached.");
+        }
+        function startGame() {
+             console.log("startGame function called."); // <<< ADDED LOG
+             if (!gameMode) {
+                 alert("Please select '2 Player' or choose a '1 Player' difficulty.");
+                 console.log("startGame aborted: No gameMode selected."); // <<< ADDED LOG
+                 return;
+             }
+             if (gameMode !== '2P') {
+                 const selectedSideRadio = document.querySelector('input[name="playerSide"]:checked');
+                 playerColor = selectedSideRadio ? selectedSideRadio.value : 'w';
+             } else {
+                 playerColor = 'w'; // Default for 2P
+             }
+             console.log(`[SETUP] Starting game. Mode: ${gameMode}, Player Side (if CPU): ${playerColor}`);
+
+             if (modeSelectionElement) {
+                 console.log("Hiding mode selection..."); // <<< ADDED LOG
+                 modeSelectionElement.style.display = 'none';
+             } else {
+                 console.error("modeSelectionElement not found in startGame!"); // <<< ADDED LOG
+             }
+
+             if (gameAreaElement) {
+                 console.log("Showing game area..."); // <<< ADDED LOG
+                 gameAreaElement.style.display = 'block'; // Use 'block' or 'flex' based on its default display type needs
+             } else {
+                 console.error("gameAreaElement not found in startGame!"); // <<< ADDED LOG
+                 return; // Cannot proceed without game area
+             }
+
+             // Make sure panel element is accessible if needed immediately after start
+             if (!panelElement) {
+                 console.error("panelElement not found in startGame - needed for setup?");
+                 // Potentially return if panel is critical before setupBoard
+             }
+
+             setupBoard(); // This should run *after* game area is visible
+         }
+
+
+        // --- Core Game Functions (Mostly Unchanged) ---
+        function setupBoard() { console.log("[SETUP] Initializing game state..."); board = JSON.parse(JSON.stringify(initialBoard)); currentPlayer = 'w'; selectedSquare = null; resetDraggingState(); validMoves = []; whiteKingPos = findKingOnBoard('w', board); blackKingPos = findKingOnBoard('b', board); if (!whiteKingPos || !blackKingPos) { console.error("Kings not found!"); return; } isWhiteInCheck = false; isBlackInCheck = false; isComputerTurn = (gameMode !== '2P' && playerColor === 'b'); gameOver = false; capturedPieces = { w: [], b: [] }; lastMove = { start: null, end: null }; moveHistory = []; isAnimating = false; document.body.classList.remove('computer-thinking'); hideGameOverModal(); if (boardElement) boardElement.classList.toggle('board-flipped', playerColor === 'b' && gameMode !== '2P'); saveState(); renderBoard(); renderCapturedPieces(); updateStatus(); updateUndoButton(); console.log(`[SETUP] Game ready. Player: ${playerColor}. Turn: ${currentPlayer}. CompTurn? ${isComputerTurn}`); if (isComputerTurn) { if (statusElement) statusElement.textContent = `CPU thinking...`; document.body.classList.add('computer-thinking'); setTimeout(makeComputerMove, 750); } }
+        function findKingOnBoard(kingColor, currentBoard) { for(let r=0; r<8; r++){ for(let c=0; c<8; c++){ if(currentBoard[r][c] === kingColor + 'k'){ return {row: r, col: c}; } } } console.error(`!!! King ${kingColor}k not found!`); return null; }
+        function saveState() { const state = { board: JSON.parse(JSON.stringify(board)), currentPlayer: currentPlayer, isWhiteInCheck: isWhiteInCheck, isBlackInCheck: isBlackInCheck, capturedPieces: JSON.parse(JSON.stringify(capturedPieces)), whiteKingPos: whiteKingPos ? { ...whiteKingPos } : null, blackKingPos: blackKingPos ? { ...blackKingPos } : null, lastMove: lastMove ? { start: lastMove.start ? { ...lastMove.start } : null, end: lastMove.end ? { ...lastMove.end } : null } : { start: null, end: null } }; moveHistory.push(state); }
+        function undoMove() { console.log("[UNDO] Attempting undo..."); if (gameOver || document.body.classList.contains('computer-thinking') || isAnimating) { console.log("[UNDO] Blocked."); return; } let movesToUndo = 1; const wasPlayerMoveLast = (gameMode !== '2P' && currentPlayer !== playerColor); if (gameMode !== '2P' && wasPlayerMoveLast && moveHistory.length >= 3) { movesToUndo = 2; } else if (moveHistory.length < 2) { console.log("[UNDO] Blocked (not enough history)."); return; } console.log(`[UNDO] Undoing ${movesToUndo} move(s).`); if (moveHistory.length - movesToUndo <= 0) { console.log("[UNDO] Blocked (cannot undo initial state)."); return; } for (let i = 0; i < movesToUndo; i++) { moveHistory.pop(); } const prevState = moveHistory[moveHistory.length - 1]; if (!prevState) { console.error("[UNDO] Error: No previous state!"); setupBoard(); return; } board = JSON.parse(JSON.stringify(prevState.board)); currentPlayer = prevState.currentPlayer; isWhiteInCheck = prevState.isWhiteInCheck; isBlackInCheck = prevState.isBlackInCheck; capturedPieces = JSON.parse(JSON.stringify(prevState.capturedPieces)); whiteKingPos = prevState.whiteKingPos ? { ...prevState.whiteKingPos } : null; blackKingPos = prevState.blackKingPos ? { ...prevState.blackKingPos } : null; lastMove = prevState.lastMove ? { start: prevState.lastMove.start ? { ...prevState.lastMove.start } : null, end: prevState.end ? { ...prevState.end } : null } : { start: null, end: null }; isComputerTurn = (gameMode !== '2P' && currentPlayer !== playerColor); gameOver = false; console.log(`[UNDO] State restored to turn: ${currentPlayer}.`); selectedSquare = null; resetDraggingState(); validMoves = []; document.body.classList.remove('computer-thinking'); renderBoard(); renderCapturedPieces(); updateStatus(); updateUndoButton(); if (isComputerTurn) { console.warn("[UNDO] Computer's turn after undo?"); document.body.classList.add('computer-thinking'); setTimeout(makeComputerMove, 500); } }
+        function updateUndoButton() { if (!undoButton) return; let canUndo = moveHistory.length > 1; undoButton.disabled = !canUndo || document.body.classList.contains('computer-thinking') || gameOver || isAnimating; }
+        function renderCapturedPieces() { if (!whiteCapturedElement || !blackCapturedElement) return; const sortAndRender = (listElement, piecesArray) => { listElement.innerHTML = ''; const sortedPieces = [...piecesArray].sort((a, b) => (pieceOrder[a[1]] || 0) - (pieceOrder[b[1]] || 0)); sortedPieces.forEach(pieceCode => { const pieceElement = document.createElement('div'); pieceElement.className = `captured-piece ${pieceCode}`; listElement.appendChild(pieceElement); }); }; sortAndRender(whiteCapturedElement, capturedPieces.b); sortAndRender(blackCapturedElement, capturedPieces.w); }
+        function renderBoard() { if (!boardElement) return; boardElement.innerHTML = ''; const oldMovingPiece = gameContainer.querySelector('.moving-piece'); if (oldMovingPiece) oldMovingPiece.remove(); boardElement.classList.toggle('board-flipped', playerColor === 'b' && gameMode !== '2P'); if (!board || board.length !== 8) return; for (let r = 0; r < 8; r++) { for (let c = 0; c < 8; c++) { try { const square = document.createElement('div'); square.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`; square.dataset.row = r; square.dataset.col = c; const pieceCode = board[r][c]; if (pieceCode) { const pieceElement = document.createElement('div'); pieceElement.className = `piece ${pieceCode}`; pieceElement.draggable = true; square.appendChild(pieceElement); pieceElement.addEventListener('dragstart', handleDragStart); pieceElement.addEventListener('dragend', handleDragEnd); pieceElement.addEventListener('touchstart', handleTouchStart, { passive: false }); } square.addEventListener('click', handleSquareClick); square.addEventListener('dragover', handleDragOver); square.addEventListener('dragleave', handleDragLeave); square.addEventListener('drop', handleDrop); /* square.addEventListener('touchmove', handleTouchMove, { passive: false }); // Global listener preferred square.addEventListener('touchend', handleTouchEnd); square.addEventListener('touchcancel', handleTouchEnd); */ if ((pieceCode === 'wk' && isWhiteInCheck) || (pieceCode === 'bk' && isBlackInCheck)) { square.classList.add('check'); } if (lastMove.start && lastMove.start.row === r && lastMove.start.col === c) { square.classList.add('last-move-start'); } if (lastMove.end && lastMove.end.row === r && lastMove.end.col === c) { square.classList.add('last-move-end'); } boardElement.appendChild(square); } catch (error) { console.error(`Render error at ${r},${c}:`, error); } } } if (selectedSquare) { const selEl = getSquareElement(selectedSquare.row, selectedSquare.col); if (selEl) { selEl.classList.add('selected'); highlightValidMoves(); } else { selectedSquare = null; validMoves = []; removeMoveHighlights(); } } else { removeMoveHighlights(); } document.removeEventListener('touchmove', handleTouchMove, { passive: false }); document.addEventListener('touchmove', handleTouchMove, { passive: false }); document.removeEventListener('touchend', handleTouchEnd); document.addEventListener('touchend', handleTouchEnd); document.removeEventListener('touchcancel', handleTouchEnd); document.addEventListener('touchcancel', handleTouchEnd); }
+
+        // --- Modal Management (Unchanged) ---
+        function showGameOverModal(title, message) { if (!gameOverModal || !modalTitleElement || !modalMessageElement) return; modalTitleElement.textContent = title; modalMessageElement.textContent = message; gameOverModal.classList.add('visible'); }
+        function hideGameOverModal() { if (!gameOverModal) return; gameOverModal.classList.remove('visible'); }
+
+        // --- Event Handlers (Click, Drag & Drop, Touch - Unchanged) ---
+        function handleSquareClick(event) { if (currentlyDragging.isDragging || isAnimating) return; if (gameOver || document.body.classList.contains('computer-thinking')) return; const isPlayerTurn = (gameMode === '2P' || currentPlayer === playerColor); if (!isPlayerTurn) return; const squareElement = event.currentTarget; const row = parseInt(squareElement.dataset.row); const col = parseInt(squareElement.dataset.col); const pieceOnSquare = board[row][col]; if (selectedSquare) { const startRow = selectedSquare.row; const startCol = selectedSquare.col; const targetMove = validMoves.find(move => move.row === row && move.col === col); if (targetMove) { initiateMove(startRow, startCol, row, col); return; } removePieceSelectionHighlight(); removeMoveHighlights(); selectedSquare = null; validMoves = []; if (pieceOnSquare && pieceOnSquare.startsWith(currentPlayer)) { selectPiece(row, col, pieceOnSquare); } } else { if (pieceOnSquare && pieceOnSquare.startsWith(currentPlayer)) { selectPiece(row, col, pieceOnSquare); } } }
+        function handleDragStart(event) { if (gameOver || document.body.classList.contains('computer-thinking') || isAnimating) { event.preventDefault(); return; } const pieceElement = event.target; const squareElement = pieceElement.closest('.square'); if (!squareElement) return; const startRow = parseInt(squareElement.dataset.row); const startCol = parseInt(squareElement.dataset.col); const pieceCode = board[startRow][startCol]; const isPlayerTurn = (gameMode === '2P' || currentPlayer === playerColor); if (!pieceCode || !pieceCode.startsWith(currentPlayer) || !isPlayerTurn) { event.preventDefault(); return; } removePieceSelectionHighlight(); selectedSquare = null; currentlyDragging.isDragging = true; currentlyDragging.pieceElement = pieceElement; currentlyDragging.startRow = startRow; currentlyDragging.startCol = startCol; currentlyDragging.pieceCode = pieceCode; currentlyDragging.validMoves = calculateValidMoves(startRow, startCol, pieceCode); validMoves = currentlyDragging.validMoves; event.dataTransfer.effectAllowed = 'move'; try { event.dataTransfer.setData('text/plain', pieceCode); } catch(e) { console.warn("Could not set drag data:", e)} const dragImage = pieceElement.cloneNode(true); const originalRect = pieceElement.getBoundingClientRect(); dragImage.style.width = `${originalRect.width}px`; dragImage.style.height = `${originalRect.height}px`; dragImage.style.position = "absolute"; dragImage.style.top = "-9999px"; dragImage.style.left = "-9999px"; dragImage.style.opacity = '0.8'; dragImage.style.pointerEvents = 'none'; document.body.appendChild(dragImage); const offsetX = originalRect.width / 2; const offsetY = originalRect.height / 2; try{ event.dataTransfer.setDragImage(dragImage, offsetX, offsetY); } catch(e) {console.warn("Could not set drag image", e)} setTimeout(() => { if (dragImage.parentNode) dragImage.parentNode.removeChild(dragImage); }, 1); setTimeout(() => { if (currentlyDragging.pieceElement === pieceElement && currentlyDragging.isDragging) { pieceElement.classList.add('piece-ghost'); } }, 0); pieceElement.classList.add('dragging'); highlightValidMoves(); }
+        function handleDragOver(event) { event.preventDefault(); if (!currentlyDragging.isDragging) return; const squareElement = event.currentTarget; const row = parseInt(squareElement.dataset.row); const col = parseInt(squareElement.dataset.col); const isValidTarget = currentlyDragging.validMoves.some(move => move.row === row && move.col === col); if (isValidTarget) { event.dataTransfer.dropEffect = 'move'; squareElement.classList.add('drag-over-highlight'); } else { event.dataTransfer.dropEffect = 'none'; squareElement.classList.remove('drag-over-highlight'); } }
+        function handleDragLeave(event) { const squareElement = event.currentTarget; squareElement.classList.remove('drag-over-highlight'); }
+        function handleDrop(event) { event.preventDefault(); if (!currentlyDragging.isDragging || isAnimating) return; const squareElement = event.currentTarget; squareElement.classList.remove('drag-over-highlight'); const endRow = parseInt(squareElement.dataset.row); const endCol = parseInt(squareElement.dataset.col); const startRow = currentlyDragging.startRow; const startCol = currentlyDragging.startCol; const isValidDrop = currentlyDragging.validMoves.some(move => move.row === endRow && move.col === endCol); if (isValidDrop) { initiateMove(startRow, startCol, endRow, endCol); } else { console.log(`[DRAG] Invalid drop at ${endRow},${endCol}`); } }
+        function handleDragEnd(event) { if (!currentlyDragging.isDragging) return; const draggedElement = currentlyDragging.pieceElement; if (draggedElement) { draggedElement.classList.remove('piece-ghost', 'dragging'); } document.querySelectorAll('.piece-ghost').forEach(el => el.classList.remove('piece-ghost')); document.querySelectorAll('.drag-over-highlight').forEach(el => el.classList.remove('drag-over-highlight')); removeMoveHighlights(); resetDraggingState(); }
+        function handleTouchStart(event) { if (gameOver || document.body.classList.contains('computer-thinking') || isAnimating || currentlyDragging.isDragging) { return; } if (currentlyDragging.touchIdentifier !== null) return; const pieceElement = event.target.closest('.piece'); if (!pieceElement) return; const squareElement = pieceElement.closest('.square'); if (!squareElement) return; const startRow = parseInt(squareElement.dataset.row); const startCol = parseInt(squareElement.dataset.col); const pieceCode = board[startRow][startCol]; const isPlayerTurn = (gameMode === '2P' || currentPlayer === playerColor); if (!pieceCode || !pieceCode.startsWith(currentPlayer) || !isPlayerTurn) { return; } event.preventDefault(); removePieceSelectionHighlight(); selectedSquare = null; const touch = event.changedTouches[0]; currentlyDragging.touchIdentifier = touch.identifier; currentlyDragging.isDragging = true; currentlyDragging.pieceElement = pieceElement; currentlyDragging.startRow = startRow; currentlyDragging.startCol = startCol; currentlyDragging.pieceCode = pieceCode; currentlyDragging.validMoves = calculateValidMoves(startRow, startCol, pieceCode); validMoves = currentlyDragging.validMoves; const rect = pieceElement.getBoundingClientRect(); currentlyDragging.ghostElement = pieceElement.cloneNode(true); currentlyDragging.ghostElement.style.position = 'fixed'; currentlyDragging.ghostElement.style.width = `${rect.width}px`; currentlyDragging.ghostElement.style.height = `${rect.height}px`; currentlyDragging.ghostElement.style.pointerEvents = 'none'; currentlyDragging.ghostElement.style.zIndex = '1010'; currentlyDragging.ghostElement.style.opacity = '0.8'; currentlyDragging.offsetX = touch.clientX - rect.left; currentlyDragging.offsetY = touch.clientY - rect.top; currentlyDragging.ghostElement.style.left = `${touch.clientX - currentlyDragging.offsetX}px`; currentlyDragging.ghostElement.style.top = `${touch.clientY - currentlyDragging.offsetY}px`; document.body.appendChild(currentlyDragging.ghostElement); pieceElement.classList.add('piece-ghost'); highlightValidMoves(); }
+        function handleTouchMove(event) { if (!currentlyDragging.isDragging || currentlyDragging.touchIdentifier === null) return; let currentTouch = null; for (let i = 0; i < event.changedTouches.length; i++) { if (event.changedTouches[i].identifier === currentlyDragging.touchIdentifier) { currentTouch = event.changedTouches[i]; break; } } if (!currentTouch) return; event.preventDefault(); if (currentlyDragging.ghostElement) { currentlyDragging.ghostElement.style.left = `${currentTouch.clientX - currentlyDragging.offsetX}px`; currentlyDragging.ghostElement.style.top = `${currentTouch.clientY - currentlyDragging.offsetY}px`; } const elementUnderTouch = document.elementFromPoint(currentTouch.clientX, currentTouch.clientY); const squareElement = elementUnderTouch ? elementUnderTouch.closest('.square') : null; document.querySelectorAll('.drag-over-highlight').forEach(el => el.classList.remove('drag-over-highlight')); if (squareElement) { const row = parseInt(squareElement.dataset.row); const col = parseInt(squareElement.dataset.col); const isValidTarget = currentlyDragging.validMoves.some(move => move.row === row && move.col === col); if (isValidTarget) { squareElement.classList.add('drag-over-highlight'); } } }
+        function handleTouchEnd(event) { if (!currentlyDragging.isDragging || currentlyDragging.touchIdentifier === null) return; let endedTouch = null; for (let i = 0; i < event.changedTouches.length; i++) { if (event.changedTouches[i].identifier === currentlyDragging.touchIdentifier) { endedTouch = event.changedTouches[i]; break; } } if (!endedTouch) return; if (currentlyDragging.ghostElement && currentlyDragging.ghostElement.parentNode) { currentlyDragging.ghostElement.parentNode.removeChild(currentlyDragging.ghostElement); } const elementUnderTouch = document.elementFromPoint(endedTouch.clientX, endedTouch.clientY); const squareElement = elementUnderTouch ? elementUnderTouch.closest('.square') : null; let droppedOnValidSquare = false; if (squareElement && !isAnimating) { const endRow = parseInt(squareElement.dataset.row); const endCol = parseInt(squareElement.dataset.col); const startRow = currentlyDragging.startRow; const startCol = currentlyDragging.startCol; const isValidDrop = currentlyDragging.validMoves.some(move => move.row === endRow && move.col === endCol); if (isValidDrop) { initiateMove(startRow, startCol, endRow, endCol); droppedOnValidSquare = true; } else { console.log(`[TOUCH] Invalid drop at ${endRow},${endCol}`); } } if (currentlyDragging.pieceElement) { currentlyDragging.pieceElement.classList.remove('piece-ghost'); } document.querySelectorAll('.drag-over-highlight').forEach(el => el.classList.remove('drag-over-highlight')); removeMoveHighlights(); resetDraggingState(); }
+        function resetDraggingState() { if(currentlyDragging.ghostElement && currentlyDragging.ghostElement.parentNode) { currentlyDragging.ghostElement.parentNode.removeChild(currentlyDragging.ghostElement); } if(currentlyDragging.pieceElement) { currentlyDragging.pieceElement.classList.remove('piece-ghost', 'dragging'); } currentlyDragging.pieceElement = null; currentlyDragging.startRow = -1; currentlyDragging.startCol = -1; currentlyDragging.pieceCode = null; currentlyDragging.validMoves = []; currentlyDragging.isDragging = false; currentlyDragging.touchIdentifier = null; currentlyDragging.ghostElement = null; currentlyDragging.offsetX = 0; currentlyDragging.offsetY = 0; }
+
+        // --- Move Execution and Animation (Unchanged) ---
+        function initiateMove(startRow, startCol, endRow, endCol) { if (isAnimating) return; console.log(`[MOVE] Initiating: ${startRow},${startCol} -> ${endRow},${endCol}`); isAnimating = true; updateUndoButton(); const pieceCode = board[startRow][startCol]; const startSquareEl = getSquareElement(startRow, startCol); const endSquareEl = getSquareElement(endRow, endCol); removePieceSelectionHighlight(); selectedSquare = null; removeMoveHighlights(); animateMove(startSquareEl, endSquareEl, pieceCode, () => { makeMove(startRow, startCol, endRow, endCol); saveState(); resetDraggingState(); validMoves = []; switchPlayer(); isAnimating = false; updateUndoButton(); }); }
+        function animateMove(startSquareEl, endSquareEl, pieceCode, onCompleteCallback) { if (!startSquareEl || !endSquareEl || !pieceCode || !boardElement || !gameContainer) { console.error("Animation error: Missing elements."); if (onCompleteCallback) onCompleteCallback(); return; } const boardRect = boardElement.getBoundingClientRect(); const startRect = startSquareEl.getBoundingClientRect(); const endRect = endSquareEl.getBoundingClientRect(); const pieceElToHide = startSquareEl.querySelector('.piece'); const movingPiece = document.createElement('div'); movingPiece.className = `moving-piece ${pieceCode}`; gameContainer.appendChild(movingPiece); const pieceWidth = startRect.width * 0.9; const pieceHeight = startRect.height * 0.9; const pieceOffsetX = (startRect.width - pieceWidth) / 2; const pieceOffsetY = (startRect.height - pieceHeight) / 2; const gameContainerRect = gameContainer.getBoundingClientRect(); const initialTopRelGameContainer = (startRect.top + pieceOffsetY) - gameContainerRect.top + gameContainer.scrollTop; const initialLeftRelGameContainer = (startRect.left + pieceOffsetX) - gameContainerRect.left + gameContainer.scrollLeft; const finalTopRelGameContainer = (endRect.top + pieceOffsetY) - gameContainerRect.top + gameContainer.scrollTop; const finalLeftRelGameContainer = (endRect.left + pieceOffsetX) - gameContainerRect.left + gameContainer.scrollLeft; const translateX = finalLeftRelGameContainer - initialLeftRelGameContainer; const translateY = finalTopRelGameContainer - initialTopRelGameContainer; movingPiece.style.position = 'absolute'; movingPiece.style.top = `${initialTopRelGameContainer}px`; movingPiece.style.left = `${initialLeftRelGameContainer}px`; movingPiece.style.width = `${pieceWidth}px`; movingPiece.style.height = `${pieceHeight}px`; movingPiece.style.transform = 'translate(0, 0)'; movingPiece.style.zIndex = '1000'; movingPiece.style.pointerEvents = 'none'; if (pieceElToHide) { pieceElToHide.classList.remove('piece-ghost'); pieceElToHide.classList.add('hidden-during-move'); } movingPiece.offsetHeight; requestAnimationFrame(() => { movingPiece.style.transform = `translate(${translateX}px, ${translateY}px)`; }); setTimeout(() => { if (movingPiece.parentNode) { movingPiece.remove(); } if (onCompleteCallback) { onCompleteCallback(); } }, ANIMATION_DURATION_MS); }
+        function makeMove(startRow, startCol, endRow, endCol) { const piece = board[startRow][startCol]; const captured = board[endRow][endCol]; if (!piece) { console.error(`Move err: empty start ${startRow},${startCol}`); return; } if (captured) { capturedPieces[piece[0]].push(captured); } if (piece === 'wp' && endRow === 0) { board[endRow][endCol] = 'wq'; } else if (piece === 'bp' && endRow === 7) { board[endRow][endCol] = 'bq'; } else { board[endRow][endCol] = piece; } board[startRow][startCol] = null; if (piece === 'wk') whiteKingPos = {row: endRow, col: endCol}; else if (piece === 'bk') blackKingPos = {row: endRow, col: endCol}; lastMove = { start: {row: startRow, col: startCol}, end: {row: endRow, col: endCol} }; }
+
+        // --- Selection and Highlighting (Unchanged) ---
+        function selectPiece(row, col, piece) { removePieceSelectionHighlight(); removeMoveHighlights(); selectedSquare = { row, col }; validMoves = calculateValidMoves(row, col, piece); const sqEl = getSquareElement(row, col); if (sqEl) sqEl.classList.add('selected'); highlightValidMoves(); }
+        function removePieceSelectionHighlight(){ if(selectedSquare){ const prevEl = getSquareElement(selectedSquare.row, selectedSquare.col); if(prevEl) prevEl.classList.remove('selected'); } document.querySelectorAll('.square.selected').forEach(el => el.classList.remove('selected')); }
+        function removeMoveHighlights(){ document.querySelectorAll('.square.highlight').forEach(el => el.classList.remove('highlight', 'capture')); }
+        function highlightValidMoves(){ removeMoveHighlights(); validMoves.forEach(m => { const s = getSquareElement(m.row, m.col); if (s) { s.classList.add('highlight'); const targetPiece = board[m.row][m.col]; if (targetPiece && getPieceColor(m.row, m.col) !== currentPlayer) { s.classList.add('capture'); } } }); }
+        function getSquareElement(r, c){ if (!isValid(r, c)) return null; return boardElement ? boardElement.querySelector(`.square[data-row="${r}"][data-col="${c}"]`) : null; }
+
+        // --- Player Switching and Game Over Check (Unchanged) ---
+        function switchPlayer() { const previousPlayer = currentPlayer; currentPlayer = (currentPlayer === 'w') ? 'b' : 'w'; isWhiteInCheck = isKingInCheck('w'); isBlackInCheck = isKingInCheck('b'); console.log(`[TURN] Switched to ${currentPlayer}. W_Check: ${isWhiteInCheck}, B_Check: ${isBlackInCheck}`); const availableMoves = calculateAllValidMoves(currentPlayer); if (availableMoves.length === 0) { gameOver = true; const winnerColor = previousPlayer; const loserColor = currentPlayer; const winnerName = winnerColor === 'w' ? 'Human' : 'Orc'; const loserName = loserColor === 'w' ? 'Human' : 'Orc'; let title = "Game Over!"; let message = ""; if ((loserColor === 'w' && isWhiteInCheck) || (loserColor === 'b' && isBlackInCheck)) { title = "Checkmate!"; message = `${winnerName} wins by checkmate!`; showGameOverModal(title, message); } else { title = "Stalemate!"; message = "The game is a draw by stalemate."; showGameOverModal(title, message); } renderBoard(); renderCapturedPieces(); updateUndoButton(); return; } renderBoard(); renderCapturedPieces(); updateStatus(); isComputerTurn = (gameMode !== '2P' && currentPlayer !== playerColor); updateUndoButton(); if (isComputerTurn && !gameOver) { console.log("[TURN] CPU's turn starting..."); document.body.classList.add('computer-thinking'); updateStatus(); setTimeout(makeComputerMove, 500); } else { document.body.classList.remove('computer-thinking'); console.log("[TURN] Player's turn."); updateStatus(); } }
+        function updateStatus() { if (!statusElement || gameOver) return; let turnText = ""; const currentSideName = currentPlayer === 'w' ? 'Human' : 'Orc'; const isInCheck = (currentPlayer === 'w' && isWhiteInCheck) || (currentPlayer === 'b' && isBlackInCheck); if (gameMode === '2P') { turnText = `${currentSideName}'s Turn`; } else { if (document.body.classList.contains('computer-thinking')) { turnText = `CPU thinking...`; } else if (currentPlayer === playerColor) { turnText = `Your Turn`; } else { turnText = `CPU's Turn`; } } if (isInCheck) { turnText += " (Check!)"; } statusElement.textContent = turnText; }
+
+        // --- Move Calculation & Check Logic (Unchanged) ---
+        function isValid(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
+        function getPieceColor(r, c) { if (!isValid(r, c)) return null; const p = board[r][c]; return p ? p[0] : null; }
+        function addSlidingMoves(moves, r, c, color, dr, dc, currentBoard) { let cr = r + dr; let cc = c + dc; while (isValid(cr, cc)) { const targetPiece = currentBoard[cr][cc]; if (targetPiece === null) { moves.push({ row: cr, col: cc }); } else { if (targetPiece[0] !== color) { moves.push({ row: cr, col: cc }); } break; } cr += dr; cc += dc; } }
+        function getPawnMoves(r, c, color, currentBoard) { const moves = []; const dir = color === 'w' ? -1 : 1; const startRow = color === 'w' ? 6 : 1; const nextRow = r + dir; if (isValid(nextRow, c) && currentBoard[nextRow][c] === null) { moves.push({ row: nextRow, col: c }); const twoStepRow = r + 2 * dir; if (r === startRow && isValid(twoStepRow, c) && currentBoard[twoStepRow][c] === null) { moves.push({ row: twoStepRow, col: c }); } } const captureCols = [c - 1, c + 1]; captureCols.forEach(capCol => { if (isValid(nextRow, capCol)) { const targetPiece = currentBoard[nextRow][capCol]; if (targetPiece && targetPiece[0] !== color) { moves.push({ row: nextRow, col: capCol }); } } }); return moves; }
+        function getRookMoves(r, c, color, currentBoard) { const moves = []; const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]]; directions.forEach(([dr, dc]) => addSlidingMoves(moves, r, c, color, dr, dc, currentBoard)); return moves; }
+        function getBishopMoves(r, c, color, currentBoard) { const moves = []; const directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]]; directions.forEach(([dr, dc]) => addSlidingMoves(moves, r, c, color, dr, dc, currentBoard)); return moves; }
+        function getQueenMoves(r, c, color, currentBoard) { const moves = []; const directions = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]]; directions.forEach(([dr, dc]) => addSlidingMoves(moves, r, c, color, dr, dc, currentBoard)); return moves; }
+        function getKnightMoves(r, c, color, currentBoard) { const moves = []; const knightMoves = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]]; knightMoves.forEach(([dr, dc]) => { const nr = r + dr; const nc = c + dc; if (isValid(nr, nc)) { const targetPiece = currentBoard[nr][nc]; if (!targetPiece || targetPiece[0] !== color) { moves.push({ row: nr, col: nc }); } } }); return moves; }
+        function getKingMoves(r, c, color, currentBoard) { const moves = []; const kingMoves = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]]; kingMoves.forEach(([dr, dc]) => { const nr = r + dr; const nc = c + dc; if (isValid(nr, nc)) { const targetPiece = currentBoard[nr][nc]; if (!targetPiece || targetPiece[0] !== color) { moves.push({ row: nr, col: nc }); } } }); return moves; }
+        function calculateValidMoves(r, c, piece, currentBoard = board) { const legalMoves = []; if (!piece) return legalMoves; const type = piece[1]; const color = piece[0]; let pseudoLegalMoves = []; switch (type) { case 'p': pseudoLegalMoves = getPawnMoves(r, c, color, currentBoard); break; case 'r': pseudoLegalMoves = getRookMoves(r, c, color, currentBoard); break; case 'n': pseudoLegalMoves = getKnightMoves(r, c, color, currentBoard); break; case 'b': pseudoLegalMoves = getBishopMoves(r, c, color, currentBoard); break; case 'q': pseudoLegalMoves = getQueenMoves(r, c, color, currentBoard); break; case 'k': pseudoLegalMoves = getKingMoves(r, c, color, currentBoard); break; default: return legalMoves; } pseudoLegalMoves.forEach(move => { if (!moveLeavesKingInCheck(r, c, move.row, move.col, color, currentBoard)) { legalMoves.push(move); } }); return legalMoves; }
+        function isSquareAttacked(r, c, attackerColor, currentBoard) { const pawnDir = attackerColor === 'w' ? 1 : -1; const pawnAttackSources = [{ dr: pawnDir, dc: -1 }, { dr: pawnDir, dc: 1 }]; for (const { dr, dc } of pawnAttackSources) { const sr = r + dr; const sc = c + dc; if (isValid(sr, sc) && currentBoard[sr][sc] === attackerColor + 'p') return true; } const knightMoves = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]]; for (const [dr, dc] of knightMoves) { const sr = r + dr; const sc = c + dc; if (isValid(sr, sc) && currentBoard[sr][sc] === attackerColor + 'n') return true; } const rookDirs = [[-1, 0], [1, 0], [0, -1], [0, 1]]; const bishopDirs = [[-1, -1], [-1, 1], [1, -1], [1, 1]]; function checkSliding(directions, pieceTypes) { for (const [dr, dc] of directions) { let cr = r + dr; let cc = c + dc; while (isValid(cr, cc)) { const p = currentBoard[cr][cc]; if (p !== null) { if (p[0] === attackerColor && pieceTypes.includes(p[1])) return true; break; } cr += dr; cc += dc; } } return false; } if (checkSliding(rookDirs, ['r', 'q'])) return true; if (checkSliding(bishopDirs, ['b', 'q'])) return true; const kingMoves = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]]; for (const [dr, dc] of kingMoves) { const sr = r + dr; const sc = c + dc; if (isValid(sr, sc) && currentBoard[sr][sc] === attackerColor + 'k') return true; } return false; }
+        function findKing(kingColor, currentBoard = board) { if (currentBoard === board) { const cachedPos = kingColor === 'w' ? whiteKingPos : blackKingPos; if (cachedPos && isValid(cachedPos.row, cachedPos.col) && currentBoard[cachedPos.row][cachedPos.col] === kingColor + 'k') { return cachedPos; } } const foundPos = findKingOnBoard(kingColor, currentBoard); if (currentBoard === board && foundPos) { if (kingColor === 'w') whiteKingPos = foundPos; else blackKingPos = foundPos; } return foundPos; }
+        function isKingInCheck(kingColor, currentBoard = board) { const kingPos = findKing(kingColor, currentBoard); if (!kingPos) { console.error(`Cannot check king: ${kingColor}k not found!`); return false; } const attackerColor = kingColor === 'w' ? 'b' : 'w'; return isSquareAttacked(kingPos.row, kingPos.col, attackerColor, currentBoard); }
+        function moveLeavesKingInCheck(startRow, startCol, endRow, endCol, pieceColor, boardToCheck) { const tempBoard = JSON.parse(JSON.stringify(boardToCheck)); const piece = tempBoard[startRow][startCol]; tempBoard[endRow][endCol] = piece; tempBoard[startRow][startCol] = null; let kingPosToCheck = findKing(pieceColor, tempBoard); if (!kingPosToCheck) { console.error("Check validation error: King position unknown after simulated move!"); return true; } const check = isSquareAttacked(kingPosToCheck.row, kingPosToCheck.col, pieceColor === 'w' ? 'b' : 'w', tempBoard); return check; }
+        function calculateAllValidMoves(playerColor, currentBoard = board) { const allMoves = []; for (let r = 0; r < 8; r++) { for (let c = 0; c < 8; c++) { const piece = currentBoard[r][c]; if (piece && piece.startsWith(playerColor)) { const moves = calculateValidMoves(r, c, piece, currentBoard); moves.forEach(move => allMoves.push({ piece: piece, startRow: r, startCol: c, endRow: move.row, endCol: move.col })); } } } return allMoves; }
+
+        // --- AI Logic (Unchanged) ---
+        function evaluateBoardFromState(boardState) { let score = 0; for (let r = 0; r < 8; r++) { for (let c = 0; c < 8; c++) { const piece = boardState[r][c]; if (piece) { const value = pieceValues[piece[1]] || 0; score += (piece[0] === 'w' ? value : -value); } } } return score; }
+        function simulateMoveOnState(currentBoardState, move) { let newBoardState = JSON.parse(JSON.stringify(currentBoardState)); const piece = newBoardState[move.startRow][move.startCol]; if (!piece) { return [newBoardState, null]; } const captured = newBoardState[move.endRow][move.endCol]; if (piece === 'wp' && move.endRow === 0) newBoardState[move.endRow][move.endCol] = 'wq'; else if (piece === 'bp' && move.endRow === 7) newBoardState[move.endRow][move.endCol] = 'bq'; else newBoardState[move.endRow][move.endCol] = piece; newBoardState[move.startRow][move.startCol] = null; return [newBoardState, captured]; }
+        function minimax(depth, boardState, alpha, beta, maximizingPlayer, playerToDoMove) { if (depth === 0) { return evaluateBoardFromState(boardState); } const availableMoves = calculateAllValidMoves(playerToDoMove, boardState); if (availableMoves.length === 0) { if (isKingInCheck(playerToDoMove, boardState)) { return maximizingPlayer ? -Infinity - depth : Infinity + depth; } else { return 0; } } if (playerToDoMove === 'w') { let maxEval = -Infinity; for (const move of availableMoves) { const [nextBoardState, _] = simulateMoveOnState(boardState, move); const evaluation = minimax(depth - 1, nextBoardState, alpha, beta, maximizingPlayer, 'b'); maxEval = Math.max(maxEval, evaluation); alpha = Math.max(alpha, evaluation); if (beta <= alpha) { break; } } return maxEval; } else { let minEval = Infinity; for (const move of availableMoves) { const [nextBoardState, _] = simulateMoveOnState(boardState, move); const evaluation = minimax(depth - 1, nextBoardState, alpha, beta, maximizingPlayer, 'w'); minEval = Math.min(minEval, evaluation); beta = Math.min(beta, evaluation); if (beta <= alpha) { break; } } return minEval; } }
+        function makeComputerMove() { if (gameOver || !isComputerTurn || isAnimating) { if (!isComputerTurn && !gameOver) { document.body.classList.remove('computer-thinking'); updateStatus(); } return; } console.log(`[AI] ${gameMode} calculating for ${currentPlayer}...`); const aiColor = currentPlayer; const availableMoves = calculateAllValidMoves(aiColor, board); if (availableMoves.length === 0) { console.error("AI Error: No moves available, but game wasn't over?"); isComputerTurn = false; document.body.classList.remove('computer-thinking'); updateStatus(); updateUndoButton(); return; } let bestMove = null; if (gameMode === 'CPU-easy') { bestMove = availableMoves[Math.floor(Math.random() * availableMoves.length)]; } else if (gameMode === 'CPU-medium') { let bestScore = -Infinity; let candidateMoves = []; availableMoves.forEach(move => { let moveScore = 0; const targetPiece = board[move.endRow][move.endCol]; if (targetPiece) { moveScore += (pieceValues[targetPiece[1]] || 0) * 10; } const [nextBoardState, _] = simulateMoveOnState(board, move); const opponentColor = aiColor === 'w' ? 'b' : 'w'; if (isKingInCheck(opponentColor, nextBoardState)) { moveScore += 5; } moveScore += Math.random() * 0.5; if (moveScore > bestScore) { bestScore = moveScore; candidateMoves = [move]; } else if (moveScore === bestScore) { candidateMoves.push(move); } }); bestMove = candidateMoves.length > 0 ? candidateMoves[Math.floor(Math.random() * candidateMoves.length)] : availableMoves[Math.floor(Math.random() * availableMoves.length)]; } else if (gameMode === 'CPU-hard') { let bestScore = (aiColor === 'w') ? -Infinity : Infinity; let depth = 2; let candidateMoves = []; const isAiMaximizing = (aiColor === 'w'); availableMoves.forEach(move => { const [nextBoardState, _] = simulateMoveOnState(board, move); const opponentColor = (aiColor === 'w' ? 'b' : 'w'); const score = minimax(depth -1, nextBoardState, -Infinity, Infinity, isAiMaximizing, opponentColor); if (isAiMaximizing) { if (score > bestScore) { bestScore = score; candidateMoves = [move]; } else if (score === bestScore) { candidateMoves.push(move); } } else { if (score < bestScore) { bestScore = score; candidateMoves = [move]; } else if (score === bestScore) { candidateMoves.push(move); } } }); bestMove = candidateMoves.length > 0 ? candidateMoves[Math.floor(Math.random() * candidateMoves.length)] : availableMoves[Math.floor(Math.random() * availableMoves.length)]; console.log(`[AI Hard] Best score: ${bestScore}, Moves: ${candidateMoves.length}`); } if (bestMove) { console.log(`[AI] Chosen Move: ${bestMove.piece} ${bestMove.startRow},${bestMove.startCol} -> ${bestMove.endRow},${bestMove.endCol}`); initiateMove(bestMove.startRow, bestMove.startCol, bestMove.endRow, bestMove.endCol); } else { console.error("AI failed to select a move!"); isComputerTurn = false; document.body.classList.remove('computer-thinking'); updateStatus(); updateUndoButton(); } }
+
+        // --- Game Control (Unchanged) ---
+        function quitGame() { console.log("[CONTROL] Quitting game..."); hideGameOverModal(); if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) { if (document.exitFullscreen) { document.exitFullscreen(); } else if (document.mozCancelFullScreen) { document.mozCancelFullScreen(); } else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); } else if (document.msExitFullscreen) { document.msExitFullscreen(); } } if(fullscreenButton) fullscreenButton.classList.remove('active'); gameOver = true; isAnimating = false; document.body.classList.remove('computer-thinking'); if (gameAreaElement) gameAreaElement.style.display = 'none'; if (modeSelectionElement) modeSelectionElement.style.display = 'flex'; if (boardElement) boardElement.innerHTML = ''; if (whiteCapturedElement) whiteCapturedElement.innerHTML = ''; if (blackCapturedElement) blackCapturedElement.innerHTML = ''; board = []; currentPlayer = 'w'; playerColor = 'w'; gameMode = null; selectedSquare = null; resetDraggingState(); validMoves = []; whiteKingPos = null; blackKingPos = null; isWhiteInCheck = false; isBlackInCheck = false; isComputerTurn = false; capturedPieces = { w: [], b: [] }; lastMove = { start: null, end: null }; moveHistory = []; selectedDifficulty = null; selectedModeType = null; if (boardElement) boardElement.classList.remove('board-flipped'); if (statusElement) statusElement.textContent = "Select mode to start"; if (mode2pButton) mode2pButton.classList.remove('selected'); if (modeCpuButton) modeCpuButton.classList.remove('selected'); if (difficultyButtons) difficultyButtons.forEach(b => b.classList.remove('selected')); if (sideOptions) { sideOptions.forEach(o => o.classList.remove('selected')); const sideHuman = document.getElementById('side-human'); if (sideHuman) sideHuman.classList.add('selected'); const sideHumanRadio = document.getElementById('radio-human'); if (sideHumanRadio) sideHumanRadio.checked = true; } if (cpuOptionsContainer) { cpuOptionsContainer.style.display = 'none'; cpuOptionsContainer.classList.remove('options-disabled'); } updateUndoButton(); if (startGameButton) startGameButton.disabled = true; }
+
+        // --- Fullscreen Functionality (Unchanged JS logic) ---
+        function toggleFullScreen() { const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement; const elementToFullscreen = gameContainer; if (!isFullscreen) { console.log("Entering Fullscreen..."); try { let promise; if (elementToFullscreen.requestFullscreen) { promise = elementToFullscreen.requestFullscreen(); } else if (elementToFullscreen.mozRequestFullScreen) { promise = elementToFullscreen.mozRequestFullScreen(); } else if (elementToFullscreen.webkitRequestFullscreen) { promise = elementToFullscreen.webkitRequestFullscreen(); } else if (elementToFullscreen.msRequestFullscreen) { promise = elementToFullscreen.msRequestFullscreen(); } if (promise) { promise.then(() => {}).catch(err => { console.error(`Fullscreen error: ${err.message} (${err.name})`); alert(`Could not enter fullscreen: ${err.message}`); if(fullscreenButton) fullscreenButton.classList.remove('active'); }); } else { console.warn("Fullscreen API not supported by this browser."); alert("Fullscreen mode is not supported by your browser."); } } catch (err) { console.error("Error attempting to enter fullscreen:", err); alert("An error occurred trying to enter fullscreen."); } } else { console.log("Exiting Fullscreen..."); try { if (document.exitFullscreen) { document.exitFullscreen(); } else if (document.mozCancelFullScreen) { document.mozCancelFullScreen(); } else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); } else if (document.msExitFullscreen) { document.msExitFullscreen(); } } catch (err) { console.error("Error attempting to exit fullscreen:", err); } } }
+        function handleFullscreenChange() { const isFullscreenNow = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement); const fsElement = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement; if (isFullscreenNow && fsElement === gameContainer) { if(fullscreenButton) fullscreenButton.classList.add('active'); console.log("Entered fullscreen (event)."); } else { if (fullscreenButton && fullscreenButton.classList.contains('active')) { fullscreenButton.classList.remove('active'); console.log("Exited fullscreen (event)."); } } }
+        document.addEventListener('fullscreenchange', handleFullscreenChange); document.addEventListener('webkitfullscreenchange', handleFullscreenChange); document.addEventListener('mozfullscreenchange', handleFullscreenChange); document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+        // --- Initial UI Setup (Unchanged) ---
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                console.log("DOM Loaded. Setting up.");
+
+                // --- Rigorous Element Check ---
+                const essentialElements = {
+                    gameContainer, boardElement, statusElement, modeSelectionElement, gameAreaElement,
+                    panelElement, whiteCapturedElement, blackCapturedElement, undoButton, quitButton,
+                    fullscreenButton, mode2pButton, modeCpuButton, cpuOptionsContainer, difficultyChoiceDiv,
+                    playerSideChoiceDiv, startGameButton, gameOverModal, modalTitleElement, modalMessageElement,
+                    newGameButton
+                };
+                let allElementsFound = true;
+                for (const key in essentialElements) {
+                    if (!essentialElements[key]) {
+                        console.error(`CRITICAL: Essential DOM element "${key}" missing! Check ID in HTML.`);
+                        allElementsFound = false;
+                    }
+                }
+                if (!allElementsFound) {
+                     alert("Error loading critical game components. Please check the console and refresh.");
+                     return; // Stop initialization
+                }
+                // Check collections specifically
+                if (difficultyButtons.length === 0) console.warn("No difficulty buttons found inside #difficulty-choice.");
+                if (sideOptions.length === 0) console.warn("No side options found inside #player-side-choice.");
+                 // --- End Element Check ---
+
+                setupModeSelectionListeners(); // Setup listeners first
+
+                if(statusElement) statusElement.textContent = "Select mode to start";
+
+                // New game button listener
+                 newGameButton.addEventListener('click', () => {
+                    console.log("New Game (from modal) clicked.");
+                    quitGame(); // Reset everything
+                    // After quitting, re-select default mode
+                    setTimeout(() => {
+                         const cpuModeBtn = document.getElementById('mode-cpu');
+                         if(cpuModeBtn) {
+                             cpuModeBtn.click();
+                             console.log("Default mode re-selected after Play Again.");
+                         } else { console.error("Cannot select default mode after Play Again."); }
+                     }, 50);
+                 });
+
+                 // Set default mode selection on initial load using a small delay
+                 setTimeout(() => {
+                     const cpuModeBtn = document.getElementById('mode-cpu');
+                     if (cpuModeBtn) {
+                         console.log("Attempting to click default mode button (CPU)...");
+                         cpuModeBtn.click(); // This should trigger the chain: select CPU -> select Easy -> update button
+                     } else {
+                         console.error("Cannot find mode-cpu button to select default mode on load.");
+                     }
+                 }, 50); // Increased delay slightly
+
+            } catch (error) {
+                console.error("Initialization setup error:", error);
+                alert("An error occurred while initializing the game. Please check the console.");
+            }
+        });
+
+    </script>
+
+</body>
+</html>
