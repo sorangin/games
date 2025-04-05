@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orc vs Human Chess</title>
+    <style>
+        /* --- Global Styles & Setup --- */
+        :root { /* CSS Variables */
+            --board-width: 480px; --panel-width: 180px; --board-height: 480px;
+            --total-width: calc(var(--board-width) + var(--panel-width));
+            --light-square: #f0d9b5; --dark-square: #b58863; --panel-bg: var(--light-square);
+            --panel-text: #6a4a3a; --panel-border: #d3bfa8; --button-bg: rgba(181, 136, 99, 0.85);
+            --button-bg-hover: var(--dark-square); --button-border: var(--dark-square); --button-text: #ffffff;
+            --container-bg: #ffffff; --body-bg: #dcdcdc; --highlight-selected: rgba(30, 100, 200, 0.7);
+            --highlight-move: rgba(0, 100, 0, 0.4); --highlight-capture: rgba(200, 0, 0, 0.5);
+            --highlight-last-start: rgba(220, 220, 100, 0.35); --highlight-last-end: rgba(180, 220, 100, 0.4);
+            --highlight-check: rgba(255, 0, 0, 0.5);
+        }
+        /* Reverted body styles - simple centering */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; justify-content: center; align-items: flex-start; /* Align container to top */
+            padding-top: 30px; /* Restore top padding */
+            background-color: var(--body-bg);
+            min-height: 100vh; margin: 0;
+        }
+        #game-container {
+            /* Reverted to original container styles */
+            display: flex; flex-direction: column; align-items: center;
+            background-color: var(--container-bg); padding: 25px; border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            /* NO fixed width/height, NO transform */
+            transition: all 0.3s ease-in-out; /* Keep smooth FS transition */
+        }
+
+         /* Fullscreen Specific Styles (SIMPLE version) */
+        #game-container:fullscreen {
+             /* Let browser handle layout, maybe just remove padding/border */
+             padding: 5px; /* Minimal padding */
+             border-radius: 0;
+             box-shadow: none;
+             width: 100%; height: 100%; /* Expand to fill */
+             overflow: auto; /* Allow scroll if needed */
+             background-color: var(--container-bg); /* Ensure background fills */
+        }
+
+
+        /* --- Mode Selection Styling --- */
+        #mode-selection { background-color: var(--panel-bg); color: var(--panel-text); border-radius: 8px; margin-bottom: 25px; border: 1px solid var(--panel-border); width: var(--total-width); height: var(--board-height); box-sizing: border-box; box-shadow: inset 0 0 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; overflow-y: auto; }
+        #mode-selection h2 { margin-top: 0; margin-bottom: 15px; color: var(--dark-square); font-weight: 600; }
+
+        /* *** ADDED/MODIFIED Rules for the button container *** */
+        .mode-type-selection {
+             width: 100%; /* Ensure this container takes full width */
+             box-sizing: border-box;
+             text-align: center; /* Helps if margin:auto wasn't used on buttons */
+        }
+
+        .mode-type-selection button {
+            display: block; /* Keep as block */
+            width: 70%; /* Now 70% of the 100% wide .mode-type-selection div */
+            max-width: 300px; /* Still respects max width */
+            margin: 10px auto; /* Auto horizontal margins for centering */
+            padding: 10px 15px; font-size: 1.0em; font-weight: 500; cursor: pointer; border: 1px solid var(--button-border); border-radius: 5px; background-color: rgba(255,255,255,0.4); color: var(--panel-text); transition: background-color 0.2s, box-shadow 0.2s;
+        }
+        .mode-type-selection button:hover { background-color: rgba(255,255,255,0.7); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .mode-type-selection button.selected { background-color: var(--button-bg); color: var(--button-text); font-weight: bold; }
+        #cpu-options-container { display: none; width: 95%; max-width: 500px; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--panel-border); display: flex; flex-wrap: wrap; justify-content: space-around; align-items: flex-start; gap: 10px; }
+        #difficulty-choice { flex-basis: 200px; text-align: center; }
+        #difficulty-choice h3 { font-size: 0.9em; margin-bottom: 5px; font-weight: 500; }
+        #difficulty-choice button { padding: 5px 10px; margin: 3px; font-size: 0.85em; cursor: pointer; border: 1px solid var(--panel-border); border-radius: 4px; background-color: #fff; color: var(--panel-text); transition: background-color 0.2s; }
+        #difficulty-choice button:hover { background-color: #eee; }
+        #difficulty-choice button.selected { background-color: var(--dark-square); color: white; font-weight: bold; border-color: var(--dark-square); }
+        #player-side-choice { flex-basis: 200px; text-align: center; }
+        #player-side-choice h3 { font-size: 0.9em; margin-bottom: 8px; font-weight: 500; }
+        .side-option { display: inline-block; margin: 0 5px; padding: 5px; border-radius: 5px; cursor: pointer; transition: background-color 0.2s; text-align: center; vertical-align: top; }
+        .side-option input[type="radio"] { display: none; }
+        .side-option img { width: 28px; height: 28px; display: block; margin: 0 auto 3px auto; pointer-events: none; }
+        .side-option label { font-weight: 500; pointer-events: none; display: block; font-size: 0.85em; }
+        .side-option:hover { background-color: rgba(181, 136, 99, 0.1); }
+        .side-option.selected { background-color: rgba(181, 136, 99, 0.25); }
+        #start-button-container { margin-top: 15px; padding-top: 10px; border-top: 1px solid var(--panel-border); width: 90%; text-align: center; }
+        #start-game-button { padding: 10px 25px; font-size: 1.05em; cursor: pointer; background-color: var(--button-bg); color: var(--button-text); border: 1px solid var(--button-border); border-radius: 5px; transition: background-color 0.2s; font-weight: bold; }
+        #start-game-button:hover:not(:disabled) { background-color: var(--button-bg-hover); }
+        #start-game-button:disabled { background-color: #ccc; border-color: #bbb; color: #777; cursor: not-allowed; opacity: 0.6; }
+        /* --- End Mode Selection --- */
+
+
+        /* --- Game Area --- */
+        #game-area { display: none; }
+        #board-and-panels { display: flex; align-items: flex-start; }
+        #board { width: var(--board-width); height: var(--board-height); display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); border: 2px solid #333; transition: transform 0.5s ease-in-out; box-sizing: border-box; background-color: #888; }
+        #board.board-flipped { transform: rotate(180deg); }
+        .square { display: flex; justify-content: center; align-items: center; user-select: none; cursor: pointer; position: relative; transition: background-color 0.15s ease-in-out; background-color: transparent; overflow: hidden; }
+        .light { background-color: var(--light-square); } .dark { background-color: var(--dark-square); }
+        .board-flipped .square { transform: rotate(180deg); }
+        .piece { width: 90%; height: 90%; background-size: contain; background-repeat: no-repeat; background-position: center; pointer-events: none; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; }
+
+        /* Highlights */
+        .selected { outline: 3px solid var(--highlight-selected); outline-offset: -3px; background-color: rgba(80, 140, 220, 0.05) !important; }
+        .highlight::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 25%; height: 25%; background-color: var(--highlight-move); border-radius: 50%; pointer-events: none; z-index: 1; box-sizing: border-box; }
+        .highlight.capture::after { width: 85%; height: 85%; background-color: transparent; border: 5px solid var(--highlight-capture); border-radius: 50%; }
+        .check { box-shadow: inset 0 0 10px 5px var(--highlight-check); }
+        .last-move-start { background-color: var(--highlight-last-start) !important; } .last-move-end { background-color: var(--highlight-last-end) !important; }
+
+        /* Sprites & Filter */
+        /* White Pieces (Humans) */
+        .wp { background-image: url('sprites/wPawn.png'); }
+        .wr { background-image: url('sprites/wRook.png'); }
+        .wn { background-image: url('sprites/wKnight.png'); }
+        .wb { background-image: url('sprites/wBishop.png'); }
+        .wq { background-image: url('sprites/wQueen.png'); }
+        .wk { background-image: url('sprites/wKing.png'); }
+
+        /* Black Pieces (Orcs) - Updated Sprites */
+        .bp { background-image: url('sprites/bPawn.png'); }
+        .br { background-image: url('sprites/bRook.png'); }
+        .bn { background-image: url('sprites/bKnight.png'); }
+        .bb { background-image: url('sprites/bBishop.png'); }
+        .bq { background-image: url('sprites/bQueen.png'); }
+        .bk { background-image: url('sprites/bKing.png'); }
+
+        /* Side Panel */
+        #side-panel {
+            width: var(--panel-width); background-color: var(--panel-bg); padding: 15px;
+            border-top: 2px solid #333; border-bottom: 2px solid #333; border-right: 2px solid #333;
+            border-left: none; display: flex; flex-direction: column;
+            min-height: var(--board-height); height: var(--board-height); box-sizing: border-box;
+            color: var(--panel-text);
+        }
+        #status { font-size: 1.15em; font-weight: bold; min-height: 1.5em; text-align: center; margin-bottom: 15px; border-bottom: 1px solid var(--panel-border); padding-bottom: 10px; }
+        #side-panel h3 { margin-top: 10px; margin-bottom: 5px; font-size: 0.9em; font-weight: normal; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: none; padding-bottom: 0; text-align: center; }
+        #captured-heading { margin-bottom: 5px; }
+        #captured-pieces-box { background-color: rgba(255, 255, 255, 0.3); border: 1px solid var(--panel-border); border-radius: 4px; padding: 8px; margin-bottom: 15px; min-height: 50px; max-height: 150px; display: flex; flex-direction: column; justify-content: space-between; gap: 5px; overflow-y: auto; flex-grow: 1; }
+        .captured-list { display: flex; flex-wrap: wrap; gap: 4px; min-height: 22px; align-content: flex-start; }
+        .captured-piece { width: 22px; height: 22px; background-size: contain; background-repeat: no-repeat; background-position: center; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; }
+
+        /* --- Panel Buttons Layout Changes --- */
+        #panel-buttons {
+            margin-top: auto; padding-top: 15px;
+            border-top: 1px solid var(--panel-border);
+            display: flex; flex-direction: column; gap: 8px; /* Stack rows/buttons */
+        }
+        /* NEW: Row for smaller side-by-side buttons */
+        .button-row {
+            display: flex;
+            justify-content: space-between; /* Space out buttons in the row */
+            gap: 6px; /* Add gap between buttons */
+        }
+        /* General button style */
+        #side-panel button {
+            padding: 9px 10px; font-size: 0.9em; cursor: pointer;
+            border: 1px solid var(--button-border); border-radius: 4px;
+            background-color: var(--button-bg); color: var(--button-text);
+            transition: background-color 0.2s, opacity 0.2s;
+            text-align: center; font-weight: bold;
+        }
+        /* Style for smaller buttons in the row */
+        .button-row button {
+            flex: 1; /* Allow buttons to share space */
+            padding: 6px 8px;
+            font-size: 0.8em;
+            line-height: 1;
+        }
+        .button-row button svg {
+            width: 16px;
+            height: 16px;
+            vertical-align: middle;
+            fill: currentColor;
+        }
+        #quit-button {
+             margin-top: 0;
+             flex-basis: 100%;
+        }
+        #side-panel button:hover:not(:disabled) { background-color: var(--button-bg-hover); }
+        #side-panel button:disabled { background-color: rgba(181, 136, 99, 0.4); color: #eaddcf; cursor: not-allowed; border-color: rgba(181, 136, 99, 0.5); opacity: 0.7; }
+
+        /* --- Fullscreen Icon Toggling --- */
+        #fullscreen-button #fs-exit-icon { display: none; }
+        #fullscreen-button.active #fs-enter-icon { display: none; }
+        #fullscreen-button.active #fs-exit-icon { display: inline-block; }
+
+        /* Computer Thinking State */
+        body.computer-thinking #board { cursor: wait; }
+        body.computer-thinking .square { pointer-events: none !important; }
+        body.computer-thinking #undo-button,
+        body.computer-thinking #fullscreen-button { pointer-events: none; opacity: 0.5; cursor: wait; }
+
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- Mode Selection -->
+        <div id="mode-selection">
+            <h2>Orc vs Human Chess</h2>
+             <div class="mode-type-selection"> <!-- Container has width: 100% -->
+                 <button id="mode-cpu">1 Player</button> <!-- width: 70% of container -->
+                 <button id="mode-2p">2 Player</button>  <!-- width: 70% of container -->
+             </div>
+             <div id="cpu-options-container">
+                 <div id="difficulty-choice">
+                     <h3>Select Difficulty:</h3>
+                     <button data-difficulty="CPU-easy">Easy</button>
+                     <button data-difficulty="CPU-medium">Medium</button>
+                     <button data-difficulty="CPU-hard">Hard</button>
+                 </div>
+                 <div id="player-side-choice">
+                     <h3>Choose your side:</h3>
+                     <div class="side-option selected" id="side-human">
+                         <input type="radio" name="playerSide" value="w" id="radio-human" checked>
+                         <img src="sprites/wKing.png" alt="Human King">
+                         <label for="radio-human">Human</label>
+                     </div>
+                     <div class="side-option" id="side-orc">
+                         <input type="radio" name="playerSide" value="b" id="radio-orc">
+                         <img src="sprites/bKing.png" alt="Orc King">
+                         <label for="radio-orc">Orc</label>
+                     </div>
+                 </div>
+             </div>
+             <div id="start-button-container">
+                 <button id="start-game-button" onclick="startGame()" disabled>Play</button>
+             </div>
+        </div> <!-- End mode-selection -->
+
+
+        <div id="game-area">
+             <div id="board-and-panels">
+                 <div id="board"></div>
+                 <div id="side-panel">
+                     <div id="status">Game Status</div>
+                     <h3 id="captured-heading">Captured</h3>
+                     <div id="captured-pieces-box">
+                         <div id="white-captured" class="captured-list"></div>
+                         <div id="black-captured" class="captured-list"></div>
+                     </div>
+                     <div id="panel-buttons">
+                         <div class="button-row">
+                             <button id="undo-button" onclick="undoMove()" title="Undo Last Move">
+                                 Undo
+                             </button>
+                             <button id="fullscreen-button" onclick="toggleFullScreen()" title="Toggle Fullscreen">
+                                 <svg id="fs-enter-icon" viewBox="0 0 24 24"> <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/> </svg>
+                                 <svg id="fs-exit-icon" viewBox="0 0 24 24"> <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/> </svg>
+                             </button>
+                         </div>
+                         <button id="quit-button" onclick="quitGame()">Quit</button>
+                     </div>
+                 </div>
+             </div>
+        </div> <!-- End game-area -->
+    </div> <!-- End game-container -->
+
+    <script>
+        // --- DOM Element References ---
+        const gameContainer = document.getElementById('game-container');
+        const boardElement = document.getElementById('board');
+        const statusElement = document.getElementById('status');
+        const modeSelectionElement = document.getElementById('mode-selection');
+        const gameAreaElement = document.getElementById('game-area');
+        const whiteCapturedElement = document.getElementById('white-captured');
+        const blackCapturedElement = document.getElementById('black-captured');
+        const undoButton = document.getElementById('undo-button');
+        const quitButton = document.getElementById('quit-button');
+        const fullscreenButton = document.getElementById('fullscreen-button');
+        const mode2pButton = document.getElementById('mode-2p'); // Button labeled "2 Player"
+        const modeCpuButton = document.getElementById('mode-cpu'); // Button labeled "1 Player"
+        const cpuOptionsContainer = document.getElementById('cpu-options-container');
+        const difficultyChoiceDiv = document.getElementById('difficulty-choice');
+        const difficultyButtons = difficultyChoiceDiv ? difficultyChoiceDiv.querySelectorAll('button') : [];
+        const playerSideChoiceDiv = document.getElementById('player-side-choice');
+        const sideOptions = document.querySelectorAll('.side-option');
+        const startGameButton = document.getElementById('start-game-button');
+
+        // --- Game State Variables ---
+        let board = []; let currentPlayer = 'w'; let playerColor = 'w'; let gameMode = null;
+        let selectedSquare = null; let validMoves = []; let whiteKingPos = null; let blackKingPos = null;
+        let isWhiteInCheck = false; let isBlackInCheck = false;
+        let isComputerTurn = false;
+        let gameOver = false; let capturedPieces = { w: [], b: [] }; let lastMove = { start: null, end: null };
+        let moveHistory = [];
+
+        // --- Constants ---
+        const pieceValues = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 1000 };
+        const initialBoard = [
+            ['br', 'bn', 'bb', 'bq', 'bk', 'bb', 'bn', 'br'],
+            ['bp', 'bp', 'bp', 'bp', 'bp', 'bp', 'bp', 'bp'],
+            [null, null, null, null, null, null, null, null],
+            [null, null, null, null, null, null, null, null],
+            [null, null, null, null, null, null, null, null],
+            [null, null, null, null, null, null, null, null],
+            ['wp', 'wp', 'wp', 'wp', 'wp', 'wp', 'wp', 'wp'],
+            ['wr', 'wn', 'wb', 'wq', 'wk', 'wb', 'wn', 'wr']
+        ];
+        const pieceOrder = { p: 1, n: 2, b: 3, r: 4, q: 5 };
+
+        // --- Mode Selection Logic ---
+        let selectedDifficulty = null; let selectedModeType = null;
+
+        function updateStartButtonState() {
+            let ready = false;
+            if (selectedModeType === '2P') {
+                ready = true;
+            } else if (selectedModeType === 'CPU' && selectedDifficulty) {
+                ready = true;
+            }
+            if(startGameButton) startGameButton.disabled = !ready;
+        }
+
+        function setupModeSelectionListeners() {
+            if (!mode2pButton || !modeCpuButton || !cpuOptionsContainer || !difficultyChoiceDiv || !playerSideChoiceDiv || !startGameButton || difficultyButtons.length === 0 || sideOptions.length === 0) {
+                console.error("CRITICAL ERROR: One or more mode selection elements not found!");
+                return;
+            }
+
+            // Listener for "2 Player" button (ID: mode-2p)
+            mode2pButton.addEventListener('click', () => {
+                selectedModeType = '2P';
+                gameMode = '2P';
+                selectedDifficulty = null;
+                cpuOptionsContainer.style.display = 'none';
+                modeCpuButton.classList.remove('selected');
+                mode2pButton.classList.add('selected');
+                difficultyButtons.forEach(btn => btn.classList.remove('selected'));
+                updateStartButtonState();
+            });
+
+            // Listener for "1 Player" button (ID: mode-cpu)
+            modeCpuButton.addEventListener('click', () => {
+                selectedModeType = 'CPU';
+                gameMode = null;
+                mode2pButton.classList.remove('selected');
+                modeCpuButton.classList.add('selected');
+                cpuOptionsContainer.style.display = 'flex';
+                updateStartButtonState();
+            });
+
+            difficultyButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    selectedDifficulty = button.getAttribute('data-difficulty');
+                    gameMode = selectedDifficulty;
+                    difficultyButtons.forEach(btn => btn.classList.remove('selected'));
+                    button.classList.add('selected');
+                    updateStartButtonState();
+                });
+            });
+
+            sideOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    const radio = option.querySelector('input[type="radio"]');
+                    if (radio) {
+                        radio.checked = true;
+                        sideOptions.forEach(opt => opt.classList.remove('selected'));
+                        option.classList.add('selected');
+                    }
+                });
+            });
+
+            document.getElementById('side-human').classList.add('selected');
+            updateStartButtonState(); // Initial state
+        }
+
+        function startGame() {
+            console.log("startGame called");
+            if (!gameMode) {
+                alert("Please select '2 Player' or choose a '1 Player' difficulty.");
+                return;
+            }
+
+            if (gameMode !== '2P') {
+                const selectedSideRadio = document.querySelector('input[name="playerSide"]:checked');
+                playerColor = selectedSideRadio ? selectedSideRadio.value : 'w';
+            } else {
+                playerColor = 'w';
+            }
+
+            console.log(`[SETUP] Starting game. Mode: ${gameMode}, Player Side (if CPU): ${playerColor}`);
+
+            if (modeSelectionElement) modeSelectionElement.style.display = 'none';
+            if (gameAreaElement) gameAreaElement.style.display = 'block';
+            else {
+                console.error("gameAreaElement not found!");
+                return;
+            }
+            setupBoard();
+        }
+
+        // --- Core Game Functions ---
+        function setupBoard() {
+            console.log("[SETUP] Initializing game state...");
+            board = JSON.parse(JSON.stringify(initialBoard));
+            currentPlayer = 'w';
+            selectedSquare = null;
+            validMoves = [];
+            whiteKingPos = findKingOnBoard('w', board);
+            blackKingPos = findKingOnBoard('b', board);
+            if (!whiteKingPos || !blackKingPos) {
+                 console.error("Kings not found during setup! White:", whiteKingPos, "Black:", blackKingPos);
+                 return;
+            }
+            isWhiteInCheck = false;
+            isBlackInCheck = false;
+            isComputerTurn = (gameMode !== '2P' && playerColor === 'b');
+            gameOver = false;
+            capturedPieces = { w: [], b: [] };
+            lastMove = { start: null, end: null };
+            moveHistory = [];
+            document.body.classList.remove('computer-thinking');
+
+            if (boardElement) boardElement.classList.toggle('board-flipped', playerColor === 'b' && gameMode !== '2P');
+
+            saveState();
+            renderBoard();
+            renderCapturedPieces();
+            updateStatus();
+            updateUndoButton();
+
+            console.log(`[SETUP] Game ready. Player: ${playerColor}. Turn: ${currentPlayer}. CompTurn? ${isComputerTurn}`);
+
+            if (isComputerTurn) {
+                if (statusElement) statusElement.textContent = `Computer (${currentPlayer === 'w' ? 'Human' : 'Orc'}) is thinking...`;
+                document.body.classList.add('computer-thinking');
+                setTimeout(makeComputerMove, 750);
+            }
+        }
+
+        function findKingOnBoard(kingColor, currentBoard) {
+            for(let r=0; r<8; r++){
+                for(let c=0; c<8; c++){
+                    if(currentBoard[r][c] === kingColor + 'k'){
+                        return {row: r, col: c};
+                    }
+                }
+            }
+            console.error(`!!! King ${kingColor}k not found!`);
+            return null;
+        }
+
+        function saveState() {
+            const state = {
+                board: JSON.parse(JSON.stringify(board)),
+                currentPlayer: currentPlayer,
+                isWhiteInCheck: isWhiteInCheck,
+                isBlackInCheck: isBlackInCheck,
+                capturedPieces: JSON.parse(JSON.stringify(capturedPieces)),
+                whiteKingPos: whiteKingPos ? { ...whiteKingPos } : null,
+                blackKingPos: blackKingPos ? { ...blackKingPos } : null,
+                lastMove: lastMove ? {
+                    start: lastMove.start ? { ...lastMove.start } : null,
+                    end: lastMove.end ? { ...lastMove.end } : null
+                } : { start: null, end: null }
+            };
+            moveHistory.push(state);
+        }
+
+        function undoMove() {
+            console.log("[UNDO] Attempting undo...");
+            if (gameOver || document.body.classList.contains('computer-thinking')) {
+                console.log("[UNDO] Blocked (game over or computer thinking).");
+                return;
+            }
+
+            let movesToUndo = 1;
+            if (gameMode !== '2P' && !isComputerTurn && moveHistory.length >= 3) {
+                movesToUndo = 2;
+            } else if (moveHistory.length < 2) {
+                console.log("[UNDO] Blocked (not enough history).");
+                return;
+            }
+
+            console.log(`[UNDO] Undoing ${movesToUndo} move(s). History length: ${moveHistory.length}`);
+
+            for (let i = 0; i < movesToUndo; i++) {
+                moveHistory.pop();
+            }
+
+            const prevState = moveHistory[moveHistory.length - 1];
+            if (!prevState) {
+                console.error("[UNDO] Error: No previous state found after popping!");
+                setupBoard();
+                return;
+            }
+
+            board = JSON.parse(JSON.stringify(prevState.board));
+            currentPlayer = prevState.currentPlayer;
+            isWhiteInCheck = prevState.isWhiteInCheck;
+            isBlackInCheck = prevState.isBlackInCheck;
+            capturedPieces = JSON.parse(JSON.stringify(prevState.capturedPieces));
+            whiteKingPos = prevState.whiteKingPos ? { ...prevState.whiteKingPos } : null;
+            blackKingPos = prevState.blackKingPos ? { ...prevState.blackKingPos } : null;
+            lastMove = prevState.lastMove ? {
+                start: prevState.lastMove.start ? { ...prevState.lastMove.start } : null,
+                end: prevState.lastMove.end ? { ...prevState.lastMove.end } : null
+            } : { start: null, end: null };
+
+            isComputerTurn = (gameMode !== '2P' && currentPlayer !== playerColor);
+            gameOver = false;
+
+            console.log(`[UNDO] State restored to turn: ${currentPlayer}. History length: ${moveHistory.length}`);
+
+            selectedSquare = null;
+            validMoves = [];
+            document.body.classList.remove('computer-thinking');
+
+            renderBoard();
+            renderCapturedPieces();
+            updateStatus();
+            updateUndoButton();
+
+            if (isComputerTurn) {
+                 console.warn("[UNDO] Now computer's turn after undo - unexpected?");
+                 document.body.classList.add('computer-thinking');
+                 setTimeout(makeComputerMove, 500);
+            }
+        }
+
+        function updateUndoButton() {
+            if (!undoButton) return;
+            let canUndo = moveHistory.length >= 2;
+            undoButton.disabled = !canUndo || document.body.classList.contains('computer-thinking') || gameOver;
+        }
+
+        function renderCapturedPieces() {
+            if (!whiteCapturedElement || !blackCapturedElement) {
+                console.error("Captured piece display elements not found!");
+                return;
+            }
+
+            const sortAndRender = (listElement, piecesArray) => {
+                listElement.innerHTML = '';
+                const sortedPieces = [...piecesArray].sort((a, b) => (pieceOrder[a[1]] || 0) - (pieceOrder[b[1]] || 0));
+                sortedPieces.forEach(pieceCode => {
+                    const pieceElement = document.createElement('div');
+                    pieceElement.className = `captured-piece ${pieceCode}`;
+                    listElement.appendChild(pieceElement);
+                });
+            };
+
+            sortAndRender(whiteCapturedElement, capturedPieces.b);
+            sortAndRender(blackCapturedElement, capturedPieces.w);
+        }
+
+        function renderBoard() {
+            if (!boardElement) {
+                console.error("CRITICAL: Board element not found!");
+                return;
+            }
+            boardElement.innerHTML = '';
+
+             boardElement.classList.toggle('board-flipped', playerColor === 'b' && gameMode !== '2P');
+
+            if (!board || board.length !== 8) {
+                console.error("CRITICAL: Invalid board data!", board);
+                return;
+            }
+
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    try {
+                        const square = document.createElement('div');
+                        square.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
+                        square.dataset.row = r;
+                        square.dataset.col = c;
+
+                        const pieceCode = board[r][c];
+                        if (pieceCode) {
+                            const pieceElement = document.createElement('div');
+                            pieceElement.className = `piece ${pieceCode}`;
+                            square.appendChild(pieceElement);
+                        }
+
+                        if ((pieceCode === 'wk' && isWhiteInCheck) || (pieceCode === 'bk' && isBlackInCheck)) {
+                            square.classList.add('check');
+                        }
+
+                        if (lastMove.start && lastMove.start.row === r && lastMove.start.col === c) square.classList.add('last-move-start');
+                        if (lastMove.end && lastMove.end.row === r && lastMove.end.col === c) square.classList.add('last-move-end');
+
+                        square.addEventListener('click', handleSquareClick);
+                        boardElement.appendChild(square);
+                    } catch (error) {
+                         console.error(`Error rendering square ${r},${c}:`, error);
+                    }
+                }
+            }
+
+            if (selectedSquare) {
+                const selEl = getSquareElement(selectedSquare.row, selectedSquare.col);
+                if (selEl) {
+                    selEl.classList.add('selected');
+                    highlightValidMoves();
+                } else {
+                    selectedSquare = null;
+                    validMoves = [];
+                }
+            } else {
+                 removeMoveHighlights();
+            }
+        }
+
+        function handleSquareClick(event) {
+            if (gameOver || document.body.classList.contains('computer-thinking')) return;
+
+            const isPlayerTurn = (gameMode === '2P' || currentPlayer === playerColor);
+            if (!isPlayerTurn) {
+                return;
+            }
+
+            const squareElement = event.currentTarget;
+            const row = parseInt(squareElement.dataset.row);
+            const col = parseInt(squareElement.dataset.col);
+            const pieceOnSquare = board[row][col];
+
+            if (selectedSquare) {
+                const startRow = selectedSquare.row;
+                const startCol = selectedSquare.col;
+                const targetMove = validMoves.find(move => move.row === row && move.col === col);
+
+                if (targetMove) {
+                    makeMove(startRow, startCol, row, col);
+                    saveState();
+                    selectedSquare = null;
+                    validMoves = [];
+                    removePieceSelectionHighlight();
+                    removeMoveHighlights();
+                    switchPlayer();
+                    return;
+                }
+
+                removePieceSelectionHighlight();
+                removeMoveHighlights();
+                if (selectedSquare.row === row && selectedSquare.col === col) {
+                    selectedSquare = null;
+                    validMoves = [];
+                    return;
+                }
+
+                if (pieceOnSquare && pieceOnSquare.startsWith(currentPlayer)) {
+                    selectPiece(row, col, pieceOnSquare);
+                    return;
+                }
+                selectedSquare = null;
+                validMoves = [];
+                return;
+
+            } else {
+                if (pieceOnSquare && pieceOnSquare.startsWith(currentPlayer)) {
+                    selectPiece(row, col, pieceOnSquare);
+                    return;
+                }
+            }
+        }
+
+        function selectPiece(row, col, piece) {
+            removePieceSelectionHighlight();
+            removeMoveHighlights();
+            selectedSquare = { row, col };
+            validMoves = calculateValidMoves(row, col, piece);
+            const sqEl = getSquareElement(row, col);
+            if (sqEl) sqEl.classList.add('selected');
+            highlightValidMoves();
+        }
+
+        function removePieceSelectionHighlight(){
+            if(selectedSquare){
+                const prevEl = getSquareElement(selectedSquare.row, selectedSquare.col);
+                if(prevEl) prevEl.classList.remove('selected');
+            }
+        }
+
+        function removeMoveHighlights(){
+            document.querySelectorAll('.square.highlight').forEach(el => el.classList.remove('highlight', 'capture'));
+        }
+
+        function highlightValidMoves(){
+            validMoves.forEach(m => {
+                const s = getSquareElement(m.row, m.col);
+                if (s) {
+                    s.classList.add('highlight');
+                    const targetPiece = board[m.row][m.col];
+                    if (targetPiece && getPieceColor(m.row, m.col) !== currentPlayer) {
+                        s.classList.add('capture');
+                    }
+                }
+            });
+        }
+
+        function getSquareElement(r, c){
+            if (!isValid(r, c)) return null;
+            return boardElement ? boardElement.querySelector(`.square[data-row="${r}"][data-col="${c}"]`) : null;
+        }
+
+        function makeMove(startRow, startCol, endRow, endCol) {
+            const piece = board[startRow][startCol];
+            const captured = board[endRow][endCol];
+
+            if (!piece) {
+                console.error(`Attempted move from empty square: ${startRow},${startCol}`);
+                return;
+            }
+
+            if (captured) {
+                const capturingColor = piece[0];
+                capturedPieces[capturingColor].push(captured);
+            }
+
+            if (piece === 'wp' && endRow === 0) {
+                board[endRow][endCol] = 'wq';
+            } else if (piece === 'bp' && endRow === 7) {
+                board[endRow][endCol] = 'bq';
+            } else {
+                board[endRow][endCol] = piece;
+            }
+
+            board[startRow][startCol] = null;
+
+            if (piece === 'wk') whiteKingPos = {row: endRow, col: endCol};
+            else if (piece === 'bk') blackKingPos = {row: endRow, col: endCol};
+
+            lastMove = { start: {row: startRow, col: startCol}, end: {row: endRow, col: endCol} };
+        }
+
+        function switchPlayer() {
+            const previousPlayer = currentPlayer;
+            currentPlayer = (currentPlayer === 'w') ? 'b' : 'w';
+
+            isWhiteInCheck = isKingInCheck('w');
+            isBlackInCheck = isKingInCheck('b');
+
+            updateStatus();
+
+            const availableMoves = calculateAllValidMoves(currentPlayer);
+            if (availableMoves.length === 0) {
+                gameOver = true;
+                const winnerName = previousPlayer === 'w' ? 'Human' : 'Orc';
+                const loserName = currentPlayer === 'w' ? 'Human' : 'Orc';
+                if (isKingInCheck(currentPlayer)) {
+                    statusElement.textContent = `Checkmate! ${winnerName} wins!`;
+                    alert(`Checkmate! ${winnerName} wins!`);
+                } else {
+                    statusElement.textContent = "Stalemate! It's a draw.";
+                    alert("Stalemate! It's a draw.");
+                }
+                renderBoard();
+                renderCapturedPieces();
+                updateUndoButton();
+                return;
+            }
+
+            renderBoard();
+            renderCapturedPieces();
+
+            isComputerTurn = (gameMode !== '2P' && currentPlayer !== playerColor);
+            updateUndoButton();
+
+            if (isComputerTurn) {
+                document.body.classList.add('computer-thinking');
+                setTimeout(makeComputerMove, 500);
+            } else {
+                document.body.classList.remove('computer-thinking');
+            }
+        }
+
+        function updateStatus() {
+            if (gameOver || !statusElement) return;
+
+            let turnText = "";
+            const currentSideName = currentPlayer === 'w' ? 'Human' : 'Orc';
+
+            if (gameMode === '2P') {
+                turnText = `${currentSideName}'s Turn`;
+            } else {
+                if (currentPlayer === playerColor) {
+                    turnText = `Your Turn (${currentSideName})`;
+                } else {
+                    turnText = `Computer (${currentSideName}) is thinking...`;
+                }
+            }
+
+            const isInCheck = (currentPlayer === 'w' && isWhiteInCheck) || (currentPlayer === 'b' && isBlackInCheck);
+            if (isInCheck) {
+                turnText += " (Check!)";
+            }
+
+            statusElement.textContent = turnText;
+        }
+
+
+        // --- Move Calculation & Check Logic ---
+        function isValid(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
+        function getPieceColor(r, c) { if (!isValid(r, c)) return null; const p = board[r][c]; return p ? p[0] : null; }
+        function addSlidingMoves(moves, r, c, color, dr, dc) { let cr = r + dr; let cc = c + dc; while (isValid(cr, cc)) { const targetPiece = board[cr][cc]; if (targetPiece === null) { moves.push({ row: cr, col: cc }); } else { if (targetPiece[0] !== color) { moves.push({ row: cr, col: cc }); } break; } cr += dr; cc += dc; } }
+        function getPawnMoves(r, c, color) { const moves = []; const dir = color === 'w' ? -1 : 1; const startRow = color === 'w' ? 6 : 1; const nextRow = r + dir; if (isValid(nextRow, c) && board[nextRow][c] === null) { moves.push({ row: nextRow, col: c }); const twoStepRow = r + 2 * dir; if (r === startRow && isValid(twoStepRow, c) && board[twoStepRow][c] === null) { moves.push({ row: twoStepRow, col: c }); } } const captureCols = [c - 1, c + 1]; captureCols.forEach(capCol => { if (isValid(nextRow, capCol)) { const targetPiece = board[nextRow][capCol]; if (targetPiece && targetPiece[0] !== color) { moves.push({ row: nextRow, col: capCol }); } } }); return moves; }
+        function getRookMoves(r, c, color) { const moves = []; const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]]; directions.forEach(([dr, dc]) => addSlidingMoves(moves, r, c, color, dr, dc)); return moves; }
+        function getBishopMoves(r, c, color) { const moves = []; const directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]]; directions.forEach(([dr, dc]) => addSlidingMoves(moves, r, c, color, dr, dc)); return moves; }
+        function getQueenMoves(r, c, color) { const moves = []; const directions = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]]; directions.forEach(([dr, dc]) => addSlidingMoves(moves, r, c, color, dr, dc)); return moves; }
+        function getKnightMoves(r, c, color) { const moves = []; const knightMoves = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]]; knightMoves.forEach(([dr, dc]) => { const nr = r + dr; const nc = c + dc; if (isValid(nr, nc)) { const targetPiece = board[nr][nc]; if (!targetPiece || targetPiece[0] !== color) { moves.push({ row: nr, col: nc }); } } }); return moves; }
+        function getKingMoves(r, c, color) { const moves = []; const kingMoves = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]]; kingMoves.forEach(([dr, dc]) => { const nr = r + dr; const nc = c + dc; if (isValid(nr, nc)) { const targetPiece = board[nr][nc]; if (!targetPiece || targetPiece[0] !== color) { moves.push({ row: nr, col: nc }); } } }); return moves; }
+        function calculateValidMoves(r, c, piece) { const legalMoves = []; if (!piece) return legalMoves; const type = piece[1]; const color = piece[0]; let pseudoLegalMoves = []; switch (type) { case 'p': pseudoLegalMoves = getPawnMoves(r, c, color); break; case 'r': pseudoLegalMoves = getRookMoves(r, c, color); break; case 'n': pseudoLegalMoves = getKnightMoves(r, c, color); break; case 'b': pseudoLegalMoves = getBishopMoves(r, c, color); break; case 'q': pseudoLegalMoves = getQueenMoves(r, c, color); break; case 'k': pseudoLegalMoves = getKingMoves(r, c, color); break; default: return legalMoves; } pseudoLegalMoves.forEach(move => { if (!moveLeavesKingInCheck(r, c, move.row, move.col, color)) { legalMoves.push(move); } }); return legalMoves; }
+        function isSquareAttacked(r, c, attackerColor) { const pawnDir = attackerColor === 'w' ? 1 : -1; const pawnAttackSources = [{ dr: pawnDir, dc: -1 }, { dr: pawnDir, dc: 1 }]; for (const { dr, dc } of pawnAttackSources) { const sr = r + dr; const sc = c + dc; if (isValid(sr, sc) && board[sr][sc] === attackerColor + 'p') return true; } const knightMoves = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]]; for (const [dr, dc] of knightMoves) { const sr = r + dr; const sc = c + dc; if (isValid(sr, sc) && board[sr][sc] === attackerColor + 'n') return true; } const rookDirs = [[-1, 0], [1, 0], [0, -1], [0, 1]]; const bishopDirs = [[-1, -1], [-1, 1], [1, -1], [1, 1]]; function checkSliding(directions, pieceTypes) { for (const [dr, dc] of directions) { let cr = r + dr; let cc = c + dc; while (isValid(cr, cc)) { const p = board[cr][cc]; if (p !== null) { if (p[0] === attackerColor && pieceTypes.includes(p[1])) return true; break; } cr += dr; cc += dc; } } return false; } if (checkSliding(rookDirs, ['r', 'q'])) return true; if (checkSliding(bishopDirs, ['b', 'q'])) return true; const kingMoves = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]]; for (const [dr, dc] of kingMoves) { const sr = r + dr; const sc = c + dc; if (isValid(sr, sc) && board[sr][sc] === attackerColor + 'k') return true; } return false; }
+        function findKing(kingColor) { const cachedPos = kingColor === 'w' ? whiteKingPos : blackKingPos; if (cachedPos && isValid(cachedPos.row, cachedPos.col) && board[cachedPos.row][cachedPos.col] === kingColor + 'k') { return cachedPos; } console.warn(`King cache miss for ${kingColor}k. Searching board.`); const foundPos = findKingOnBoard(kingColor, board); if (foundPos) { if (kingColor === 'w') whiteKingPos = foundPos; else blackKingPos = foundPos; } return foundPos; }
+        function isKingInCheck(kingColor) { const kingPos = findKing(kingColor); if (!kingPos) { console.error(`Cannot check king status: ${kingColor}k not found!`); return false; } const attackerColor = kingColor === 'w' ? 'b' : 'w'; return isSquareAttacked(kingPos.row, kingPos.col, attackerColor); }
+        function moveLeavesKingInCheck(startRow, startCol, endRow, endCol, pieceColor) { const piece = board[startRow][startCol]; const capturedPiece = board[endRow][endCol]; let kingPosToCheck = pieceColor === 'w' ? whiteKingPos : blackKingPos; board[endRow][endCol] = piece; board[startRow][startCol] = null; if (piece === pieceColor + 'k') { kingPosToCheck = { row: endRow, col: endCol }; } if (!kingPosToCheck) { console.error("Cannot perform check validation: King position unknown!"); board[startRow][startCol] = piece; board[endRow][endCol] = capturedPiece; return true; } const check = isSquareAttacked(kingPosToCheck.row, kingPosToCheck.col, pieceColor === 'w' ? 'b' : 'w'); board[startRow][startCol] = piece; board[endRow][endCol] = capturedPiece; return check; }
+        function calculateAllValidMoves(playerColor) { const allMoves = []; for (let r = 0; r < 8; r++) { for (let c = 0; c < 8; c++) { const piece = board[r][c]; if (piece && piece.startsWith(playerColor)) { const moves = calculateValidMoves(r, c, piece); moves.forEach(move => allMoves.push({ piece: piece, startRow: r, startCol: c, endRow: move.row, endCol: move.col })); } } } return allMoves; }
+
+        // --- AI Logic ---
+        function evaluateBoardFromState(boardState) { let score = 0; for (let r = 0; r < 8; r++) { for (let c = 0; c < 8; c++) { const piece = boardState[r][c]; if (piece) { const value = pieceValues[piece[1]] || 0; score += (piece[0] === 'w' ? value : -value); } } } return score; }
+        function simulateMoveOnState(currentBoardState, move) { let newBoardState = JSON.parse(JSON.stringify(currentBoardState)); const piece = newBoardState[move.startRow][move.startCol]; if (!piece) { console.error("AI Error: Simulate move from empty square:", move); return [newBoardState, null]; } const captured = newBoardState[move.endRow][move.endCol]; if (piece === 'wp' && move.endRow === 0) newBoardState[move.endRow][move.endCol] = 'wq'; else if (piece === 'bp' && move.endRow === 7) newBoardState[move.endRow][move.endCol] = 'bq'; else newBoardState[move.endRow][move.endCol] = piece; newBoardState[move.startRow][move.startCol] = null; return [newBoardState, captured]; }
+        function calculateAllValidMovesForState(playerColor, boardState) { const allMoves = []; const originalBoard = board; const originalWKing = whiteKingPos; const originalBKing = blackKingPos; board = boardState; whiteKingPos = findKingOnBoard('w', boardState); blackKingPos = findKingOnBoard('b', boardState); try { for (let r = 0; r < 8; r++) { for (let c = 0; c < 8; c++) { const piece = boardState[r][c]; if (piece && piece.startsWith(playerColor)) { const moves = calculateValidMoves(r, c, piece); moves.forEach(move => allMoves.push({ piece: piece, startRow: r, startCol: c, endRow: move.row, endCol: move.col })); } } } } finally { board = originalBoard; whiteKingPos = originalWKing; blackKingPos = originalBKing; } return allMoves; }
+        function minimax(depth, boardState, alpha, beta, maximizingPlayer) { const playerToMove = maximizingPlayer ? 'w' : 'b'; if (depth === 0) { return evaluateBoardFromState(boardState); } const availableMoves = calculateAllValidMovesForState(playerToMove, boardState); if (availableMoves.length === 0) { const originalBoard = board; board = boardState; const originalWKing = whiteKingPos; whiteKingPos = findKingOnBoard('w', boardState); const originalBKing = blackKingPos; blackKingPos = findKingOnBoard('b', boardState); let score = 0; try { if (isKingInCheck(playerToMove)) { score = maximizingPlayer ? -Infinity : Infinity; } else { score = 0; } } finally { board = originalBoard; whiteKingPos = originalWKing; blackKingPos = originalBKing; } return score; } if (maximizingPlayer) { let maxEval = -Infinity; for (const move of availableMoves) { const [nextBoardState, _] = simulateMoveOnState(boardState, move); const evaluation = minimax(depth - 1, nextBoardState, alpha, beta, false); maxEval = Math.max(maxEval, evaluation); alpha = Math.max(alpha, evaluation); if (beta <= alpha) { break; } } return maxEval; } else { let minEval = Infinity; for (const move of availableMoves) { const [nextBoardState, _] = simulateMoveOnState(boardState, move); const evaluation = minimax(depth - 1, nextBoardState, alpha, beta, true); minEval = Math.min(minEval, evaluation); beta = Math.min(beta, evaluation); if (beta <= alpha) { break; } } return minEval; } }
+        function makeComputerMove() { if (gameOver || !isComputerTurn) return; const aiColor = currentPlayer; const availableMoves = calculateAllValidMoves(aiColor); if (availableMoves.length === 0) { console.error("AI Error: Computer has no valid moves, but game not over?"); isComputerTurn = false; updateUndoButton(); document.body.classList.remove('computer-thinking'); return; } let bestMove = null; if (gameMode === 'CPU-easy') { bestMove = availableMoves[Math.floor(Math.random() * availableMoves.length)]; } else if (gameMode === 'CPU-medium') { let bestScore = -Infinity; let candidateMoves = []; availableMoves.forEach(move => { let moveScore = 0; const targetPiece = board[move.endRow][move.endCol]; if (targetPiece) { moveScore += (pieceValues[targetPiece[1]] || 0) * 10; } moveScore += Math.random() * 0.1; if (moveScore > bestScore) { bestScore = moveScore; candidateMoves = [move]; } else if (moveScore === bestScore) { candidateMoves.push(move); } }); bestMove = candidateMoves.length > 0 ? candidateMoves[Math.floor(Math.random() * candidateMoves.length)] : availableMoves[Math.floor(Math.random() * availableMoves.length)]; } else if (gameMode === 'CPU-hard') { let bestScore = (aiColor === 'w') ? -Infinity : Infinity; let depth = 2; let candidateMoves = []; availableMoves.forEach(move => { const [nextBoardState, _] = simulateMoveOnState(board, move); const nextMaximizingPlayer = (aiColor === 'b'); const score = minimax(depth - 1, nextBoardState, -Infinity, Infinity, nextMaximizingPlayer); if (aiColor === 'w') { if (score > bestScore) { bestScore = score; candidateMoves = [move]; } else if (score === bestScore) { candidateMoves.push(move); } } else { if (score < bestScore) { bestScore = score; candidateMoves = [move]; } else if (score === bestScore) { candidateMoves.push(move); } } }); bestMove = candidateMoves.length > 0 ? candidateMoves[Math.floor(Math.random() * candidateMoves.length)] : availableMoves[Math.floor(Math.random() * availableMoves.length)]; } if (bestMove) { makeMove(bestMove.startRow, bestMove.startCol, bestMove.endRow, bestMove.endCol); saveState(); switchPlayer(); } else { console.error("AI failed to select a move!"); isComputerTurn = false; updateUndoButton(); document.body.classList.remove('computer-thinking'); } }
+
+        // --- Game Control ---
+        function quitGame() { console.log("[CONTROL] Quitting game..."); if (document.fullscreenElement === gameContainer || document.webkitFullscreenElement === gameContainer || document.mozFullScreenElement === gameContainer || document.msFullscreenElement === gameContainer) { if (document.exitFullscreen) { document.exitFullscreen(); } else if (document.mozCancelFullScreen) { document.mozCancelFullScreen(); } else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); } else if (document.msExitFullscreen) { document.msExitFullscreen(); } } if(fullscreenButton) fullscreenButton.classList.remove('active'); gameOver = true; if (gameAreaElement) gameAreaElement.style.display = 'none'; if (modeSelectionElement) modeSelectionElement.style.display = 'block'; if (boardElement) boardElement.innerHTML = ''; if (whiteCapturedElement) whiteCapturedElement.innerHTML = ''; if (blackCapturedElement) blackCapturedElement.innerHTML = ''; board = []; currentPlayer = 'w'; playerColor = 'w'; gameMode = null; selectedSquare = null; validMoves = []; whiteKingPos = null; blackKingPos = null; isWhiteInCheck = false; isBlackInCheck = false; isComputerTurn = false; capturedPieces = { w: [], b: [] }; lastMove = { start: null, end: null }; moveHistory = []; selectedDifficulty = null; selectedModeType = null; document.body.classList.remove('computer-thinking'); if (boardElement) boardElement.classList.remove('board-flipped'); if (statusElement) statusElement.textContent = "Select mode to start"; if (mode2pButton) mode2pButton.classList.remove('selected'); if (modeCpuButton) modeCpuButton.classList.remove('selected'); if (difficultyButtons) difficultyButtons.forEach(b => b.classList.remove('selected')); if (sideOptions) sideOptions.forEach(o => o.classList.remove('selected')); const sideHuman = document.getElementById('side-human'); if (sideHuman) sideHuman.classList.add('selected'); const sideHumanRadio = document.getElementById('radio-human'); if (sideHumanRadio) sideHumanRadio.checked = true; if (cpuOptionsContainer) cpuOptionsContainer.style.display = 'none'; updateUndoButton(); if (startGameButton) startGameButton.disabled = true; }
+
+        // --- Fullscreen Functionality ---
+        function toggleFullScreen() { const isFullscreen = document.fullscreenElement === gameContainer || document.webkitFullscreenElement === gameContainer || document.mozFullScreenElement === gameContainer || document.msFullscreenElement === gameContainer; if (!isFullscreen) { console.log("Entering Fullscreen..."); const promise = gameContainer.requestFullscreen ? gameContainer.requestFullscreen() : gameContainer.mozRequestFullScreen ? gameContainer.mozRequestFullScreen() : gameContainer.webkitRequestFullscreen ? gameContainer.webkitRequestFullscreen() : gameContainer.msRequestFullscreen ? gameContainer.msRequestFullscreen() : null; if (promise) { promise.then(() => {}).catch(err => { console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`); if(fullscreenButton) fullscreenButton.classList.remove('active'); }); } else { console.warn("Fullscreen API is not supported."); } } else { console.log("Exiting Fullscreen..."); if (document.exitFullscreen) { document.exitFullscreen(); } else if (document.mozCancelFullScreen) { document.mozCancelFullScreen(); } else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); } else if (document.msExitFullscreen) { document.msExitFullscreen(); } } }
+        function handleFullscreenChange() { const isFullscreenNow = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement); if (isFullscreenNow && gameContainer === document.fullscreenElement) { if(fullscreenButton) fullscreenButton.classList.add('active'); console.log("Entered fullscreen for game container (event)."); } else { if(fullscreenButton) fullscreenButton.classList.remove('active'); console.log("Exited fullscreen or element changed (event)."); } }
+        document.addEventListener('fullscreenchange', handleFullscreenChange); document.addEventListener('webkitfullscreenchange', handleFullscreenChange); document.addEventListener('mozfullscreenchange', handleFullscreenChange); document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+        // --- Initial UI Setup ---
+        document.addEventListener('DOMContentLoaded', () => { try { console.log("DOM Loaded. Setting up listeners..."); setupModeSelectionListeners(); console.log("Mode selection listeners attached."); if(statusElement) statusElement.textContent = "Select mode to start"; if (!gameContainer || !boardElement || !modeSelectionElement || !gameAreaElement || !statusElement || !fullscreenButton) { console.error("CRITICAL ERROR: Essential DOM element missing on load!"); alert("Error loading game components. Please refresh or try another browser."); } } catch (error) { console.error("Error during initial setup:", error); alert("An error occurred while initializing the game."); } });
+
+    </script>
+
+</body>
+</html>
