@@ -59,9 +59,15 @@ body {
 }
 
 .site-header h1 {
-    font-size: 2.8em;
     color: var(--heading-color);
     margin-bottom: 10px;
+    line-height: 1;
+}
+
+.site-header h1 img {
+    height: 60px; /* <--- ADJUST THIS VALUE! Try 50px, 70px, etc. */
+    width: auto;  /* Automatically adjust width to maintain aspect ratio */
+    vertical-align: middle; /* Helps alignment if there was text next to it */
 }
 
 .site-header p { /* Style for optional subtitle */
