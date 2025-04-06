@@ -2,64 +2,277 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sora Games</title>
-    <link rel="stylesheet" href="style.css"> <!-- Link to your CSS file -->
-    <!-- Optional: Add a nice font from Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- <<< MODIFICATION: Updated Title >>> -->
+    <title>Revenge of the Ants - Layering Fix</title>
+    <style>
+        /* --- CSS --- (No changes) --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background-color: #1a1a1a; display: flex; justify-content: center; align-items: center; font-family: 'Courier New', Courier, monospace; }
+        #game-container { position: relative; width: 100%; height: 100%; overflow: hidden; background-color: #6aa84f; }
+        #gameCanvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges; cursor: pointer; background-color: #6aa84f; }
+        .overlay-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.75); color: white; display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center; font-size: 2.5em; z-index: 10; }
+        .overlay-screen h1 { margin-bottom: 20px; color: #ff4d4d; text-transform: uppercase; }
+        .overlay-screen p { font-size: 0.6em; margin-bottom: 15px; }
+        .overlay-screen button { padding: 15px 30px; font-size: 0.5em; background-color: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; transition: background-color 0.2s ease; margin-top: 20px; }
+        .overlay-screen button:hover { background-color: #45a049; }
+        #start-screen { display: flex; }
+        #game-over-screen { display: none; }
+        #high-score-display { font-size: 0.5em; color: #ffd700; margin-bottom: 30px;}
+        #start-high-score { font-size: 0.5em; color: #ffd700; margin-top: 20px; }
+        #lives-display { position: absolute; top: 15px; right: 15px; display: flex; align-items: center; z-index: 5; gap: 5px; }
+        .life-icon { width: 30px; height: 48px; image-rendering: pixelated; filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.7)); }
+        .ui-icon { width: 28px; height: 28px; image-rendering: pixelated; vertical-align: middle; margin-right: 5px; }
+        #menu-trigger-button { position: absolute; top: 15px; left: 15px; width: 45px; height: 45px; background-color: rgba(50, 50, 50, 0.6); background-image: url('sprites/icon_menu.png'); background-size: 60%; background-position: center; background-repeat: no-repeat; border: 2px solid rgba(255, 255, 255, 0.7); border-radius: 5px; cursor: pointer; z-index: 5; display: none; font-size: 24px; line-height: 42px; text-align: center; color: white; }
+        #menu-trigger-button:hover { background-color: rgba(80, 80, 80, 0.8); border-color: white; }
+        #options-menu-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.65); color: #3a2e2e; display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 20; font-family: 'Courier New', Courier, monospace; }
+        .menu-panel { background-color: #e0d6c7; border: 3px solid #5c4d4d; box-shadow: 5px 5px 8px rgba(0, 0, 0, 0.4); padding: 15px; margin-bottom: 25px; border-radius: 4px; width: 80%; max-width: 400px; }
+        #top-icons-panel { display: flex; justify-content: center; gap: 25px; padding: 10px 15px; }
+        .top-icon-btn { background-color: #c9bfae; border: 3px solid #5c4d4d; border-radius: 4px; width: 70px; height: 70px; cursor: pointer; background-size: 70%; background-position: center; background-repeat: no-repeat; transition: background-color 0.2s, transform 0.1s; box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.3); }
+        .top-icon-btn:hover { background-color: #d9cfbe; transform: scale(1.05) translateY(-2px); }
+        .top-icon-btn:active { transform: translateY(1px); box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.3); }
+        #leaderboard-btn { background-image: url('sprites/icon_leaderboards.png'); }
+        #trophy-btn { background-image: url('sprites/icon_trophy.png'); }
+        #settings-panel { display: flex; justify-content: space-around; align-items: center; }
+        .setting-btn { background-color: #c9bfae; border: 3px solid #5c4d4d; border-radius: 4px; width: 70px; height: 70px; cursor: pointer; background-size: 70%; background-position: center; background-repeat: no-repeat; transition: background-color 0.2s, transform 0.1s; box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.2), 2px 2px 3px rgba(0, 0, 0, 0.3); }
+        .setting-btn:hover { background-color: #d9cfbe; transform: translateY(-2px); }
+        .setting-btn:active { transform: translateY(1px); box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.3); }
+        #music-toggle-btn { background-image: url('sprites/icon_music_on.png'); }
+        #music-toggle-btn.muted { background-image: url('sprites/icon_music_off.png'); }
+        #sound-toggle-btn { background-image: url('sprites/icon_sound_on.png'); }
+        #sound-toggle-btn.muted { background-image: url('sprites/icon_sound_off.png'); }
+        #chat-btn { background-image: url('sprites/icon_chat.png'); }
+        #actions-panel { display: flex; flex-direction: column; align-items: center; gap: 15px; }
+        .action-btn { background-color: #c9bfae; border: 3px solid #5c4d4d; border-radius: 4px; padding: 15px 40px; font-size: 1.8em; font-weight: bold; color: #4d3f3f; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; width: 80%; text-align: center; transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s; box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.3); }
+        .action-btn:hover { background-color: #d9cfbe; transform: translateY(-2px); box-shadow: 4px 4px 7px rgba(0, 0, 0, 0.4); }
+        .action-btn:active { transform: translateY(1px); box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.3); }
+        #resume-button.highlighted { border: 4px solid #e6c300; box-shadow: 0 0 15px rgba(230, 195, 0, 0.7), 3px 3px 5px rgba(0, 0, 0, 0.3); }
+    </style>
 </head>
 <body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="start-screen" class="overlay-screen"><h1>Revenge of the Ants</h1><p>Squish the GIANT ants before they reach the bottom!</p><p id="loading-message">Loading Assets...</p><button id="start-button" disabled>Loading...</button><p id="start-high-score">High Score: 0</p></div>
+        <div id="game-over-screen" class="overlay-screen"><h1>Game Over</h1><p id="final-score">Kills: 0</p><p id="final-gold">Gold: 0</p><p id="high-score-display">High Score: 0</p><button id="restart-button">Restart</button></div>
+        <button id="menu-trigger-button" aria-label="Open Menu"></button>
+        <div id="lives-display"></div>
+        <div id="options-menu-overlay">
+            <div id="top-icons-panel" class="menu-panel"><button id="leaderboard-btn" class="top-icon-btn" aria-label="Leaderboards"></button><button id="trophy-btn" class="top-icon-btn" aria-label="Achievements"></button></div>
+            <div id="settings-panel" class="menu-panel"><button id="music-toggle-btn" class="setting-btn" aria-label="Toggle Music"></button><button id="sound-toggle-btn" class="setting-btn" aria-label="Toggle Sound Effects"></button><button id="chat-btn" class="setting-btn" aria-label="Feedback"></button></div>
+            <div id="actions-panel" class="menu-panel"><button id="resume-button" class="action-btn highlighted">Resume</button><button id="exit-button" class="action-btn">Exit</button></div>
+        </div>
+    </div>
 
-    <header class="site-header">
-        <h1>Sora Games</h1>
-    </header>
 
-    <main class="game-grid">
+<script>
+    // --------------- Game Setup --------------- (No changes)
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const gameContainer = document.getElementById('game-container');
+    const startScreen = document.getElementById('start-screen');
+    const gameOverScreen = document.getElementById('game-over-screen');
+    const finalScoreDisplay = document.getElementById('final-score');
+    const finalGoldDisplay = document.getElementById('final-gold');
+    const restartButton = document.getElementById('restart-button');
+    const startButton = document.getElementById('start-button');
+    const loadingMessage = document.getElementById('loading-message');
+    const highScoreDisplay = document.getElementById('high-score-display');
+    const startHighScoreDisplay = document.getElementById('start-high-score');
+    const livesDisplay = document.getElementById('lives-display');
+    const menuTriggerButton = document.getElementById('menu-trigger-button');
+    const optionsMenuOverlay = document.getElementById('options-menu-overlay');
+    const musicToggleButton = document.getElementById('music-toggle-btn');
+    const soundToggleButton = document.getElementById('sound-toggle-btn');
+    const chatButton = document.getElementById('chat-btn');
+    const resumeButton = document.getElementById('resume-button');
+    const exitButton = document.getElementById('exit-button');
+    const leaderboardButton = document.getElementById('leaderboard-btn');
+    const trophyButton = document.getElementById('trophy-btn');
 
-        <!-- Game Card 1: Knights Vs Goblins -->
-        <a href="KnightsVsGoblins.html" class="game-card">
-            <img src="images/knights_vs_goblins_screenshot.png" alt="Knights Vs Goblins Screenshot">
-            <h3>Knights Vs Goblins</h3>
-        </a>
+    // --- Game Constants --- (No changes)
+    const GAME_WIDTH = 540; const GAME_HEIGHT = 960;
+    canvas.width = GAME_WIDTH; canvas.height = GAME_HEIGHT;
+    const ANT_MIN_SCALE = 0.7; const ANT_MAX_SCALE = 1.6;
+    const KING_Y_OFFSET = 30;
+    const DEAD_ANT_STAY_DURATION = 5000;
+    const DEAD_ANT_FADE_DURATION = 1000;
 
-        <!-- Game Card 2: Medieval Math -->
-        <a href="MedievalMath.html" class="game-card">
-            <img src="images/medieval_math_screenshot.png" alt="Medieval Math Screenshot">
-            <h3>Medieval Math</h3>
-        </a>
+    // --- Game State --- (No changes)
+    let score = 0; let level = 1; let lives = 3; const STARTING_LIVES = 3;
+    let highScore = 0; let goldCount = 0;
+    let ants = []; let powerUps = []; let goldCoins = []; let effects = [];
+    let gameOver = false; let paused = false; let gameRunning = false;
+    let lastTime = 0; let timeToNextSpawn = 0; let spawnInterval = 1400;
+    let antBaseSpeed = 90;
+    let isMusicMuted = false; let areSoundsMuted = false; let backgroundMusicStarted = false;
 
-        <a href="OrcsVsHumansChess.html" class="game-card">
-            <img src="images/chess_screenshot.png" alt="Chess Screenshot">
-            <h3>Orcs Vs Humans Chess</h3>
-        </a>
-        
-        <!-- Game Card 3: Goblin Typing Invasion -->
-        <a href="GoblinTypingInvasion.html" class="game-card">
-            <img src="images/goblin_typing_invasion_screenshot.png" alt="Goblin Typing Invasion Screenshot">
-            <h3>Goblin Typing Invasion</h3>
-        </a>
+    // --- Animation Definitions --- (No changes)
+    const playerAnimations = { idle: { frameCount: 2, fps: 5 }, run: { frameCount: 2, fps: 10 }, attack1: { frameCount: 4, fps: 8 }, attack2: { frameCount: 4, fps: 8 }, attack3: { frameCount: 4, fps: 8 }, whirlwind: { frameCount: 3, fps: 12 }, };
+    const antAnimations = { run: { frameCount: 2, fps: 8 }, dead: { frameCount: 1, fps: 5 } };
 
-        <!-- Game Card 4: Goblin Siege Defense -->
-        <a href="GoblinSiegeDefense.html" class="game-card">
-            <img src="images/goblin_siege_defense_screenshot.png" alt="Goblin Siege Defense Screenshot">
-            <h3>Goblin Siege Defense</h3>
-        </a>
+    // --- Player State Object --- (No changes)
+    const player = { type: 'player', x: GAME_WIDTH / 2, y: GAME_HEIGHT - 170, prevX: GAME_WIDTH / 2, collisionWidth: 60, collisionHeight: 85, drawWidth: 75, drawHeight: 120, spriteSheet: new Image(), spriteData: null, loaded: false, animations: playerAnimations, currentAnimation: 'idle', currentFrame: 0, animationTimer: 0, msPerFrame: 0, isAttackAnimationPlaying: false, attackSequence: ['attack1', 'attack2', 'attack3', 'whirlwind'], nextAttackIndex: 0, attackResetTimer: 0, COMBO_RESET_DURATION: 600, };
 
-        <!-- Game Card 5: Color Cascade -->
-        <a href="ColorCascade.html" class="game-card">
-            <img src="images/color_cascade_screenshot.png" alt="Color Cascade Screenshot">
-            <h3>Color Cascade</h3>
-        </a>
+    // --- Other Entities --- (No changes)
+    const antProto = { width: 80, height: 70, spriteSheet: new Image(), spriteData: null, loaded: false, animations: antAnimations, };
+    const king = { type: 'king', width: 75, height: 120, img: new Image(), loaded: false, x: GAME_WIDTH / 2, y: GAME_HEIGHT - KING_Y_OFFSET };
+    const background = { img: new Image(), loaded: false };
+    const killIcon = { img: new Image(), loaded: false, width: 28, height: 28 };
+    const goldCoinProto = { img: new Image(), loaded: false, width: 25, height: 25 };
 
-        <!-- Add more game cards here following the same pattern -->
+    // --- Asset Loading --- (No changes)
+    let assetsToLoad = 8; let assetsLoaded = 0;
+    let audioContextReady = false; let loadCheckScheduled = false;
+    function updateLoadingProgress() { loadingMessage.textContent = `Loading Assets... (${assetsLoaded}/${assetsToLoad})`; }
+    function checkAssetsLoaded() { loadCheckScheduled = false; const pI = player.spriteSheet.complete && player.spriteSheet.naturalWidth > 0; const pD = !!player.spriteData; const aI = antProto.spriteSheet.complete && antProto.spriteSheet.naturalWidth > 0; const aD = !!antProto.spriteData; const allC = (assetsLoaded >= assetsToLoad); if (pI && pD && !player.loaded) player.loaded = true; if (aI && aD && !antProto.loaded) antProto.loaded = true; if (allC && player.loaded && antProto.loaded) { console.log("%c>>> All assets ready <<<", "color: lightgreen; font-weight: bold;"); loadingMessage.style.display = 'none'; startButton.textContent = 'Start Game'; startButton.disabled = false; highScore = loadHighScore(); startHighScoreDisplay.textContent = `High Score: ${highScore}`; setPlayerAnimation('idle'); updateLivesDisplay(); loadAudioPreferences(); updateMuteButtonVisuals(); requestAnimationFrame(draw); } else if (allC && (!player.loaded || !antProto.loaded) && !loadCheckScheduled) { console.warn(`>>> RETRY CONDITION (Player: ${player.loaded}, Ant: ${antProto.loaded}) <<<`); loadCheckScheduled = true; setTimeout(checkAssetsLoaded, 150); } }
+    function assetLoadSuccess(assetName) { assetsLoaded++; updateLoadingProgress(); setTimeout(checkAssetsLoaded, 20); }
+    function assetLoadError(assetName, error) { console.error(`Error loading ${assetName}:`, error); assetsLoaded++; updateLoadingProgress(); setTimeout(checkAssetsLoaded, 20); }
+    console.log("Loading assets..."); updateLoadingProgress();
+    player.spriteSheet.onload = () => assetLoadSuccess('Player Atlas Image'); player.spriteSheet.onerror = (e) => assetLoadError('Player Atlas Image', e); player.spriteSheet.src = 'sprites/spearman_atlas.png';
+    fetch('sprites/spearman_atlas.json').then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }).then(d => { player.spriteData = d; assetLoadSuccess('Player Atlas JSON'); }).catch(e => assetLoadError('Player Atlas JSON', e));
+    antProto.spriteSheet.onload = () => assetLoadSuccess('Ant Atlas Image'); antProto.spriteSheet.onerror = (e) => assetLoadError('Ant Atlas Image', e); antProto.spriteSheet.src = 'sprites/ant_red_atlas.png';
+    fetch('sprites/ant_red_atlas.json').then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }).then(d => { antProto.spriteData = d; assetLoadSuccess('Ant Atlas JSON'); }).catch(e => assetLoadError('Ant Atlas JSON', e));
+    king.img.onload = () => { king.loaded = true; assetLoadSuccess('King Image'); }; king.img.onerror = (e) => assetLoadError('King Image', e); king.img.src = 'sprites/king.png';
+    background.img.onload = () => { background.loaded = true; assetLoadSuccess('Background Image'); }; background.img.onerror = (e) => assetLoadError('Background Image', e); background.img.src = 'sprites/background.png';
+    killIcon.img.onload = () => { killIcon.loaded = true; assetLoadSuccess('Kill Icon'); }; killIcon.img.onerror = (e) => assetLoadError('Kill Icon', e); killIcon.img.src = 'sprites/antdead_icon.png';
+    goldCoinProto.img.onload = () => { goldCoinProto.loaded = true; assetLoadSuccess('Gold Coin'); }; goldCoinProto.img.onerror = (e) => assetLoadError('Gold Coin', e); goldCoinProto.img.src = 'sprites/gold.png';
 
-    </main>
+    // --- Audio --- (No changes)
+    const sounds = { squish: null, gameOver: null, backgroundMusic: null, powerup: null, lifeLost: null, coinCollect: null }; let audioContext;
+    function initAudio() { try { window.AudioContext = window.AudioContext || window.webkitAudioContext; if (window.AudioContext) { audioContext = new AudioContext(); console.log("AudioContext state:", audioContext.state); const resumeAudio = () => { if (audioContext && audioContext.state === 'suspended') { audioContext.resume().then(() => { console.log("AudioContext resumed."); audioContextReady = true; if (gameRunning && !paused && !isMusicMuted) tryStartBackgroundMusic(); }).catch(e => console.error("AudioContext resume failed:", e)); } else if (audioContext && audioContext.state === 'running') audioContextReady = true; document.removeEventListener('click', resumeAudio, { capture: true }); document.removeEventListener('touchstart', resumeAudio, { capture: true }); startButton.removeEventListener('click', resumeAudio); }; document.addEventListener('click', resumeAudio, { once: true, capture: true }); document.addEventListener('touchstart', resumeAudio, { once: true, capture: true }); startButton.addEventListener('click', resumeAudio, { once: true }); } else { console.warn("Web Audio API not supported."); audioContextReady = true; } sounds.squish = new Audio('audio/squish.wav'); sounds.gameOver = new Audio('audio/game_over.wav'); sounds.powerup = new Audio('audio/powerup.wav'); sounds.lifeLost = new Audio('audio/life_lost.wav'); sounds.coinCollect = new Audio('audio/gold.wav'); sounds.backgroundMusic = new Audio('audio/background.mp3'); if (sounds.backgroundMusic) { sounds.backgroundMusic.loop = true; sounds.backgroundMusic.volume = 0.25; sounds.backgroundMusic.load(); } } catch (e) { console.error("Error initializing audio:", e); } }
+    function playSound(sound) { if (areSoundsMuted || !sound) return; if (audioContextReady || !audioContext) { sound.currentTime = 0; sound.play().catch(e => { if (e.name !== 'AbortError') console.warn("Sound play failed:", e.name, sound.src); }); } }
+    function tryStartBackgroundMusic() { if (isMusicMuted || !gameRunning || paused || !sounds.backgroundMusic || backgroundMusicStarted) return; if (audioContextReady || !audioContext) { sounds.backgroundMusic.play().then(() => backgroundMusicStarted = true).catch(e => { if (e.name !== 'AbortError') console.error("BG music play failed:", e.name); }); } }
+    function pauseBackgroundMusic() { if (sounds.backgroundMusic && backgroundMusicStarted) { sounds.backgroundMusic.pause(); backgroundMusicStarted = false; } }
+    function updateMuteButtonVisuals() { musicToggleButton.classList.toggle('muted', isMusicMuted); soundToggleButton.classList.toggle('muted', areSoundsMuted); }
+    function saveAudioPreferences() { try { localStorage.setItem('antRevengeMusicMuted', isMusicMuted.toString()); localStorage.setItem('antRevengeSoundsMuted', areSoundsMuted.toString()); } catch (e) { console.warn("Could not save audio prefs:", e); } }
+    function loadAudioPreferences() { try { isMusicMuted = localStorage.getItem('antRevengeMusicMuted') === 'true'; areSoundsMuted = localStorage.getItem('antRevengeSoundsMuted') === 'true'; console.log(`Loaded Audio Prefs: Music Muted=${isMusicMuted}, Sounds Muted=${areSoundsMuted}`); } catch (e) { console.warn("Could not load audio prefs:", e); isMusicMuted = false; areSoundsMuted = false; } updateMuteButtonVisuals(); }
+    initAudio();
 
-    <footer class="site-footer">
-        <p>&copy; 2025 Sora Ngin / Sora Entertainment</p>
-    </footer>
+    // --- Utils --- (No changes)
+    function resizeGame() { const vpW = window.innerWidth; const vpH = window.innerHeight; const targetAspect = GAME_WIDTH / GAME_HEIGHT; let newW, newH; if (vpW / vpH > targetAspect) { newH = vpH; newW = newH * targetAspect; } else { newW = vpW; newH = newW / targetAspect; } gameContainer.style.width = `${newW}px`; gameContainer.style.height = `${newH}px`; }
+    window.addEventListener('resize', resizeGame);
+    function getCanvasCoordinates(event) { const rect = canvas.getBoundingClientRect(); let clientX, clientY; if (event.touches && event.touches.length > 0) { clientX = event.touches[0].clientX; clientY = event.touches[0].clientY; if (event.target === canvas) event.preventDefault(); } else { clientX = event.clientX; clientY = event.clientY; } const scaleX = canvas.width / rect.width; const scaleY = canvas.height / rect.height; return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY }; }
+    function handleMove(event) { if (gameOver || paused || !gameRunning || !player.loaded) return; const coords = getCanvasCoordinates(event); const halfPlayerWidth = player.collisionWidth / 2; player.x = Math.max(halfPlayerWidth, Math.min(GAME_WIDTH - halfPlayerWidth, coords.x)); }
+    canvas.addEventListener('mousemove', handleMove); canvas.addEventListener('touchmove', handleMove, { passive: false });
+    function saveHighScore(newScore) { if (newScore > highScore) { highScore = newScore; localStorage.setItem('antRevengeHighScore', highScore.toString()); } }
+    function loadHighScore() { return parseInt(localStorage.getItem('antRevengeHighScore') || '0', 10); }
+
+    // --- Game Logic --- (No changes in these functions)
+    function setPlayerAnimation(newAnimationName) { if (!player.loaded || player.currentAnimation === newAnimationName || !player.animations[newAnimationName]) return; player.currentAnimation = newAnimationName; player.currentFrame = 0; player.animationTimer = 0; const animData = player.animations[player.currentAnimation]; player.msPerFrame = (animData && animData.fps > 0) ? (1000 / animData.fps) : 999999; }
+    function setAntAnimation(ant, newAnimationName) { if (!ant || ant.currentAnimation === newAnimationName || !antProto.animations[newAnimationName]) return; ant.currentAnimation = newAnimationName; ant.currentFrame = 0; ant.animationTimer = 0; const animData = antProto.animations[ant.currentAnimation]; ant.msPerFrame = (animData && animData.fps > 0) ? (1000 / animData.fps) : 999999; }
+    function spawnEntity() { const spawnPadding=20; const halfProtoWidth=antProto.width/2; const minSpawnX=halfProtoWidth*ANT_MIN_SCALE+spawnPadding; const maxSpawnX=GAME_WIDTH-halfProtoWidth*ANT_MIN_SCALE-spawnPadding; const spawnX=Math.random()*(maxSpawnX-minSpawnX)+minSpawnX; const roll=Math.random(); if(roll<0.06&&level>2) spawnPowerUp(spawnX); else if(roll<0.15&&level>1) spawnAnt(spawnX,true); else spawnAnt(spawnX,false); }
+    function spawnAnt(x, isGolden = false) { const speedMult = isGolden ? 1.5 : 1.0; const points = isGolden ? 5 : 1; const initialAnim = 'run'; const animData = antProto.animations[initialAnim]; const initialMsPerFrame = (animData && animData.fps > 0) ? (1000 / animData.fps) : 999999; ants.push({ type: 'ant', x: x, y: -antProto.height, width: antProto.width, height: antProto.height, speed: (antBaseSpeed + (level - 1) * 12 + Math.random() * 30) * speedMult, spriteSheet: antProto.spriteSheet, spriteData: antProto.spriteData, isGolden: isGolden, pointsValue: points, state: 'alive', currentAnimation: initialAnim, currentFrame: 0, animationTimer: 0, msPerFrame: initialMsPerFrame, deadTimer: 0, isFading: false, fadeDuration: DEAD_ANT_FADE_DURATION, fadeTimer: 0, alpha: 1.0 }); }
+    function spawnPowerUp(x) { powerUps.push({x:x, y:-50, width:40, height:40, type:'bomb', color:'#ffcc00'}); }
+    function spawnGoldCoin(x, y) { if (!goldCoinProto.img.complete || goldCoinProto.img.naturalWidth === 0) return; goldCoins.push({ x: x, y: y, width: goldCoinProto.width, height: goldCoinProto.height, img: goldCoinProto.img, speed: antBaseSpeed * 0.4 + Math.random() * 10 }); }
+    function activatePowerUp(type) { if (type === 'bomb') { playSound(sounds.powerup); ants.forEach(ant => { if (ant.state === 'alive') killAnt(ant); }); effects.push({ type: 'flash', life: 0.2, color: 'rgba(255,255,255,0.7)' }); } }
+    function loseLife() { lives--; playSound(sounds.lifeLost); updateLivesDisplay(); if (lives <= 0) triggerGameOver(); }
+    function killAnt(ant) { if (ant.state !== 'alive') return; ant.state = 'dying'; setAntAnimation(ant, 'dead'); playSound(sounds.squish); ant.speed = 0; ant.deadTimer = DEAD_ANT_STAY_DURATION; ant.isFading = false; ant.alpha = 1.0; ant.fadeTimer = 0; }
+    function checkCollisions() { if (paused || !gameRunning) return; for (let i = ants.length - 1; i >= 0; i--) { const ant = ants[i]; if (ant.state === 'alive') { let collisionScale = ANT_MIN_SCALE + (ANT_MAX_SCALE - ANT_MIN_SCALE) * (ant.y / GAME_HEIGHT); collisionScale = Math.max(ANT_MIN_SCALE, Math.min(ANT_MAX_SCALE, collisionScale)); const scaledAntWidth = ant.width * collisionScale; const scaledAntHeight = ant.height * collisionScale; if (Math.abs(player.x - ant.x) < (player.collisionWidth / 2 + scaledAntWidth / 2) && Math.abs(player.y - ant.y) < (player.collisionHeight / 2 + scaledAntHeight / 2)) { score += ant.pointsValue; killAnt(ant); if (Math.random() < (ant.isGolden ? 0.6 : 0.05)) { spawnGoldCoin(ant.x, ant.y); } player.attackResetTimer = player.COMBO_RESET_DURATION; if (!player.isAttackAnimationPlaying) { const anim = player.attackSequence[player.nextAttackIndex]; if (player.animations[anim]) { setPlayerAnimation(anim); player.isAttackAnimationPlaying = true; player.nextAttackIndex = (player.nextAttackIndex + 1) % player.attackSequence.length; } } const nextLvlScore = level * 10 + (level - 1) * 5; if (score >= nextLvlScore) { level++; spawnInterval = Math.max(250, spawnInterval * 0.92); antBaseSpeed += 8; console.log(`Level Up! ${level}`); } } } } for (let i = powerUps.length - 1; i >= 0; i--) { const pu = powerUps[i]; if (Math.abs(player.x - pu.x) < (player.collisionWidth / 2 + pu.width / 2) && Math.abs(player.y - pu.y) < (player.collisionHeight / 2 + pu.height / 2)) { activatePowerUp(pu.type); powerUps.splice(i, 1); continue; } if (pu.y - pu.height / 2 > GAME_HEIGHT) { powerUps.splice(i, 1); } } for (let i = goldCoins.length - 1; i >= 0; i--) { const coin = goldCoins[i]; if (Math.abs(player.x - coin.x) < (player.collisionWidth / 2 + coin.width / 2) && Math.abs(player.y - coin.y) < (player.collisionHeight / 2 + coin.height / 2)) { goldCount++; playSound(sounds.coinCollect); goldCoins.splice(i, 1); } } }
+    function update(deltaTime) { if (paused || gameOver || !gameRunning) return; const dtSec = deltaTime / 1000; if (player.loaded) { const animDef = player.animations[player.currentAnimation]; if (animDef && player.msPerFrame > 0) { player.animationTimer += deltaTime; if (player.animationTimer >= player.msPerFrame) { player.animationTimer %= player.msPerFrame; const nextFrame = (player.currentFrame + 1) % animDef.frameCount; if (nextFrame === 0 && player.currentFrame === animDef.frameCount - 1 && player.isAttackAnimationPlaying) { player.isAttackAnimationPlaying = false; } player.currentFrame = nextFrame; } } if (player.attackResetTimer > 0) { player.attackResetTimer -= deltaTime; if (player.attackResetTimer <= 0) { player.nextAttackIndex = 0; } } if (!player.isAttackAnimationPlaying) { setPlayerAnimation(Math.abs(player.x - player.prevX) > 1.5 ? 'run' : 'idle'); } player.prevX = player.x; } for (let i = ants.length - 1; i >= 0; i--) { const ant = ants[i]; if (antProto.loaded && ant.msPerFrame > 0) { ant.animationTimer += deltaTime; if (ant.animationTimer >= ant.msPerFrame) { ant.animationTimer %= ant.msPerFrame; const animDef = antProto.animations[ant.currentAnimation]; if (animDef && animDef.frameCount > 1) { ant.currentFrame = (ant.currentFrame + 1) % animDef.frameCount; } else if (animDef && animDef.frameCount === 1) { ant.currentFrame = 0; } } } if (ant.speed !== 0) { ant.y += ant.speed * dtSec; } if (ant.state === 'alive') { if (ant.y - ant.height / 2 > GAME_HEIGHT) { ants.splice(i, 1); loseLife(); if (gameOver) break; continue; } } else if (ant.state === 'dying') { if (ant.deadTimer > 0) { ant.deadTimer -= deltaTime; if (ant.deadTimer <= 0) { ant.isFading = true; ant.fadeTimer = 0; } } else if (ant.isFading) { ant.fadeTimer += deltaTime; ant.alpha = Math.max(0, 1.0 - (ant.fadeTimer / ant.fadeDuration)); if (ant.alpha <= 0) { ants.splice(i, 1); continue; } } if (ant.y - ant.height > GAME_HEIGHT + 50) { ants.splice(i, 1); continue; } } } timeToNextSpawn -= deltaTime; if (timeToNextSpawn <= 0) { spawnEntity(); timeToNextSpawn = Math.max(150, spawnInterval-(level*15)+Math.random()*(spawnInterval*0.4)); } powerUps.forEach(pu => pu.y += (antBaseSpeed * 0.8) * dtSec); goldCoins.forEach(coin => coin.y += coin.speed * dtSec); goldCoins = goldCoins.filter(coin => coin.y - coin.height / 2 < GAME_HEIGHT); for (let i = effects.length - 1; i >= 0; i--) { const e = effects[i]; e.life -= dtSec; if (e.type !== 'flash') { e.x += (e.vx || 0) * dtSec; e.y += (e.vy || 0) * dtSec; } if (e.life <= 0) { effects.splice(i, 1); } } checkCollisions(); }
+
+    // --- Drawing Helpers --- (No changes)
+    function drawPlayer(p) { if (!p.loaded || !p.spriteData || !p.spriteSheet.complete) { ctx.fillStyle='blue'; ctx.fillRect(p.x - p.drawWidth/2, p.y - p.drawHeight/2, p.drawWidth, p.drawHeight); return; } let frameKeyPrefix = p.currentAnimation; if (p.currentAnimation === 'attack1') frameKeyPrefix = 'attk1'; else if (p.currentAnimation === 'attack2') frameKeyPrefix = 'attk2'; else if (p.currentAnimation === 'attack3') frameKeyPrefix = 'attk3'; const frameKey = `${frameKeyPrefix}_${String(p.currentFrame).padStart(2, '0')}.png`; const frameData = p.spriteData.frames[frameKey]; if (frameData) { const { x: sourceX, y: sourceY, w: sourceW, h: sourceH } = frameData.frame; const destX = p.x - p.drawWidth / 2; const destY = p.y - p.drawHeight / 2; ctx.drawImage(p.spriteSheet, sourceX, sourceY, sourceW, sourceH, destX, destY, p.drawWidth, p.drawHeight); } else { console.warn(`Missing player frame data: ${frameKey}`); ctx.fillStyle = 'magenta'; ctx.fillRect(p.x - p.collisionWidth / 2, p.y - p.collisionHeight / 2, p.collisionWidth, p.collisionHeight); } }
+    function drawAnt(ant) { if (!antProto.loaded || !antProto.spriteSheet.complete || !antProto.spriteData) { let normalizedY = Math.max(0, Math.min(GAME_HEIGHT, ant.y)) / GAME_HEIGHT; let currentScale = ANT_MIN_SCALE + (ANT_MAX_SCALE - ANT_MIN_SCALE) * normalizedY; let scaledWidth = ant.width * currentScale; let scaledHeight = ant.height * currentScale; let drawX = ant.x - scaledWidth / 2; let drawY = ant.y - scaledHeight / 2; ctx.save(); if (ant.isGolden) ctx.filter = 'sepia(1) saturate(2) hue-rotate(-50deg) brightness(1.1)'; if (ant.state === 'dying') ctx.globalAlpha = ant.alpha; ctx.fillStyle = ant.isGolden ? 'gold' : 'darkred'; ctx.fillRect(drawX, drawY, scaledWidth, scaledHeight); ctx.restore(); return; } let normalizedY = Math.max(0, Math.min(GAME_HEIGHT, ant.y)) / GAME_HEIGHT; let currentScale = ANT_MIN_SCALE + (ANT_MAX_SCALE - ANT_MIN_SCALE) * normalizedY; let scaledWidth = ant.width * currentScale; let scaledHeight = ant.height * currentScale; let drawX = ant.x - scaledWidth / 2; let drawY = ant.y - scaledHeight / 2; let frameKeyPrefix = `ant_red_${ant.currentAnimation}`; let frameKey = `${frameKeyPrefix}_${String(ant.currentFrame).padStart(2, '0')}.png`; const frameData = antProto.spriteData.frames[frameKey]; ctx.save(); if (ant.isGolden) { ctx.filter = 'sepia(1) saturate(2) hue-rotate(-50deg) brightness(1.1)'; } if (ant.state === 'dying') { ctx.globalAlpha = ant.alpha; } if (frameData) { const { x: sourceX, y: sourceY, w: sourceW, h: sourceH } = frameData.frame; ctx.drawImage(antProto.spriteSheet, sourceX, sourceY, sourceW, sourceH, drawX, drawY, scaledWidth, scaledHeight); } else { console.warn(`Missing ant frame data: ${frameKey}`); ctx.fillStyle = ant.isGolden ? 'gold' : 'darkred'; ctx.fillRect(drawX, drawY, scaledWidth, scaledHeight); } ctx.restore(); }
+    function drawKing(k) { if (k.loaded && k.img.complete && k.img.naturalWidth > 0) { const kingDrawX = k.x - k.width / 2; const kingDrawY = k.y - k.height; ctx.drawImage(k.img, kingDrawX, kingDrawY, k.width, k.height); } }
+
+    // --- Drawing ---
+    function draw() {
+        ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+        // Draw Background First
+        if (background.img.complete && background.img.naturalWidth > 0) {
+            ctx.drawImage(background.img, 0, 0, GAME_WIDTH, GAME_HEIGHT);
+        } else { ctx.fillStyle = '#6aa84f'; ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT); }
+
+        if (gameRunning || gameOver || paused) {
+
+            // <<< MODIFICATION: Separate Draw Lists & Sorting >>>
+            let livingDrawables = [];
+            let deadDrawables = [];
+
+            // 1. Separate ants into living and dead lists
+            ants.forEach(ant => {
+                if (ant.state === 'dying') {
+                    deadDrawables.push(ant);
+                } else { // 'alive' state
+                    livingDrawables.push(ant);
+                }
+            });
+
+            // 2. Add other living entities
+            if (player.loaded) {
+                livingDrawables.push(player);
+            }
+            if (king.loaded) {
+                 king.y = GAME_HEIGHT - KING_Y_OFFSET; // Ensure king's Y is correct
+                 livingDrawables.push(king);
+            }
+
+            // 3. Sort the dead ants (optional, but keeps consistent ordering)
+             deadDrawables.sort((a, b) => a.y - b.y);
+
+            // 4. Sort the living entities by Y coordinate
+            livingDrawables.sort((a, b) => a.y - b.y);
+
+            // 5. Draw Dead Ants FIRST (so they are underneath)
+            deadDrawables.forEach(item => {
+                 drawAnt(item); // Only ants can be in this list
+            });
+
+            // 6. Draw Living Entities SECOND (Y-sorted)
+            livingDrawables.forEach(item => {
+                if (item.type === 'player') {
+                    drawPlayer(item);
+                } else if (item.type === 'ant') {
+                    drawAnt(item); // Living ants
+                } else if (item.type === 'king') {
+                    drawKing(item);
+                }
+            });
+            // <<< END MODIFICATION >>>
+
+
+            // Draw PowerUps (on top of characters)
+            powerUps.forEach(pu => { if (pu.type === 'bomb') { ctx.fillStyle = pu.color; ctx.beginPath(); ctx.arc(pu.x, pu.y, pu.width / 2, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#555'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(pu.x, pu.y-pu.height/2); ctx.lineTo(pu.x+5, pu.y-pu.height/2-10); ctx.stroke(); } });
+
+            // Draw Gold Coins (on top of characters)
+            if (goldCoinProto.img.complete && goldCoinProto.img.naturalWidth > 0) { goldCoins.forEach(coin => ctx.drawImage(coin.img, coin.x - coin.width / 2, coin.y - coin.height / 2, coin.width, coin.height)); }
+            else { goldCoins.forEach(coin => { ctx.fillStyle = 'gold'; ctx.beginPath(); ctx.arc(coin.x, coin.y, coin.width / 2, 0, Math.PI*2); ctx.fill(); }); }
+
+            // Draw Effects (Last before UI)
+            effects.forEach(effect => { if(effect.type==='flash'){ ctx.fillStyle=effect.color; ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT); } });
+
+            // Draw UI Elements (Always on very top)
+            const uiYPos = 15 + (killIcon.height || 28) / 2; const uiIconSize = 28; const uiPadding = 8; ctx.fillStyle = 'white'; ctx.font = 'bold 26px "Courier New", Courier, monospace'; ctx.textBaseline = 'middle'; let currentX = 70; ctx.textAlign = 'left'; ctx.fillText(`Lvl: ${level}`, currentX, uiYPos); currentX += ctx.measureText(`Lvl: ${level}`).width + uiPadding * 2; const goldIconDrawable = goldCoinProto.img.complete && goldCoinProto.img.naturalWidth > 0; const goldIconWidth = goldIconDrawable ? goldCoinProto.width * (uiIconSize / goldCoinProto.height) : 0; if (goldIconDrawable) { ctx.drawImage(goldCoinProto.img, currentX, uiYPos - uiIconSize / 2, goldIconWidth, uiIconSize); currentX += goldIconWidth + uiPadding; } else { ctx.fillText(`G:`, currentX, uiYPos); currentX += ctx.measureText(`G:`).width + uiPadding; } ctx.fillText(`${goldCount}`, currentX, uiYPos); const scoreText = `${score}`; const scoreWidth = ctx.measureText(scoreText).width; const killIconDrawable = killIcon.img.complete && killIcon.img.naturalWidth > 0; const killIconDisplayWidth = killIconDrawable ? killIcon.width * (uiIconSize / killIcon.height) : ctx.measureText("K:").width; const killSectionWidth = killIconDisplayWidth + uiPadding + scoreWidth; const lifeIconWidth = (king.loaded && king.width > 0) ? (king.width * (30 / king.height)) : 20; const livesDisplayApproxWidth = (lifeIconWidth + 5) * STARTING_LIVES + 20; let killSectionStartX = GAME_WIDTH - livesDisplayApproxWidth - killSectionWidth - 15; ctx.textAlign = 'left'; if (killIconDrawable) { ctx.drawImage(killIcon.img, killSectionStartX, uiYPos - uiIconSize / 2, killIconDisplayWidth, uiIconSize); ctx.fillText(scoreText, killSectionStartX + killIconDisplayWidth + uiPadding, uiYPos); } else { ctx.fillText(`K: ${scoreText}`, killSectionStartX, uiYPos); }
+
+        } else if (!gameRunning && assetsLoaded >= assetsToLoad && player.loaded) {
+            // Start Screen (HTML overlay)
+        } else { // Loading screen
+            ctx.fillStyle = 'white'; ctx.font = '24px "Courier New", Courier, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(loadingMessage.textContent || "Loading...", canvas.width / 2, canvas.height / 2);
+        }
+    }
+
+    // --- Life Display Update --- (No changes)
+    function updateLivesDisplay() { livesDisplay.innerHTML = ''; if (king.img.complete && king.img.naturalWidth > 0) { for (let i = 0; i < lives; i++) { const lifeImg = new Image(); lifeImg.src = king.img.src; lifeImg.className = 'life-icon'; livesDisplay.appendChild(lifeImg); } } else { livesDisplay.textContent = `Lives: ${lives}`; livesDisplay.style.color = 'white'; livesDisplay.style.fontSize = '20px'; } }
+
+    // --- Game Loop, Control Functions, Event Listeners --- (No changes)
+    let animationFrameId = null;
+    function gameLoop(timestamp) { const deltaTime = (timestamp && lastTime) ? timestamp - lastTime : 16.67; lastTime = timestamp || 0; if (gameRunning && !paused) { update(Math.min(deltaTime, 50)); } draw(); if (!gameOver) { animationFrameId = requestAnimationFrame(gameLoop); } else { if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; } } }
+    function startGame() { if (!player.loaded || !antProto.loaded) { console.error(`Start failed: Player Loaded=${player.loaded}, Ant Proto Loaded=${antProto.loaded}`); return; } if (audioContext && audioContext.state === 'suspended') { audioContext.resume().then(() => { audioContextReady = true; proceedWithStart(); }).catch(e => proceedWithStart()); } else { proceedWithStart(); } }
+    function proceedWithStart() { console.log("Starting game..."); startScreen.style.display = 'none'; gameOverScreen.style.display = 'none'; optionsMenuOverlay.style.display = 'none'; menuTriggerButton.style.display = 'block'; paused = false; initGame(true); }
+    function toggleMenu() { if (gameOver || !gameRunning) return; paused = !paused; if (paused) { optionsMenuOverlay.style.display = 'flex'; pauseBackgroundMusic(); if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; } draw(); } else { optionsMenuOverlay.style.display = 'none'; if (!isMusicMuted) tryStartBackgroundMusic(); lastTime = performance.now(); if (!animationFrameId && !gameOver) animationFrameId = requestAnimationFrame(gameLoop); } }
+    function exitToStart() { console.log("Exiting to start screen..."); gameRunning = false; paused = false; gameOver = false; if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; } optionsMenuOverlay.style.display = 'none'; menuTriggerButton.style.display = 'none'; gameOverScreen.style.display = 'none'; startScreen.style.display = 'flex'; score = 0; level = 1; goldCount = 0; lives = STARTING_LIVES; ants = []; powerUps = []; goldCoins = []; effects = []; updateLivesDisplay(); highScore = loadHighScore(); startHighScoreDisplay.textContent = `High Score: ${highScore}`; pauseBackgroundMusic(); backgroundMusicStarted = false; ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT); if (background.loaded) { ctx.drawImage(background.img, 0, 0, GAME_WIDTH, GAME_HEIGHT); } else { ctx.fillStyle = '#6aa84f'; ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT); } }
+    function triggerGameOver() { if (gameOver) return; console.log("Game Over!"); gameOver = true; gameRunning = false; playSound(sounds.gameOver); pauseBackgroundMusic(); menuTriggerButton.style.display = 'none'; optionsMenuOverlay.style.display = 'none'; finalScoreDisplay.textContent = `Kills: ${score}`; finalGoldDisplay.textContent = `Gold: ${goldCount}`; saveHighScore(score); highScoreDisplay.textContent = `High Score: ${highScore}`; gameOverScreen.style.display = 'flex'; if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; } }
+    function initGame(isFirstStart = false) { console.log("Initializing game state..."); score = 0; level = 1; lives = STARTING_LIVES; goldCount = 0; ants = []; powerUps = []; goldCoins = []; effects = []; gameOver = false; paused = false; timeToNextSpawn = 2000; spawnInterval = 1400; antBaseSpeed = 90; player.x = GAME_WIDTH / 2; player.prevX = player.x; player.isAttackAnimationPlaying = false; player.nextAttackIndex = 0; player.attackResetTimer = 0; if (player.loaded) { setPlayerAnimation('idle'); player.currentFrame = 0; player.animationTimer = 0; } updateLivesDisplay(); gameOverScreen.style.display = 'none'; optionsMenuOverlay.style.display = 'none'; menuTriggerButton.style.display = 'block'; gameRunning = true; if (sounds.backgroundMusic) sounds.backgroundMusic.currentTime = 0; backgroundMusicStarted = false; if (!isMusicMuted) tryStartBackgroundMusic(); if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; } lastTime = performance.now(); animationFrameId = requestAnimationFrame(gameLoop); }
+    startButton.addEventListener('click', startGame); restartButton.addEventListener('click', () => initGame(false)); menuTriggerButton.addEventListener('click', toggleMenu); resumeButton.addEventListener('click', toggleMenu); exitButton.addEventListener('click', exitToStart); musicToggleButton.addEventListener('click', () => { isMusicMuted = !isMusicMuted; updateMuteButtonVisuals(); if (isMusicMuted) pauseBackgroundMusic(); else if (gameRunning && !paused) tryStartBackgroundMusic(); saveAudioPreferences(); }); soundToggleButton.addEventListener('click', () => { areSoundsMuted = !areSoundsMuted; updateMuteButtonVisuals(); saveAudioPreferences(); }); chatButton.addEventListener('click', () => alert("Feedback/Chat not implemented.")); leaderboardButton.addEventListener('click', () => alert("Leaderboards not implemented.")); trophyButton.addEventListener('click', () => alert("Achievements not implemented."));
+    startButton.addEventListener('touchstart', (e) => { e.preventDefault(); startGame(); }, { passive: false }); restartButton.addEventListener('touchstart', (e) => { e.preventDefault(); initGame(false); }, { passive: false }); menuTriggerButton.addEventListener('touchstart', (e) => { e.preventDefault(); toggleMenu(); }, { passive: false }); resumeButton.addEventListener('touchstart', (e) => { e.preventDefault(); toggleMenu(); }, { passive: false }); exitButton.addEventListener('touchstart', (e) => { e.preventDefault(); exitToStart(); }, { passive: false }); musicToggleButton.addEventListener('touchstart', (e) => { e.preventDefault(); musicToggleButton.click(); }, { passive: false }); soundToggleButton.addEventListener('touchstart', (e) => { e.preventDefault(); soundToggleButton.click(); }, { passive: false }); chatButton.addEventListener('touchstart', (e) => { e.preventDefault(); chatButton.click(); }, { passive: false }); leaderboardButton.addEventListener('touchstart', (e) => { e.preventDefault(); leaderboardButton.click(); }, { passive: false }); trophyButton.addEventListener('touchstart', (e) => { e.preventDefault(); trophyButton.click(); }, { passive: false });
+
+    // --- Initial Setup --- (No changes)
+    console.log("Script loaded. Initializing audio, loading preferences, starting asset load...");
+    resizeGame(); loadAudioPreferences();
+    requestAnimationFrame(draw);
+
+</script>
 
 </body>
 </html>
