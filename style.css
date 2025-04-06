@@ -1,4 +1,4 @@
-/* style.css - COMPLETE VERSION WITH TOP OVERLAY */
+/* style.css - COMPLETE VERSION WITH SECTIONS */
 
 /* --- Global Styles & Variables --- */
 :root {
@@ -9,7 +9,6 @@
     --shadow-color: rgba(0, 0, 0, 0.15);
     --border-color: #e0e0e0;
     --font-main: 'Poppins', sans-serif;
-    /* CHANGE: Gradient for top overlay */
     --title-overlay-bg: linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 100%);
     --title-text-color: #ffffff;
 }
@@ -25,7 +24,7 @@ body {
     line-height: 1.6;
     background-color: var(--bg-color);
     color: var(--text-color);
-    padding: 20px;
+    padding: 20px; /* Overall page padding */
 }
 
 /* --- Header & Footer --- */
@@ -48,20 +47,46 @@ body {
 
 .site-footer {
     text-align: center;
-    margin-top: 50px;
+    margin-top: 50px; /* Increased slightly to give space after last section */
     padding-top: 20px;
     border-top: 1px solid var(--border-color);
     color: #777;
     font-size: 0.9em;
 }
 
+/* --- Section Styling (NEW) --- */
+.game-section {
+    margin-bottom: 60px; /* Adds space below each section */
+    /* Ensures sections don't exceed the max grid width if desired */
+    max-width: 1200px; /* Matches the game grid max-width */
+    margin-left: auto;
+    margin-right: auto;
+    padding: 0 10px; /* Add slight horizontal padding if body padding isn't enough */
+}
+
+.section-title { /* Styles for the new H2 headings */
+    font-size: 2.2em; /* Adjust size as needed */
+    color: var(--heading-color);
+    margin-bottom: 25px; /* Space between title and the grid */
+    padding-bottom: 10px; /* Space for the border */
+    border-bottom: 2px solid var(--border-color); /* Visual separator */
+    /* text-align: center; */ /* Uncomment if you want centered titles */
+}
+
+/* Optional: Remove most of the bottom margin from the *last* section before the footer */
+main > .game-section:last-of-type {
+    margin-bottom: 30px; /* Reduce margin before the footer */
+}
+
+
 /* --- Game Grid --- */
+/* NOTE: The grid itself is now *within* each .game-section */
 .game-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 30px;
-    max-width: 1200px;
-    margin: 0 auto;
+    /* max-width: 1200px; */ /* Max-width is now handled by .game-section */
+    /* margin: 0 auto; */ /* Centering is now handled by .game-section */
 }
 
 /* --- Game Card Styling --- */
@@ -117,18 +142,35 @@ body {
 
 /* --- Responsive Adjustments --- */
 @media (max-width: 600px) {
+    body {
+        padding: 15px; /* Slightly reduce body padding */
+    }
     .site-header h1 {
         font-size: 2.2em;
     }
+    .game-section {
+        margin-bottom: 40px; /* Reduce section spacing */
+        padding: 0 5px; /* Reduce horizontal padding */
+    }
+    .section-title {
+        font-size: 1.8em; /* Reduce title size */
+        margin-bottom: 20px; /* Reduce space below title */
+    }
+    main > .game-section:last-of-type {
+        margin-bottom: 20px; /* Reduce space before footer */
+    }
     .game-grid {
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 20px;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Smaller min card size */
+        gap: 20px; /* Reduce gap between cards */
     }
     .game-card img {
         height: 250px; /* Adjust image height for smaller cards */
     }
     .game-card h3 {
-        font-size: 1.0em;
-        padding: 10px 10px;
+        font-size: 1.0em; /* Smaller title text on card */
+        padding: 10px 10px; /* Adjust padding on card title */
+    }
+    .site-footer {
+        margin-top: 40px; /* Adjust footer spacing */
     }
 }
