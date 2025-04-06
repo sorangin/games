@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ASCII RPG Adventure v2</title>
+    <style>
+        /* Basic Reset & Body Styling */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* Prevent scrolling outside game area */
+            background-color: #111;
+            color: #eee;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Game Container - Manages overall scaling and centering */
+        #game-container {
+            position: relative; /* Needed for absolute positioning of buttons */
+            width: 100vmin; /* Use max viewport dimension */
+            height: 100vmin;
+            max-width: 100%;
+            max-height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+             /* background: #333; */ /* Optional: visualize container */
+        }
+
+        /* Game Screen - Maintains aspect ratio */
+        #game-screen {
+             /* Base Aspect ratio, adjust if viewWidth/viewHeight changes significantly */
+            aspect-ratio: 25 / 18; /* Approx based on viewWidth / (viewHeight + UI Height factor) */
+            width: 100%; /* Fill the container */
+            height: 100%; /* Fill the container */
+            background-color: #000;
+            border: 2px solid #555;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Hide anything spilling out */
+            image-rendering: pixelated; /* Keep text sharp on scaling */
+             /* Font size will be set by JS */
+        }
+
+        /* Game Areas */
+        #map-display {
+            flex-grow: 1;
+            background-color: #1a1a1a;
+            padding: 1vmin; /* Use vmin for padding relative to container */
+            white-space: pre; /* Crucial for ASCII layout */
+            overflow: hidden; /* Hide map overflow */
+            line-height: 1.0; /* Tighter line spacing for grid look, adjusted by JS */
+            position: relative; /* For player positioning */
+            color: #ccc;
+            /* Font size is dynamically set by JS */
+            font-family: 'Courier New', Courier, monospace; /* Ensure font */
+             will-change: font-size; /* Hint for performance */
+        }
+
+        #ui-panel {
+            height: auto; /* Adjust height based on content */
+            min-height: 6em; /* Ensure minimum space for UI, relative to base font size */
+            font-size: 1.5vmin; /* UI font size relative to viewport */
+            background-color: #222;
+            border-top: 2px solid #555;
+            padding: 0.5em 1em;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+         #status-line, #status-line-2 {
+             display: flex;
+             justify-content: space-between;
+             flex-wrap: wrap; /* Allow wrapping on small UI */
+             gap: 1em;
+             margin-bottom: 0.3em;
+             font-weight: bold;
+         }
+         #status-line span, #status-line-2 span { padding: 0 0.5em; }
+         #hp-bar {
+            display: inline-block;
+            min-width: 5em; /* Ensure bar has some width */
+            background-color: #500;
+            border: 1px solid #a00;
+            vertical-align: middle;
+         }
+         #hp-bar-fill {
+             height: 0.8em;
+             background-color: #d00;
+             transition: width 0.3s ease;
+         }
+         #xp-bar {
+             display: inline-block;
+             min-width: 5em;
+             background-color: #005;
+             border: 1px solid #00a;
+             vertical-align: middle;
+         }
+         #xp-bar-fill {
+             height: 0.8em;
+             background-color: #00d;
+             transition: width 0.3s ease;
+         }
+
+
+        #message-log {
+            height: 3.5em; /* Show ~3 lines based on UI font size */
+            overflow-y: scroll; /* Allow scrolling for messages */
+            border: 1px dashed #444;
+            padding: 0.3em;
+            margin-top: 0.5em;
+            font-size: 0.9em; /* Slightly smaller than status */
+            line-height: 1.2;
+            color: #bbb;
+        }
+        #message-log p { margin: 0; padding: 0; }
+
+
+        /* Mobile Controls */
+        #mobile-controls {
+            position: absolute;
+            bottom: 10px;
+            /* Adjust positioning and size as needed */
+            left: 50%;
+            transform: translateX(-50%);
+            display: grid;
+            grid-template-areas:
+                ". up ."
+                "left . right"
+                ". down .";
+            gap: 8px;
+            width: clamp(120px, 30vmin, 200px); /* Responsive size */
+            opacity: 0.75;
+            z-index: 10;
+        }
+
+        #mobile-controls button {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: clamp(1.2em, 5vmin, 2em); /* Responsive font size */
+            background-color: #444;
+            color: #eee;
+            border: 1px solid #888;
+            border-radius: 8px;
+            padding: 0; /* Remove padding */
+            aspect-ratio: 1/1; /* Make buttons square */
+            touch-action: manipulation; /* Improve touch responsiveness */
+            display: flex; /* Center icon */
+            justify-content: center;
+            align-items: center;
+        }
+        #mobile-controls button:active {
+            background-color: #666;
+        }
+
+        #btn-up { grid-area: up; }
+        #btn-down { grid-area: down; }
+        #btn-left { grid-area: left; }
+        #btn-right { grid-area: right; }
+
+        /* Fullscreen Button */
+        #fullscreen-button {
+             position: absolute;
+             top: clamp(5px, 1.5vmin, 15px);
+             right: clamp(5px, 1.5vmin, 15px);
+             width: clamp(25px, 5vmin, 40px);
+             height: clamp(25px, 5vmin, 40px);
+             background-color: rgba(50, 50, 50, 0.7);
+             border: 1px solid #aaa;
+             border-radius: 3px;
+             cursor: pointer;
+             z-index: 20;
+             display: flex;
+             justify-content: center;
+             align-items: center;
+             padding: 0;
+        }
+         #fullscreen-button svg {
+            width: 70%;
+            height: 70%;
+            fill: #eee;
+        }
+        #fullscreen-button:hover {
+            background-color: rgba(80, 80, 80, 0.9);
+        }
+
+        /* ASCII Character Styles */
+        .player { color: yellow; font-weight: bold; }
+        .wall { color: #888; }
+        .floor { color: #555; } /* Slightly darker floor */
+        .water { color: #36f; }
+        .tree { color: #2a4; }
+        .monster { color: red; font-weight: bold; animation: blink 1s step-end infinite; }
+        .monster-orc { color: orangered; font-weight: bold; animation: blink 0.8s step-end infinite; } /* Orc color */
+        .item { color: cyan; font-weight: bold; animation: blink 1.5s step-end infinite; }
+        .heal { color: limegreen; font-weight: bold; }
+        .door { color: orange; }
+
+        @keyframes blink {
+            50% { opacity: 0.3; }
+        }
+
+        /* Combat Overlay */
+         #combat-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.9); /* Darker overlay */
+            z-index: 50;
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            text-align: center;
+            font-size: 1.8vmin; /* Base font size for combat */
+        }
+        #combat-log {
+            width: 90%;
+            height: 50%;
+            border: 1px solid #666;
+            margin-bottom: 15px;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: #111;
+            font-size: 0.9em; /* Slightly smaller than overlay base */
+             white-space: normal; /* Allow wrapping */
+             line-height: 1.3;
+        }
+         #combat-log p { margin-bottom: 0.3em;}
+
+        #combat-stats { font-size: 0.95em; margin-bottom: 10px; }
+
+        #combat-actions button {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1em; /* Relative to combat overlay font size */
+            padding: 8px 15px;
+            margin: 0 5px;
+            background-color: #444;
+            color: #eee;
+            border: 1px solid #888;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+         #combat-actions button:hover { background-color: #666; }
+         #combat-actions button:disabled { background-color: #333; color: #777; cursor: not-allowed;}
+         #combat-result { margin-top: 10px; font-weight: bold; font-size: 1.1em;}
+
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="game-screen">
+            <div id="map-display"></div>
+            <div id="ui-panel">
+                <div id="status-line">
+                     <span id="player-level">Lvl: 1</span>
+                     <span id="player-hp">HP: 10/10
+                         <span id="hp-bar"><span id="hp-bar-fill" style="width: 100%;"></span></span>
+                     </span>
+                     <span id="player-attack">Atk: 2</span>
+                     <span id="player-items">Potions: 0</span>
+                </div>
+                 <div id="status-line-2">
+                     <span id="player-xp">XP: 0/10
+                         <span id="xp-bar"><span id="xp-bar-fill" style="width: 0%;"></span></span>
+                     </span>
+                     <span id="player-pos">Pos: (0, 0)</span>
+                 </div>
+                <div id="message-log">
+                    <p>Loading...</p>
+                </div>
+            </div>
+
+            <!-- Combat Overlay -->
+            <div id="combat-overlay">
+                <h3 id="combat-title">Combat!</h3>
+                <div id="combat-log"></div>
+                <div id="combat-stats">
+                    <p>Player HP: <span id="combat-player-hp"></span> | Monster HP: <span id="combat-monster-hp"></span></p>
+                </div>
+                <div id="combat-actions">
+                    <button id="combat-attack">Attack</button>
+                    <button id="combat-potion">Use Potion</button>
+                    <button id="combat-flee">Flee</button>
+                </div>
+                 <div id="combat-result" style="margin-top: 10px; font-weight: bold;"></div>
+            </div>
+
+        </div>
+
+        <!-- On-Screen Controls -->
+        <div id="mobile-controls">
+            <button id="btn-up">▲</button>
+            <button id="btn-left">◄</button>
+            <button id="btn-right">►</button>
+            <button id="btn-down">▼</button>
+        </div>
+
+        <!-- Fullscreen Button -->
+        <button id="fullscreen-button" title="Toggle Fullscreen">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zm-3-12V5h3v2h-3z"/>
+                <path d="M0 0h24v24H0z" fill="none"/>
+             </svg>
+        </button>
+
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const gameContainer = document.getElementById('game-container');
+        const gameScreen = document.getElementById('game-screen');
+        const mapDisplay = document.getElementById('map-display');
+        const messageLog = document.getElementById('message-log');
+        const playerHpDisplay = document.getElementById('player-hp');
+        const hpBarFill = document.getElementById('hp-bar-fill');
+        const playerLevelDisplay = document.getElementById('player-level');
+        const playerXpDisplay = document.getElementById('player-xp');
+        const xpBarFill = document.getElementById('xp-bar-fill');
+        const playerAttackDisplay = document.getElementById('player-attack');
+        const playerPosDisplay = document.getElementById('player-pos');
+        const playerItemsDisplay = document.getElementById('player-items');
+        const uiPanel = document.getElementById('ui-panel'); // Get UI panel for font size reference
+
+        const combatOverlay = document.getElementById('combat-overlay');
+        const combatTitle = document.getElementById('combat-title');
+        const combatLog = document.getElementById('combat-log');
+        const combatPlayerHp = document.getElementById('combat-player-hp');
+        const combatMonsterHp = document.getElementById('combat-monster-hp');
+        const combatActions = document.getElementById('combat-actions');
+        const combatAttackBtn = document.getElementById('combat-attack');
+        const combatPotionBtn = document.getElementById('combat-potion');
+        const combatFleeBtn = document.getElementById('combat-flee');
+        const combatResult = document.getElementById('combat-result');
+
+        // --- Game Constants ---
+        const SAVE_KEY = 'asciiRpgSaveData';
+        // Viewport settings (how much of the map is shown)
+        const VIEW_WIDTH = 25; // Target number of characters horizontally
+        const VIEW_HEIGHT = 15; // Target number of lines vertically
+
+        // --- Game State ---
+        let player = {
+            x: 2,
+            y: 2,
+            hp: 10,
+            maxHp: 10,
+            attack: 2,
+            potions: 0,
+            level: 1,
+            xp: 0,
+            xpToNextLevel: 10 // XP needed for level 2
+        };
+
+        let monster = null; // Holds current monster data during combat
+        let gameState = 'map'; // 'map', 'combat', 'paused'
+        let baseMapData = []; // Original map layout
+        let currentMapData = []; // Map state including cleared monsters/items
+
+        // --- Map Definition ---
+        // #: Wall, .: Floor, ~: Water, T: Tree, M: Goblin, O: Orc, *: Potion, H: Heal
+        const initialMap = [
+            "##############################",
+            "#............#####...........#",
+            "#@...........#***#.......O...#",
+            "#....T.......#####...........#",
+            "#....T.~~..........#######...#",
+            "#......~~..........#.....#...#",
+            "#..................#..M..#...#",
+            "#....######........#.....#...#",
+            "#....# M O#........#######...#",
+            "#....# H *#..................#",
+            "#....######....M.............#",
+            "#............................#",
+            "#.......#########............#",
+            "#.......#.......#...T.T......#",
+            "#.......#...O...#...T.T......#",
+            "#.......#.......#............#",
+            "#.......#########............#",
+            "#............*...M...........#",
+            "##############################"
+        ];
+
+        const mapWidth = initialMap[0].length;
+        const mapHeight = initialMap.length;
+
+
+        // --- Helper Functions ---
+        function logMessage(message, color = '#eee') {
+            const p = document.createElement('p');
+            p.textContent = `> ${message}`; // Add prompt character
+            p.style.color = color;
+            messageLog.appendChild(p);
+            messageLog.scrollTop = messageLog.scrollHeight;
+            while (messageLog.children.length > 50) {
+                messageLog.removeChild(messageLog.firstChild);
+            }
+        }
+
+        function combatLogMessage(message, color = '#eee') {
+             const p = document.createElement('p');
+             p.textContent = message;
+             p.style.color = color;
+             combatLog.appendChild(p);
+             combatLog.scrollTop = combatLog.scrollHeight;
+        }
+
+        function getTile(x, y, mapSource = currentMapData) {
+            if (x < 0 || x >= mapWidth || y < 0 || y >= mapHeight || !mapSource[y]) {
+                return '#'; // Treat out of bounds as wall
+            }
+            return mapSource[y][x] || '#'; // Default to wall if character is missing
+        }
+
+        function setTile(x, y, tile) {
+            if (x >= 0 && x < mapWidth && y >= 0 && y < mapHeight && currentMapData[y]) {
+                 // Need to convert string row to array, modify, then back to string
+                 let row = currentMapData[y].split('');
+                 if (row[x] !== tile) { // Only modify if different
+                     row[x] = tile;
+                     currentMapData[y] = row.join('');
+                     return true; // Indicate change occurred
+                 }
+            }
+            return false; // Indicate no change
+        }
+
+        // --- Saving and Loading ---
+        function saveGame() {
+             try {
+                 const saveData = {
+                     player: player,
+                     map: currentMapData // Save the current state of the map
+                 };
+                 localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+                 console.log("Game saved.");
+                 // Optional: logMessage("Game progress saved.", "lightblue");
+             } catch (e) {
+                 console.error("Failed to save game:", e);
+                 logMessage("Error: Could not save game progress.", "red");
+             }
+         }
+
+         function loadGame() {
+             try {
+                 const savedData = localStorage.getItem(SAVE_KEY);
+                 if (savedData) {
+                     const parsedData = JSON.parse(savedData);
+                     // Basic validation
+                     if (parsedData.player && parsedData.map && parsedData.map.length === mapHeight) {
+                         player = parsedData.player;
+                         currentMapData = parsedData.map;
+                         console.log("Game loaded.");
+                         logMessage("Save data loaded successfully!", "lightgreen");
+                         return true;
+                     } else {
+                          console.warn("Invalid save data found.");
+                          localStorage.removeItem(SAVE_KEY); // Clear invalid data
+                     }
+                 }
+             } catch (e) {
+                 console.error("Failed to load game:", e);
+                 logMessage("Error loading saved game. Starting fresh.", "orange");
+                 localStorage.removeItem(SAVE_KEY); // Clear potentially corrupted data
+             }
+             // If load failed or no save exists, initialize
+             initializeNewGame();
+             return false;
+         }
+
+          function initializeNewGame() {
+             console.log("Initializing new game state.");
+             // Deep copy initial map to baseMapData and currentMapData
+             baseMapData = initialMap.map(row => row);
+             currentMapData = initialMap.map(row => row);
+
+             // Find player start position '@' from initial map and place player
+             let foundStart = false;
+             for (let y = 0; y < mapHeight; y++) {
+                 const x = initialMap[y].indexOf('@');
+                 if (x !== -1) {
+                     player.x = x;
+                     player.y = y;
+                     setTile(x, y, '.'); // Replace '@' with floor on the map
+                     foundStart = true;
+                     break;
+                 }
+             }
+             if (!foundStart) { // Fallback if no '@' in map
+                 console.error("Player start '@' not found in map! Defaulting to (1,1).");
+                 player.x = 1;
+                 player.y = 1;
+             }
+
+             // Reset player stats to default (in case load failed mid-way)
+             player.hp = 10;
+             player.maxHp = 10;
+             player.attack = 2;
+             player.potions = 0;
+             player.level = 1;
+             player.xp = 0;
+             player.xpToNextLevel = 10;
+
+             logMessage("Welcome to ASCII RPG! Use Arrow Keys or Tap Controls.", "cyan");
+         }
+
+
+        // --- Rendering ---
+        function renderGame() {
+            if (!currentMapData || currentMapData.length === 0) {
+                 console.error("Attempted to render with invalid map data.");
+                 return;
+             }
+            // Render Map Viewport
+            let mapView = '';
+            let startX = Math.max(0, Math.min(player.x - Math.floor(VIEW_WIDTH / 2), mapWidth - VIEW_WIDTH));
+            let startY = Math.max(0, Math.min(player.y - Math.floor(VIEW_HEIGHT / 2), mapHeight - VIEW_HEIGHT));
+
+            for (let y = 0; y < VIEW_HEIGHT; y++) {
+                for (let x = 0; x < VIEW_WIDTH; x++) {
+                    let mapX = startX + x;
+                    let mapY = startY + y;
+
+                    if (mapX === player.x && mapY === player.y) {
+                        mapView += '<span class="player">@</span>';
+                    } else {
+                         let tile = getTile(mapX, mapY); // Use currentMapData via getTile
+                         let tileClass = '';
+                         switch(tile) {
+                             case '#': tileClass = 'wall'; break;
+                             case '.': tileClass = 'floor'; break;
+                             case '~': tileClass = 'water'; break;
+                             case 'T': tileClass = 'tree'; break;
+                             case 'M': tileClass = 'monster'; break;
+                             case 'O': tileClass = 'monster-orc'; break; // Orc style
+                             case '*': tileClass = 'item'; break;
+                             case 'H': tileClass = 'heal'; break;
+                             default: tileClass = 'floor'; tile = '.'; // Treat unknown as floor
+                         }
+                         mapView += `<span class="${tileClass}">${tile}</span>`;
+                    }
+                }
+                mapView += '\n';
+            }
+            mapDisplay.innerHTML = mapView;
+
+            // Render UI
+            let hpPercentage = Math.max(0, (player.hp / player.maxHp) * 100);
+            let xpPercentage = Math.max(0, (player.xp / player.xpToNextLevel) * 100);
+
+            playerLevelDisplay.textContent = `Lvl: ${player.level}`;
+            playerHpDisplay.innerHTML = `HP: ${player.hp}/${player.maxHp} <span id="hp-bar"><span id="hp-bar-fill"></span></span>`;
+            document.getElementById('hp-bar-fill').style.width = `${hpPercentage}%`; // Re-select needed after innerHTML
+
+            playerAttackDisplay.textContent = `Atk: ${player.attack}`;
+            playerItemsDisplay.textContent = `Potions: ${player.potions}`;
+
+            playerXpDisplay.innerHTML = `XP: ${player.xp}/${player.xpToNextLevel} <span id="xp-bar"><span id="xp-bar-fill"></span></span>`;
+            document.getElementById('xp-bar-fill').style.width = `${xpPercentage}%`; // Re-select
+
+            playerPosDisplay.textContent = `Pos: (${player.x}, ${player.y})`;
+
+
+             // Show/Hide Combat Overlay
+            combatOverlay.style.display = (gameState === 'combat') ? 'flex' : 'none';
+        }
+
+        // --- Dynamic Font Size Adjustment ---
+         function adjustFontSize() {
+             const mapRect = mapDisplay.getBoundingClientRect();
+             if (mapRect.width === 0 || mapRect.height === 0) return; // Not visible yet
+
+             // Calculate font size based on fitting VIEW_WIDTH characters horizontally
+             const fontWidth = mapRect.width / VIEW_WIDTH;
+             // Calculate font size based on fitting VIEW_HEIGHT lines vertically
+             const fontHeight = mapRect.height / VIEW_HEIGHT;
+
+             // Use the smaller dimension to ensure content fits without overflow
+             // Multiply by a factor (e.g., 1.6-1.8) because font size isn't exactly char width/height
+             // This factor might need tweaking based on font choice and desired density
+             const targetFontSize = Math.min(fontWidth * 1.7, fontHeight * 0.9); // Adjusted factors
+
+             mapDisplay.style.fontSize = `${targetFontSize}px`;
+             mapDisplay.style.lineHeight = `1.0`; // Keep lines tight
+
+            // Optionally adjust UI font size relative to map font size or keep it based on vmin
+            // uiPanel.style.fontSize = `${targetFontSize * 0.6}px`; // Example relative UI size
+         }
+
+        // --- Player Movement and Interaction ---
+        function movePlayer(dx, dy) {
+            if (gameState !== 'map') return;
+
+            let newX = player.x + dx;
+            let newY = player.y + dy;
+
+            let targetTile = getTile(newX, newY);
+
+            // Check for collisions
+             if (targetTile === '#' || targetTile === '~' || targetTile === 'T') {
+                logMessage("Blocked!", "#ff8888");
+                return;
+            }
+
+            // Interactions
+            let interactionOccurred = false;
+            let shouldMove = true;
+            let shouldSave = false;
+
+            if (targetTile === '*') {
+                player.potions++;
+                logMessage("Found a potion!", "#aaffaa");
+                 if (setTile(newX, newY, '.')) { // Update map state
+                     shouldSave = true;
+                 }
+                 interactionOccurred = true;
+            } else if (targetTile === 'M' || targetTile === 'O') { // Check for both monster types
+                logMessage(`A wild ${targetTile === 'M' ? 'Goblin' : 'Orc'} appears!`, "#ffaaaa");
+                startCombat(newX, newY, targetTile); // Pass position and type
+                shouldMove = false; // Don't move onto tile until combat is won
+                interactionOccurred = true; // Prevent default move message
+            } else if (targetTile === 'H') {
+                 if (player.hp < player.maxHp) {
+                     const healed = player.maxHp - player.hp;
+                     player.hp = player.maxHp;
+                     logMessage(`You rest and restore ${healed} HP.`, "#aaffaa");
+                     shouldSave = true; // Save after healing
+                 } else {
+                     logMessage("You are already at full health.");
+                 }
+                 interactionOccurred = true;
+            }
+
+            // Update player position if allowed
+            if (shouldMove) {
+                 player.x = newX;
+                 player.y = newY;
+                 if (!interactionOccurred && targetTile === '.') {
+                     // Maybe add floor description later? logMessage("Moved.");
+                 }
+            }
+
+            renderGame(); // Re-render after potential changes
+
+            if (shouldSave) {
+                 saveGame(); // Save state after picking up items, healing etc.
+            }
+        }
+
+        // --- XP and Leveling System ---
+        function gainXP(amount) {
+            if (gameState === 'gameOver') return;
+            player.xp += amount;
+            logMessage(`You gained ${amount} XP.`, 'cyan');
+            let leveledUp = false;
+            while (player.xp >= player.xpToNextLevel) {
+                player.xp -= player.xpToNextLevel;
+                levelUp();
+                leveledUp = true;
+            }
+            if (leveledUp) saveGame(); // Save after leveling up
+            renderGame(); // Update XP bar etc.
+        }
+
+        function levelUp() {
+            player.level++;
+            // Increase stats (example: +5 Max HP, +1 Attack)
+            player.maxHp += 5;
+            player.hp = player.maxHp; // Fully heal on level up
+            player.attack += 1;
+            // Increase XP requirement for next level (example: exponential)
+            player.xpToNextLevel = Math.floor(player.xpToNextLevel * 1.6);
+            logMessage(`LEVEL UP! You reached level ${player.level}!`, 'yellow', true); // Highlight
+             logMessage(`Max HP +5, Attack +1. HP Restored.`, 'lime');
+            // Play sound effect here if audio is added
+        }
+
+        // --- Combat System ---
+         function startCombat(monsterX, monsterY, monsterType) {
+            gameState = 'combat';
+            combatLog.innerHTML = '';
+            combatResult.textContent = '';
+            combatAttackBtn.disabled = false;
+            combatPotionBtn.disabled = false;
+            combatFleeBtn.disabled = false;
+
+            // Define monster stats based on type
+            switch (monsterType) {
+                case 'O': // Orc
+                     monster = {
+                         x: monsterX, y: monsterY, type: monsterType,
+                         name: "Orc", hp: 15, maxHp: 15, attack: 3, xp: 12
+                     };
+                     break;
+                 case 'M': // Goblin (default)
+                 default:
+                     monster = {
+                         x: monsterX, y: monsterY, type: monsterType,
+                         name: "Goblin", hp: 8, maxHp: 8, attack: 2, xp: 5
+                     };
+                     break;
+            }
+
+            combatTitle.textContent = `Combat vs ${monster.name}!`;
+            combatLogMessage(`Encountered a ${monster.name}!`, 'yellow');
+            updateCombatUI();
+            renderGame(); // Show combat overlay
+        }
+
+        function updateCombatUI() {
+            if (!monster) return;
+            combatPlayerHp.textContent = `${player.hp}/${player.maxHp}`;
+            combatMonsterHp.textContent = `${monster.hp}/${monster.maxHp}`;
+            combatPotionBtn.disabled = (player.potions <= 0 || player.hp === player.maxHp);
+            combatPotionBtn.textContent = `Use Potion (${player.potions})`;
+        }
+
+        function playerTurn(action) {
+             if (gameState !== 'combat' || !monster || monster.hp <= 0 || player.hp <= 0) return;
+
+             combatResult.textContent = '';
+             let monsterTurnDelayed = true; // Assume monster gets a turn unless action prevents it
+
+             switch(action) {
+                case 'attack':
+                    let playerDamage = Math.max(0, player.attack + Math.floor(Math.random() * 3) - 1); // Dmg = Atk + (0 to 2) - 1
+                    monster.hp = Math.max(0, monster.hp - playerDamage);
+                    combatLogMessage(`You attack the ${monster.name} for ${playerDamage} damage.`);
+                    break;
+                case 'potion':
+                    if (player.potions > 0 && player.hp < player.maxHp) {
+                        let healAmount = Math.floor(player.maxHp * 0.5); // Heal 50%
+                        let actualHeal = Math.min(healAmount, player.maxHp - player.hp); // Don't overheal
+                        player.hp += actualHeal;
+                        player.potions--;
+                        combatLogMessage(`Used potion, restored ${actualHeal} HP.`, '#aaffaa');
+                        saveGame(); // Save potion usage
+                    } else if (player.potions <= 0) {
+                         combatLogMessage("You have no potions!", '#ffcc00');
+                         monsterTurnDelayed = false; // Failed action, no monster turn delay needed
+                    } else {
+                        combatLogMessage("Your HP is already full!", '#ffcc00');
+                         monsterTurnDelayed = false; // Failed action
+                    }
+                    break;
+                case 'flee':
+                    let fleeChance = 0.5; // 50% chance
+                    if (Math.random() < fleeChance) {
+                        combatLogMessage("You successfully fled!", '#aaffaa');
+                        endCombat(false); // Fled
+                        return; // Exit immediately, no monster turn
+                    } else {
+                        combatLogMessage("You failed to flee!", '#ffaaaa');
+                        // Flee fail, monster gets turn
+                    }
+                    break;
+             }
+
+             updateCombatUI();
+
+             // Check Monster Status immediately after player action
+             if (monster.hp <= 0) {
+                combatLogMessage(`You defeated the ${monster.name}!`, 'lime');
+                combatResult.textContent = "Victory!";
+                combatResult.style.color = 'lime';
+                gainXP(monster.xp); // Award XP
+                endCombat(true); // Victory
+                return; // Exit, no monster turn
+            }
+
+             // Monster's Turn (if alive and player action didn't end combat/fail)
+             if (monsterTurnDelayed) {
+                 combatAttackBtn.disabled = true; // Disable player actions during monster turn
+                 combatPotionBtn.disabled = true;
+                 combatFleeBtn.disabled = true;
+
+                 setTimeout(() => {
+                     monsterAttack();
+                     // Re-enable buttons after monster attack (if combat not over)
+                      if (gameState === 'combat' && player.hp > 0) {
+                         combatAttackBtn.disabled = false;
+                         updateCombatUI(); // Updates potion button state too
+                         combatFleeBtn.disabled = false;
+                     }
+                 }, 700); // 700ms delay
+             } else {
+                 // If player action failed (no potion, full hp), don't delay monster turn if it gets one
+                 // Currently, failed actions don't grant monster a free turn, might change logic
+             }
+        }
+
+         function monsterAttack() {
+             if (gameState !== 'combat' || !monster || monster.hp <= 0 || player.hp <= 0) return;
+
+             let monsterDamage = Math.max(0, monster.attack + Math.floor(Math.random() * 3) - 1);
+             player.hp = Math.max(0, player.hp - monsterDamage);
+             combatLogMessage(`The ${monster.name} attacks you for ${monsterDamage} damage.`, '#ffaaaa');
+
+             updateCombatUI();
+             renderGame(); // Update main UI HP bar
+
+             // Check Player Status
+             if (player.hp <= 0) {
+                 combatLogMessage("You have been defeated!", 'red');
+                 combatResult.textContent = "Game Over!";
+                 combatResult.style.color = 'red';
+                 endCombat(false, true); // Defeat, game over
+             }
+         }
+
+
+        function endCombat(victory, gameOver = false) {
+             combatAttackBtn.disabled = true;
+             combatPotionBtn.disabled = true;
+             combatFleeBtn.disabled = true;
+             let combatEndedState = gameOver ? 'gameOver' : 'map';
+
+            if (victory && monster) {
+                 // Remove monster from map state only on victory
+                 if(setTile(monster.x, monster.y, '.')) { // Replace with floor
+                    // Move player onto the cleared tile AFTER combat ends
+                    player.x = monster.x;
+                    player.y = monster.y;
+                 }
+                 saveGame(); // Save map change and potential XP gain
+            }
+
+             setTimeout(() => {
+                 gameState = combatEndedState;
+                 monster = null;
+                 renderGame(); // Hide overlay, update map/player position
+                 if (!gameOver) {
+                    logMessage("Combat finished.", 'gray');
+                 } else {
+                    logMessage("GAME OVER. Refresh page to restart from last save.", 'red', true);
+                     // Could add a restart button or mechanism here
+                 }
+
+             }, victory ? 1500 : 1000); // Slightly longer pause on victory
+        }
+
+
+        // --- Input Handling ---
+        function handleKeyDown(event) {
+            if (gameState === 'map') {
+                switch (event.key) {
+                    case 'ArrowUp': case 'w': case 'W': movePlayer(0, -1); break;
+                    case 'ArrowDown': case 's': case 'S': movePlayer(0, 1); break;
+                    case 'ArrowLeft': case 'a': case 'A': movePlayer(-1, 0); break;
+                    case 'ArrowRight': case 'd': case 'D': movePlayer(1, 0); break;
+                    // Debug / Cheats (Optional)
+                    // case 'p': player.potions++; renderGame(); break;
+                    // case 'x': gainXP(player.xpToNextLevel - player.xp); break; // Level up
+                    // case 'k': player.hp=1; renderGame(); break; // Near death
+                }
+            } else if (gameState === 'combat') {
+                 switch (event.key) {
+                     case '1': case 'A': case 'a': combatAttackBtn.click(); break;
+                     case '2': case 'P': case 'p': combatPotionBtn.click(); break;
+                     case '3': case 'F': case 'f': combatFleeBtn.click(); break;
+                 }
+            }
+        }
+
+        // --- Fullscreen ---
+        const fullscreenButton = document.getElementById('fullscreen-button');
+        const fullscreenIcon = fullscreenButton.querySelector('svg path:first-of-type');
+        const fullscreenEnterIconPath = "M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zm-3-12V5h3v2h-3z";
+        const fullscreenExitIconPath = "M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z";
+
+        function toggleFullScreen() {
+            // Use document.documentElement for requesting fullscreen on the whole page
+            // which often works better with dynamic content scaling than a specific div.
+            const elementToFullscreen = document.documentElement;
+
+            if (!document.fullscreenElement) {
+                 if (elementToFullscreen.requestFullscreen) elementToFullscreen.requestFullscreen();
+                 else if (elementToFullscreen.webkitRequestFullscreen) elementToFullscreen.webkitRequestFullscreen();
+                 else if (elementToFullscreen.mozRequestFullScreen) elementToFullscreen.mozRequestFullScreen();
+                 else if (elementToFullscreen.msRequestFullscreen) elementToFullscreen.msRequestFullscreen();
+            } else {
+                 if (document.exitFullscreen) document.exitFullscreen();
+                 else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                 else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
+                 else if (document.msExitFullscreen) document.msExitFullscreen();
+            }
+        }
+
+        function updateFullscreenIcon() {
+             if (document.fullscreenElement) {
+                 fullscreenIcon.setAttribute('d', fullscreenExitIconPath);
+                 fullscreenButton.title = "Exit Fullscreen";
+             } else {
+                 fullscreenIcon.setAttribute('d', fullscreenEnterIconPath);
+                 fullscreenButton.title = "Enter Fullscreen";
+             }
+        }
+
+        // --- Event Listeners ---
+        document.addEventListener('keydown', handleKeyDown);
+        fullscreenButton.addEventListener('click', toggleFullScreen);
+        document.addEventListener('fullscreenchange', updateFullscreenIcon);
+        document.addEventListener('webkitfullscreenchange', updateFullscreenIcon); // Safari
+        document.addEventListener('mozfullscreenchange', updateFullscreenIcon); // Firefox
+        document.addEventListener('MSFullscreenChange', updateFullscreenIcon); // IE/Edge
+
+        // Mobile Controls
+        document.getElementById('btn-up').addEventListener('click', () => movePlayer(0, -1));
+        document.getElementById('btn-down').addEventListener('click', () => movePlayer(0, 1));
+        document.getElementById('btn-left').addEventListener('click', () => movePlayer(-1, 0));
+        document.getElementById('btn-right').addEventListener('click', () => movePlayer(1, 0));
+
+        // Combat Buttons
+        combatAttackBtn.addEventListener('click', () => playerTurn('attack'));
+        combatPotionBtn.addEventListener('click', () => playerTurn('potion'));
+        combatFleeBtn.addEventListener('click', () => playerTurn('flee'));
+
+        // Resize Observer for Font Scaling
+         const resizeObserver = new ResizeObserver(entries => {
+             // We are observing the mapDisplay, but font size affects layout,
+             // so we might need a slight delay or ensure it runs after layout stabilizes.
+             // requestAnimationFrame helps wait for the next paint cycle.
+             window.requestAnimationFrame(() => {
+                 adjustFontSize();
+                 // Re-render might be needed if font size drastically changes other elements
+                 // renderGame(); // Usually not needed unless UI elements depend heavily on map font size
+             });
+         });
+
+
+        // --- Initial Game Setup ---
+        window.onload = () => {
+             messageLog.innerHTML = ''; // Clear "Loading..."
+             if (!loadGame()) {
+                 // If loadGame returned false, it already called initializeNewGame
+                 // Log initial welcome messages here if needed outside initialize
+             }
+             adjustFontSize(); // Initial font size calculation
+             renderGame(); // Initial render
+             resizeObserver.observe(mapDisplay); // Start observing map display for size changes
+         };
+
+         // Optional: Adjust font on orientation change for mobile specifically
+         window.addEventListener('orientationchange', () => {
+             setTimeout(() => {
+                 adjustFontSize();
+                 // renderGame(); // Might be needed if orientation change affects UI layout significantly
+             }, 100); // Short delay after orientation change
+         });
+
+
+    </script>
+</body>
+</html>
