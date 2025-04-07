@@ -3,14 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Knights Vs Goblins (Centering Fix)</title>
+    <title>Knights Vs Goblins (Grid Spell Layout)</title>
     <style>
-        /* --- Base Styles (Unchanged) --- */
+        /* --- Base Styles --- */
         :root {
             --grid-cols: 8;
             --grid-rows: 10;
             --board-aspect-ratio: var(--grid-cols) / var(--grid-rows);
             font-size: clamp(8px, 1.8vmin, 16px);
+            --death-fade-time: 1s;
+            --attack-anim-time: 0.08s;
+            --move-anim-time: 0.25s; /* Movement animation duration */
+            --frost-nova-hover-bg: rgba(100, 150, 255, 0.3);
+            --frost-nova-hover-border: rgba(150, 200, 255, 0.7);
+            --frozen-filter: hue-rotate(180deg) brightness(1.2) saturate(1.5);
+            --frozen-shadow: inset 0 0 5px rgba(150, 200, 255, 0.6);
+            /* Spell State Filters */
+            --spell-locked-filter: sepia(0.8) saturate(3) hue-rotate(-55deg) brightness(0.7);
+            --spell-used-filter: grayscale(90%) brightness(60%);
+            /* Hover Outline Color */
+            --hover-outline-color-player: yellow;
+            --hover-outline-color-enemy: red;
+            /* Heal Color */
+            --heal-color: #50ff50; /* Light green */
         }
         html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
         body { display: flex; justify-content: center; align-items: center; background-color: #3a4a3a; font-family: 'Courier New', Courier, monospace; color: #eee; padding: 5px; box-sizing: border-box; }
@@ -18,163 +33,156 @@
         #game-container:fullscreen { padding: 0; border: none; gap: 5px; width: 100vw; height: 100vh; max-width: 100vw; max-height: 100vh; }
         #game-container:fullscreen > #ui-panel { border-left-color: #333; }
 
-        /* --- Game Board & Cells (Unchanged) --- */
-        #game-board {
-            display: grid;
-            border: clamp(1px, 0.3vmin, 2px) solid #1e281e;
-            position: relative; /* Needed for absolute positioned popups */
-            flex-grow: 0;
-            flex-shrink: 1;
-            grid-template-columns: repeat(var(--grid-cols), 1fr);
-            grid-template-rows: repeat(var(--grid-rows), 1fr);
-            aspect-ratio: var(--board-aspect-ratio);
-            max-width: 100%;
-            max-height: 100%;
-            box-sizing: border-box;
-            min-width: 160px; /* Minimum practical size */
-            min-height: calc(160px / var(--board-aspect-ratio));
-            overflow: hidden; /* Prevent units slightly overflowing grid */
-        }
-        #game-board.spell-targeting { cursor: crosshair !important; }
-        #game-board.spell-targeting .grid-cell:hover { background-color: rgba(255, 100, 100, 0.4) !important; box-shadow: inset 0 0 0 2px rgba(255, 0, 0, 0.7); }
-        .grid-cell {
-            border: 1px solid #7a8a7a;
-            background-color: #6a7a6a;
-            position: relative; /* May not be strictly needed now */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: background-color 0.2s, box-shadow 0.2s;
-            box-sizing: border-box;
-            image-rendering: pixelated; /* Apply to cell */
-            min-width: 1px; /* Prevent collapse */
-            min-height: 1px; /* Prevent collapse */
-            overflow: hidden; /* Prevent highlight overflow */
-            grid-column: auto; /* Explicitly set defaults */
-            grid-row: auto; /* Explicitly set defaults */
-        }
+        /* --- Game Board & Cells --- */
+        #game-board { display: grid; border: clamp(1px, 0.3vmin, 2px) solid #1e281e; position: relative; flex-grow: 0; flex-shrink: 1; grid-template-columns: repeat(var(--grid-cols), 1fr); grid-template-rows: repeat(var(--grid-rows), 1fr); aspect-ratio: var(--board-aspect-ratio); max-width: 100%; max-height: 100%; box-sizing: border-box; min-width: 160px; min-height: calc(160px / var(--board-aspect-ratio)); overflow: hidden; }
+        /* Spell Targeting Cursors & Hovers */
+        #game-board.fireball-targeting { cursor: crosshair !important; }
+        #game-board.fireball-targeting .grid-cell:hover { background-color: rgba(255, 100, 100, 0.4) !important; box-shadow: inset 0 0 0 2px rgba(255, 0, 0, 0.7); }
+        #game-board.flame-wave-targeting .grid-cell:hover { background-color: rgba(255, 150, 50, 0.3) !important; box-shadow: none; }
+        #game-board.flame-wave-targeting .grid-cell:hover::before { content: ''; position: absolute; top: 0; left: calc(-1 * var(--hover-col, 0) * 100%); width: calc(var(--grid-cols) * 100%); height: 100%; background-color: rgba(255, 80, 0, 0.4); border-top: 2px solid rgba(255, 50, 0, 0.8); border-bottom: 2px solid rgba(255, 50, 0, 0.8); pointer-events: none; z-index: 1; }
+        #game-board.frost-nova-targeting { cursor: cell !important; }
+        #game-board.frost-nova-targeting .grid-cell:hover { background-color: transparent !important; box-shadow: none; }
+        #game-board.frost-nova-targeting .grid-cell.frost-aoe-preview { background-color: var(--frost-nova-hover-bg) !important; box-shadow: inset 0 0 0 1px var(--frost-nova-hover-border); z-index: 2; }
+        #game-board.heal-targeting { cursor: help !important; }
+        #game-board.heal-targeting .unit.player:not(.dead):not(.acted):not(.frozen):hover { filter: drop-shadow(0 0 3px var(--heal-color)); box-shadow: 0 0 0 2px var(--heal-color); }
+        .grid-cell { border: 1px solid #7a8a7a; background-color: #6a7a6a; position: relative; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: background-color 0.2s, box-shadow 0.2s; box-sizing: border-box; image-rendering: pixelated; min-width: 1px; min-height: 1px; overflow: hidden; grid-column: auto; grid-row: auto; }
         .grid-cell.valid-move { background-color: #aaeaaa; opacity: 0.8; }
         .grid-cell.valid-attack { background-color: #ffaaaa; opacity: 0.8; }
 
-        /* --- Units (MODIFIED FOR GRID POSITIONING) --- */
-        .unit {
-            /* position: absolute; --- REMOVED */
-            /* top: 0; left: 0; --- REMOVED (Controlled by grid-row/grid-column) */
-            grid-column: var(--unit-x, 1); /* Set defaults or via JS */
-            grid-row: var(--unit-y, 1); /* Set defaults or via JS */
-            align-self: center; /* NEW: Center vertically in grid cell */
-            justify-self: center; /* NEW: Center horizontally in grid cell */
+        /* --- Units --- */
+        .unit { grid-column: var(--unit-x, 1); grid-row: var(--unit-y, 1); align-self: center; justify-self: center; border-radius: 3px; display: flex; justify-content: center; align-items: center; font-weight: bold; z-index: 10; transition: filter 0.2s, box-shadow 0.2s, width 0.1s, height 0.1s, opacity var(--death-fade-time) ease-in-out, background-image 0.1s ease-in, transform var(--move-anim-time) ease-out; transform: none; box-sizing: border-box; background-color: transparent; image-rendering: pixelated; background-size: contain; background-repeat: no-repeat; background-position: center; pointer-events: none; width: 10px; height: 10px; opacity: 1; filter: none; }
+        #game-board .unit { pointer-events: auto; }
+        .unit.is-moving { z-index: 15; }
+        .unit.selected { box-shadow: 0 0 0 clamp(1px, 0.5vmin, 3px) yellow; z-index: 13; }
+        .unit.selected:not(:hover) { filter: drop-shadow(0 0 3px yellow); }
+        .unit.acted:not(:hover):not(.is-moving) { filter: grayscale(50%) brightness(80%); }
+        .unit.frozen:not(:hover):not(.is-moving) { filter: var(--frozen-filter); box-shadow: var(--frozen-shadow); }
+        .unit.selected.frozen:not(:hover):not(.is-moving) { filter: var(--frozen-filter) drop-shadow(0 0 3px yellow); box-shadow: var(--frozen-shadow), 0 0 0 clamp(1px, 0.5vmin, 3px) yellow; }
+        .unit.unit-hit-flash { animation: simple-hit-flash 0.2s ease-out; }
+        @keyframes simple-hit-flash { 50% { filter: brightness(1.8); } }
+        #game-board .unit.player:not(.dead):not(.fading-out):not(.selected):not(.is-moving):hover { filter: drop-shadow( 1px 0px 0 var(--hover-outline-color-player)) drop-shadow(-1px 0px 0 var(--hover-outline-color-player)) drop-shadow( 0px 1px 0 var(--hover-outline-color-player)) drop-shadow( 0px -1px 0 var(--hover-outline-color-player)); z-index: 12; cursor: pointer; box-shadow: none; }
+        #game-board .unit.enemy:not(.dead):not(.fading-out):not(.selected):not(.is-moving):hover { filter: drop-shadow( 1px 0px 0 var(--hover-outline-color-enemy)) drop-shadow(-1px 0px 0 var(--hover-outline-color-enemy)) drop-shadow( 0px 1px 0 var(--hover-outline-color-enemy)) drop-shadow( 0px -1px 0 var(--hover-outline-color-enemy)); z-index: 12; cursor: pointer; box-shadow: none; }
+        #game-board .unit.player.acted:not(.dead):not(.fading-out):not(.selected):not(.is-moving):hover,
+        #game-board .unit.player.frozen:not(.dead):not(.fading-out):not(.selected):not(.is-moving):hover { filter: drop-shadow( 1px 0px 0 var(--hover-outline-color-player)) drop-shadow(-1px 0px 0 var(--hover-outline-color-player)) drop-shadow( 0px 1px 0 var(--hover-outline-color-player)) drop-shadow( 0px -1px 0 var(--hover-outline-color-player)); box-shadow: none; }
+        #game-board .unit.enemy.acted:not(.dead):not(.fading-out):not(.selected):not(.is-moving):hover,
+        #game-board .unit.enemy.frozen:not(.dead):not(.fading-out):not(.selected):not(.is-moving):hover { filter: drop-shadow( 1px 0px 0 var(--hover-outline-color-enemy)) drop-shadow(-1px 0px 0 var(--hover-outline-color-enemy)) drop-shadow( 0px 1px 0 var(--hover-outline-color-enemy)) drop-shadow( 0px -1px 0 var(--hover-outline-color-enemy)); box-shadow: none; }
+        .unit.dead { z-index: 5; pointer-events: none !important; filter: none !important; box-shadow: none !important; opacity: 1; transition: opacity var(--death-fade-time) ease-in-out; transform: none !important; }
+        .unit.fading-out { opacity: 0 !important; }
 
-            /* --- Other Styles (Mostly Unchanged) --- */
-            border-radius: 3px;
-            display: flex; /* Still useful for potential internal content */
-            justify-content: center; /* For potential internal content */
-            align-items: center; /* For potential internal content */
-            font-weight: bold;
-            z-index: 10;
-            /* Adjusted transition */
-            transition: filter 0.2s, box-shadow 0.2s, width 0.1s, height 0.1s; /* Removed top/left */
-            box-sizing: border-box;
-            background-color: transparent;
-            image-rendering: pixelated;
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            pointer-events: none; /* Default, overridden below */
-            /* Width/Height set by JS based on cell size */
-            width: 10px; /* Initial placeholder */
-            height: 10px; /* Initial placeholder */
-        }
-        #game-board .unit {
-             pointer-events: auto; /* Units on board are clickable */
-        }
-        .unit.selected {
-            box-shadow: 0 0 0 clamp(1px, 0.5vmin, 3px) yellow;
-            z-index: 11;
-        }
-
-        /* --- UI Panel (Unchanged) --- */
+        /* --- UI Panel --- */
         #ui-panel { width: clamp(180px, 28vmin, 240px); flex-shrink: 0; max-height: 100%; padding: clamp(0.8rem, 1.5vmin, 1.5rem); background-color: #4a5a4a; border-left: clamp(1px, 0.4vmin, 3px) solid #1e281e; display: flex; flex-direction: column; justify-content: space-between; overflow-y: auto; font-size: 1.4rem; box-sizing: border-box; position: relative; }
         #level-display { text-align: center; margin-bottom: 1rem; font-weight: bold; color: #ffd700; background-color:#5a6a5a; padding: 0.5rem; border: 1px solid #1e281e; border-radius: 3px; font-size: 1.6rem; }
         #unit-info, #turn-info { background-color: #5a6a5a; padding: 1rem; margin-bottom: 1.5rem; border: 1px solid #1e281e; border-radius: 3px; min-height: 7rem; }
         #unit-info h3, #turn-info h3 { margin-top: 0; margin-bottom: 0.8rem; border-bottom: 1px solid #7a8a7a; padding-bottom: 0.5rem; color: #eee; font-size: 1.5rem; }
         #unit-info p, #turn-info p { margin: 0.4rem 0; font-size: 1.3rem; color: #ddd; line-height: 1.4; }
-        #spell-area { margin-top: auto; margin-bottom: 1.5rem; padding: 0.8rem 0.5rem; background-color:#5a6a5a; border: 1px solid #1e281e; border-radius: 3px; min-height: 5rem; display: none; align-items: center; justify-content: center; flex-wrap: wrap; }
-        #spell-area.visible { display: flex; }
-        .spell-icon { display: inline-block; width: clamp(30px, 5vmin, 45px); height: clamp(30px, 5vmin, 45px); border: clamp(1px, 0.3vmin, 2px) solid #333; border-radius: 4px; background-color: #444; background-size: contain; background-repeat: no-repeat; background-position: center; cursor: pointer; margin: 0 0.5rem; transition: border-color 0.2s, box-shadow 0.2s, filter 0.2s; image-rendering: pixelated; vertical-align: middle; }
+        #unit-status { color: #aadeff; font-style: italic; min-height: 1.4em; }
+
+        /* <<< UPDATED Spell Area Layout >>> */
+        #spell-area {
+            margin-top: auto; margin-bottom: 1.5rem; padding: clamp(0.5rem, 1vmin, 1rem);
+            background-color:#5a6a5a; border: 1px solid #1e281e; border-radius: 3px;
+            min-height: auto; /* Let content determine height */
+            /* Grid Layout */
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); /* Force 2 columns */
+            gap: clamp(8px, 1.5vmin, 15px);  /* Responsive gap */
+            place-items: center;            /* Center items in grid cells */
+            align-content: center;          /* Center grid rows */
+        }
+        .spell-container { display: flex; flex-direction: column; align-items: center; text-align: center; width: 100%; }
+        .spell-icon { display: inline-block; width: clamp(30px, 4.5vmin, 40px); height: clamp(30px, 4.5vmin, 40px); border: clamp(1px, 0.3vmin, 2px) solid #333; border-radius: 4px; background-color: #444; background-size: contain; background-repeat: no-repeat; background-position: center; margin-bottom: 3px; transition: border-color 0.2s, box-shadow 0.2s, filter 0.2s; image-rendering: pixelated; vertical-align: middle; filter: none; cursor: default; box-shadow: none; }
         #fireball-spell { background-image: url('./sprites/sFireball1.png'); }
-        .spell-label { font-size: 1.3rem; margin-left: 0.8rem; font-weight: bold; color: #eee; text-shadow: 1px 1px #111; }
-        .spell-icon.unavailable { filter: grayscale(90%) brightness(60%); cursor: not-allowed; border-color: #555; }
+        #flame-wave-spell { background-image: url('./sprites/sFireball1.png'); }
+        #frost-nova-spell { background-image: url('./sprites/sFrostbolt1.png'); }
+        #heal-spell { background-image: url('./sprites/heal.png'); }
+        .spell-label { font-size: clamp(0.9rem, 1.5vmin, 1.1rem); font-weight: bold; color: #eee; text-shadow: 1px 1px #111; line-height: 1.2; }
+        .spell-icon.locked { filter: var(--spell-locked-filter); cursor: not-allowed; border-color: #553333; }
+        .spell-icon.locked + .spell-label { color: #f88; }
+        .spell-icon.used { filter: var(--spell-used-filter); cursor: not-allowed; border-color: #555; }
+        .spell-icon.used + .spell-label { color: #aaa; }
         .spell-icon.available { filter: none; cursor: pointer; border-color: #888; }
         .spell-icon.available:hover { border-color: #eee; }
-        .spell-icon.selected { border-color: yellow; box-shadow: 0 0 8px yellow; }
+        .spell-icon.available + .spell-label { color: #eee; }
+        .spell-icon.selected { filter: none !important; cursor: pointer; border-color: yellow !important; box-shadow: 0 0 8px yellow !important; }
+        .spell-icon.selected + .spell-label { color: #eee; }
+
         #feedback-area { margin-bottom: 1rem; min-height: 2rem; font-size: 1.4rem; font-weight: bold; color: #fff; text-align: center; }
         .feedback-levelup { color: #ffd700; text-shadow: 1px 1px #443300; }
+        .feedback-error { color: #ff8888; text-shadow: 1px 1px #550000; }
         #end-turn-button { padding: 1rem 1.5rem; background-color: #a0522d; border: 2px solid #1e281e; color: white; font-family: 'Courier New', Courier, monospace; cursor: pointer; font-size: 1.4rem; border-radius: 3px; text-align: center; transition: background-color 0.2s; width: 100%; box-sizing: border-box;}
         #end-turn-button:hover { background-color: #8B4513; }
         #end-turn-button.disabled { background-color: #888; cursor: not-allowed; color: #bbb; }
 
-        /* --- UI Buttons (Fullscreen & Mute - Unchanged) --- */
-        .ui-button { position: absolute; top: 5px; padding: 3px 5px; background-color: rgba(30, 40, 30, 0.6); border: 1px solid #7a8a7a; color: #eee; font-size: 1.6rem; line-height: 1; border-radius: 3px; cursor: pointer; z-index: 5; transition: background-color 0.2s; min-width: 25px; min-height: 25px; display: inline-flex; justify-content: center; align-items: center; user-select: none; -webkit-tap-highlight-color: transparent; }
-         .ui-button:hover { background-color: rgba(60, 80, 60, 0.8); }
-         .ui-button:disabled { opacity: 0.5; cursor: not-allowed; }
-        #fullscreen-button { right: 5px; }
-        #mute-button { right: 40px; }
+        /* --- UI Buttons --- */
+        .ui-button { position: absolute; top: 5px; padding: 3px 5px; background-color: rgba(30, 40, 30, 0.6); border: 1px solid #7a8a7a; color: #eee; font-size: 1.6rem; line-height: 1; border-radius: 3px; cursor: pointer; z-index: 55; transition: background-color 0.2s; min-width: 25px; min-height: 25px; display: inline-flex; justify-content: center; align-items: center; user-select: none; -webkit-tap-highlight-color: transparent; }
+        .ui-button:hover { background-color: rgba(60, 80, 60, 0.8); } .ui-button:disabled { opacity: 0.5; cursor: not-allowed; } #fullscreen-button { right: 5px; } #mute-button { right: 40px; }
 
-        /* --- Popups & Overlays (Unchanged) --- */
-        /* Damage popup still needs absolute positioning relative to game board */
+        /* --- Popups & Overlays --- */
         .damage-popup { position: absolute; color: red; font-size: clamp(1.2rem, 2vmin, 1.8rem); font-weight: bold; animation: moveUpFadeOut 1s forwards; z-index: 20; pointer-events: none; text-shadow: 1px 1px white; }
+        .freeze-popup { position: absolute; color: #aadeff; font-size: clamp(1.2rem, 2vmin, 1.6rem); font-weight: bold; animation: moveUpFadeOut 0.8s forwards; z-index: 20; pointer-events: none; text-shadow: 1px 1px #112233; }
+        .heal-popup { position: absolute; color: var(--heal-color); font-size: clamp(1.2rem, 2vmin, 1.8rem); font-weight: bold; animation: moveUpFadeOut 1s forwards; z-index: 20; pointer-events: none; text-shadow: 1px 1px #003300; }
         @keyframes moveUpFadeOut { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-30px); } }
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; z-index: 50; padding: 20px; box-sizing: border-box; }
-        .overlay h2 { color: #ffd700; margin-bottom: 2rem; font-size: 2.5rem; }
-        .overlay p { font-size: 1.5rem; line-height: 1.6; margin-bottom: 2rem;}
-        .overlay button { padding: 1rem 2rem; font-size: 1.6rem; cursor: pointer; background-color: #a0522d; border: 2px solid #1e281e; color: white; font-family: 'Courier New', Courier, monospace; border-radius: 3px; }
+        .overlay h2 { color: #ffd700; margin-bottom: 2rem; font-size: clamp(2rem, 6vmin, 2.5rem); }
+        .overlay p { font-size: clamp(1.2rem, 4vmin, 1.5rem); line-height: 1.6; margin-bottom: 2rem;}
+        .overlay button { padding: clamp(0.8rem, 3vmin, 1rem) clamp(1.5rem, 6vmin, 2rem); font-size: clamp(1.2rem, 4vmin, 1.6rem); cursor: pointer; background-color: #a0522d; border: 2px solid #1e281e; color: white; font-family: 'Courier New', Courier, monospace; border-radius: 3px; }
         .overlay button:hover { background-color: #8B4513; }
 
-        /* --- Media Query (Unchanged) --- */
-        @media (max-width: 700px), (max-aspect-ratio: 1/1) {
-             #game-container { flex-direction: column; justify-content: flex-start; align-items: stretch; }
-             #game-board { width: 100%; height: auto; margin: 0; min-height: calc(160px / var(--board-aspect-ratio)); }
-             #ui-panel { width: 100%; height: auto; flex-grow: 1; flex-shrink: 1; border-left: none; border-top: clamp(1px, 0.4vmin, 3px) solid #1e281e; min-height: 100px; max-height: 40vh; font-size: 1.3rem; }
-             .ui-button { top: 3px; font-size: 1.4rem; }
-             #fullscreen-button { right: 3px; }
-             #mute-button { right: 35px; }
-             #unit-info h3, #turn-info h3 { font-size: 1.4rem;}
-             #unit-info p, #turn-info p { font-size: 1.2rem;}
-             #game-container:fullscreen > #ui-panel { border-top-color: #333; }
-        }
+        /* --- Media Query --- */
+        @media (max-width: 700px), (max-aspect-ratio: 1/1) { #game-container { flex-direction: column; justify-content: flex-start; align-items: stretch; } #game-board { width: 100%; height: auto; margin: 0; min-height: calc(160px / var(--board-aspect-ratio)); } #ui-panel { width: 100%; height: auto; flex-grow: 1; flex-shrink: 1; border-left: none; border-top: clamp(1px, 0.4vmin, 3px) solid #1e281e; min-height: 100px; max-height: 40vh; font-size: 1.3rem; } .ui-button { top: 3px; font-size: 1.4rem; } #fullscreen-button { right: 3px; } #mute-button { right: 35px; } #unit-info h3, #turn-info h3 { font-size: 1.4rem;} #unit-info p, #turn-info p { font-size: 1.2rem;} #game-container:fullscreen > #ui-panel { border-top-color: #333; } .spell-icon { width: clamp(28px, 4.5vmin, 40px); height: clamp(28px, 4.5vmin, 40px); } .spell-label { font-size: 1.0rem; } }
     </style>
 </head>
 <body>
-    <!-- HTML structure (Unchanged) -->
+    <!-- HTML structure -->
     <div id="game-container">
-        <div id="game-board">
-            <!-- Grid cells added by JS -->
-            <!-- Unit elements will be added here directly by JS -->
-        </div>
+        <div id="game-board"></div>
         <div id="ui-panel">
-            <button id="mute-button" class="ui-button" title="Toggle Sound">🔊</button>
-            <button id="fullscreen-button" class="ui-button" title="Toggle Fullscreen" disabled>&#x26F6;</button>
+            <button id="mute-button" class="ui-button" title="Toggle Sound (M)">🔊</button>
+            <button id="fullscreen-button" class="ui-button" title="Toggle Fullscreen (F)" disabled>&#x26F6;</button>
             <div id="level-display">Level: 1</div>
-            <div id="turn-info"> <h3>Turn Info</h3> <p id="current-turn">Turn: Player</p> <p id="actions-left">Actions Left: 0</p> </div>
-            <div id="unit-info"> <h3>Unit Info</h3> <p id="unit-name">Name: -</p> <p id="unit-hp">HP: -/-</p> <p id="unit-atk">ATK: -</p> <p id="unit-mov">MOV: -</p> </div>
-            <div id="spell-area"> <div id="fireball-spell" class="spell-icon unavailable"></div> <span class="spell-label">Fireball</span> </div>
+            <div id="turn-info"><h3 id="current-turn">Turn: Player</h3><p id="actions-left">Actions Left: 0</p></div>
+            <div id="unit-info"><h3>Unit Info</h3><p id="unit-name"></p><p id="unit-hp">HP: -/-</p><p id="unit-atk">ATK: -</p><p id="unit-mov">MOV: -</p><p id="unit-status"></p></div>
+             <!-- UPDATED Spell Area -->
+            <div id="spell-area">
+                 <div id="fireball-container" class="spell-container">
+                     <div id="fireball-spell" class="spell-icon locked" title="Unlock at Level 4"></div>
+                     <span class="spell-label">Fireball</span> <!-- No (1) -->
+                 </div>
+                 <div id="flame-wave-container" class="spell-container">
+                     <div id="flame-wave-spell" class="spell-icon locked" title="Unlock at Level 8"></div>
+                     <span class="spell-label">Flame Wave</span> <!-- No (2) -->
+                 </div>
+                 <div id="frost-nova-container" class="spell-container">
+                     <div id="frost-nova-spell" class="spell-icon locked" title="Unlock at Level 12"></div>
+                     <span class="spell-label">Frost Nova</span> <!-- No (3) -->
+                 </div>
+                 <div id="heal-container" class="spell-container">
+                     <div id="heal-spell" class="spell-icon locked" title="Unlock at Level 16"></div>
+                     <span class="spell-label">Heal</span> <!-- No (4) -->
+                 </div>
+             </div>
             <div id="feedback-area"></div>
-            <button id="end-turn-button">End Turn</button>
+            <button id="end-turn-button" title="End Player Turn (E)">[E]nd Turn</button>
         </div>
-        <div id="start-screen" class="overlay"> <h2>Knights Vs Goblins</h2> <p>Defeat all Goblins to advance levels.<br>Unlock Fireball at Lvl 4!</p> <button id="start-button">Begin Conquest!</button> </div>
-        <div id="game-over-screen" class="overlay" style="display: none;"> <h2 id="game-over-title">Defeat!</h2> <p id="game-over-message"></p> <button id="restart-button">Play Again? (Lvl 1)</button> </div>
+        <div id="start-screen" class="overlay"><h2>Knights Vs Goblins</h2><p>Defeat all Goblins to advance levels.<br/></p><button id="start-button">Begin Conquest!</button></div>
+        <div id="game-over-screen" class="overlay" style="display: none;"><h2 id="game-over-title">Defeat!</h2><p id="game-over-message"></p><button id="restart-button">Play Again? (Lvl 1)</button></div>
     </div>
 
     <script>
-        // --- DOM Elements (Unchanged) ---
+        // --- DOM Elements (Added heal elements) ---
         const gameContainer = document.getElementById('game-container');
         const gameBoard = document.getElementById('game-board');
         const uiPanel = document.getElementById('ui-panel');
         const levelDisplayElement = document.getElementById('level-display');
         const spellAreaElement = document.getElementById('spell-area');
+        const fireballContainer = document.getElementById('fireball-container');
         const fireballElement = document.getElementById('fireball-spell');
+        const flameWaveContainer = document.getElementById('flame-wave-container');
+        const flameWaveElement = document.getElementById('flame-wave-spell');
+        const frostNovaContainer = document.getElementById('frost-nova-container');
+        const frostNovaElement = document.getElementById('frost-nova-spell');
+        const healContainer = document.getElementById('heal-container');
+        const healElement = document.getElementById('heal-spell');
         const turnInfo = document.getElementById('turn-info');
         const unitInfo = document.getElementById('unit-info');
         const currentTurnDisplay = document.getElementById('current-turn');
@@ -183,6 +191,7 @@
         const unitHpDisplay = document.getElementById('unit-hp');
         const unitAtkDisplay = document.getElementById('unit-atk');
         const unitMovDisplay = document.getElementById('unit-mov');
+        const unitStatusDisplay = document.getElementById('unit-status');
         const feedbackArea = document.getElementById('feedback-area');
         const endTurnButton = document.getElementById('end-turn-button');
         const startScreen = document.getElementById('start-screen');
@@ -194,535 +203,233 @@
         const fullscreenButton = document.getElementById('fullscreen-button');
         const muteButton = document.getElementById('mute-button');
 
-        // --- Audio Setup (Unchanged) ---
-        const musicTracks = [ 'audio/music_Treasure.mp3', 'audio/music_AoiUsagi-Die.mp3', 'audio/music_WormsTheme.mp3' ];
-        const sfxSuccessPath = 'audio/Success.wav'; const sfxErrorPath = 'audio/Error.wav'; const sfxGameOverPath = 'audio/GameOver.wav'; const sfxHitPath = 'audio/sfxHit.wav'; const sfxDefeatPath = 'audio/sfxGoblinDead.wav'; const sfxMovePath = 'audio/sfxMove.wav'; const sfxSelectPath = 'audio/sfxSelect.wav'; const sfxFireballCastPath = 'audio/sfxFireballCast.wav'; const sfxFireballHitPath = 'audio/sfxFireballHit.wav';
+        // --- Audio Setup (Added heal sfx) ---
+        const musicTracks = [ 'audio/music_Treasure.mp3', 'audio/music_AoiUsagi-Die.mp3', 'audio/music_WormsTheme.mp3', 'audio/bgm.mp3' ];
+        const sfx = { success: new Audio('audio/Success.wav'), error: new Audio('audio/Error.wav'), gameOver: new Audio('audio/GameOver.wav'), hit: new Audio('audio/sfxHit.wav'), defeat: new Audio('audio/sfxGoblinDead.wav'), move: new Audio('audio/sfxMove.wav'), select: new Audio('audio/sfxSelect.wav'), fireballCast: new Audio('audio/sfxFireballCast.wav'), fireballHit: new Audio('audio/sfxFireballHit.wav'), frostNovaCast: new Audio('audio/sfxFrostboltCast.wav'), frostNovaHit: new Audio('audio/sfxFrostboltHit.wav'), playerDie: new Audio('audio/player_die.wav'), startBeep: new Audio('audio/start_beep.wav'), heal: new Audio('audio/heal.wav') };
         let bgMusic = new Audio(); bgMusic.loop = true; bgMusic.volume = 0.3;
-        let sfxSuccess = new Audio(sfxSuccessPath); sfxSuccess.volume = 0.6; let sfxError = new Audio(sfxErrorPath); sfxError.volume = 0.6; let sfxGameOver = new Audio(sfxGameOverPath); sfxGameOver.volume = 0.8; let sfxHit = new Audio(sfxHitPath); sfxHit.volume = 0.7; let sfxDefeat = new Audio(sfxDefeatPath); sfxDefeat.volume = 0.7; let sfxMove = new Audio(sfxMovePath); sfxMove.volume = 0.5; let sfxSelect = new Audio(sfxSelectPath); sfxSelect.volume = 0.5; let sfxFireballCast = new Audio(sfxFireballCastPath); sfxFireballCast.volume = 0.7; let sfxFireballHit = new Audio(sfxFireballHitPath); sfxFireballHit.volume = 0.8;
         let isMuted = false; let audioInitialized = false;
+        Object.values(sfx).forEach(sound => { sound.volume = 0.6; sound.preload = 'auto'; });
+        sfx.gameOver.volume = 0.8; sfx.fireballHit.volume = 0.8; sfx.frostNovaHit.volume = 0.7; sfx.move.volume = 0.4; sfx.select.volume = 0.5; sfx.hit.volume = 0.7; sfx.defeat.volume = 0.7; sfx.playerDie.volume = 0.7; sfx.heal.volume = 0.7;
 
-        // --- Audio Helper Functions (Unchanged) ---
-        function playSfx(sfx) {
-            let sfxName = sfx ? (sfx.src ? sfx.src.split('/').pop() : 'No Source') : 'INVALID SFX';
-            if (isMuted || !audioInitialized) return;
-            if (sfx && sfx.src && sfx.readyState >= 2) {
-                 sfx.currentTime = 0;
-                 sfx.play().catch(e => console.warn(`!!! SFX Play Fail: ${sfxName} - ${e.name} (${e.message})`));
-            } else if (sfx && sfx.src) {
-                 console.warn(`!!! SFX Not Ready: ${sfxName}, State: ${sfx.readyState}`);
-            } else {
-                 console.error(`!!! SFX Error: Invalid SFX object passed to playSfx.`);
-            }
-        }
-        function startMusic() {
-             if (isMuted || !audioInitialized) return;
-             if (bgMusic.src && bgMusic.readyState >= 2) {
-                  bgMusic.play().catch(e => console.error("Music play failed:", e.name, bgMusic.src));
-             } else if (bgMusic.src) {
-                 bgMusic.addEventListener('canplaythrough', () => {
-                     if (!isMuted && audioInitialized) {
-                          bgMusic.play().catch(e => console.error("Music play (deferred) failed:", e.name, bgMusic.src));
-                     }
-                 }, { once: true });
-                  console.warn("Music not ready, attempting play when loaded:", bgMusic.src);
-             } else {
-                  console.warn("Attempted to play music, but no source is set.");
-             }
-        }
-        function stopMusic() { if (bgMusic) { bgMusic.pause(); bgMusic.currentTime = 0; } }
-        function initializeAudio() {
-            if (audioInitialized) return;
-            console.log("Attempting to initialize audio context...");
-            const soundsToUnlock = [ bgMusic, sfxSuccess, sfxError, sfxGameOver, sfxHit, sfxDefeat, sfxMove, sfxSelect, sfxFireballCast, sfxFireballHit ];
-            let promiseChain = Promise.resolve();
-            soundsToUnlock.forEach(sound => {
-                promiseChain = promiseChain.then(() => {
-                    if (sound && typeof sound.play === 'function') {
-                        const wasMuted = sound.muted; sound.muted = false;
-                        const playPromise = sound.play();
-                        if (playPromise && typeof playPromise.then === 'function') {
-                            return playPromise.then(() => { sound.pause(); sound.muted = wasMuted; }).catch(err => { sound.muted = wasMuted; });
-                        } else { sound.muted = wasMuted; }
-                    }
-                    return Promise.resolve();
-                });
-            });
-            promiseChain.then(() => {
-                if (!audioInitialized) {
-                    audioInitialized = true;
-                    console.log("Audio context potentially initialized by user action.");
-                    if (!isGameOver() && startScreen.style.display === 'none' && !isMuted) { startMusic(); }
-                }
-            }).catch(e => console.warn("Audio context unlock sequence had issues:", e));
-        }
+        // --- Audio Helpers ---
+        function playSfx(sound) { if (isMuted || !audioInitialized || !sound) return; try { sound.currentTime = 0; sound.play().catch(e => console.warn(`SFX Play Fail: ${sound.src.split('/').pop()} - ${e.name} (${e.message})`)); } catch(e) { console.error("SFX play error", e); }}
+        function startMusic() { if (isMuted || !audioInitialized) return; if (!bgMusic.src) { selectAndLoadMusic(); if (!bgMusic.src) { return; } } const playPromise = bgMusic.play(); if (playPromise !== undefined) { playPromise.catch(error => { if (error.name === 'NotAllowedError') { console.log("Music autoplay blocked."); } }); } }
+        function stopMusic() { if (bgMusic && !bgMusic.paused) { bgMusic.pause(); bgMusic.currentTime = 0; } }
+        function selectAndLoadMusic() { const i = Math.floor(Math.random() * musicTracks.length); const t = musicTracks[i]; bgMusic.src = t; bgMusic.load(); }
+        function initializeAudio() { if (audioInitialized) return true; const AC = window.AudioContext || window.webkitAudioContext; if (!AC) { let success = false; try { const dummyAudio = new Audio(); dummyAudio.volume=0; dummyAudio.play().then(()=>{dummyAudio.pause(); success=true;}).catch(()=>{}); } catch(e){} audioInitialized = success; return audioInitialized; } const context = new AC(); const unlockAudio = () => { context.resume().then(() => { audioInitialized = true; startMusicIfNotPlaying(); document.removeEventListener('click', unlockAudio, true); document.removeEventListener('keydown', unlockAudio, true); }).catch(e => {}); }; if (context.state === 'suspended') { document.addEventListener('click', unlockAudio, { once: true, capture: true }); document.addEventListener('keydown', unlockAudio, { once: true, capture: true }); } else { audioInitialized = true; } return audioInitialized; }
+        function startMusicIfNotPlaying() { if (!isGameOver() && startScreen.style.display === 'none' && !isMuted && bgMusic.paused) { startMusic(); } }
 
-        // --- Game Config & State (Unchanged) ---
-        const GRID_COLS = 8; const GRID_ROWS = 10; let currentCellSize = 30; const FIREBALL_UNLOCK_LEVEL = 4; const FIREBALL_DAMAGE = 2; const UNIT_DATA = { knight: { name: "Knight", hp: 6, atk: 1, mov: 3, team: 'player', spriteUrl: './sprites/Knight.png'}, goblin: { name: "Goblin", hp: 2, atk: 1, mov: 4, team: 'enemy', spriteUrl: './sprites/Goblin.png'} };
-        let units = []; let selectedUnit = null; let currentTurn = 'player'; let validMoves = []; let validAttacks = []; let unitCounter = 0; let isProcessing = false; let currentLevel = 1; let clickedUnitObject = null; let hasFireball = false; let fireballSelected = false; let resizeTimeout = null; let winCheckTimeout = null;
+        // --- Game Config & State (Added Heal config) ---
+        const GRID_COLS = 8; const GRID_ROWS = 10; let currentCellSize = 30;
+        const FIREBALL_UNLOCK_LEVEL = 4; const FIREBALL_DAMAGE = 2;
+        const FLAME_WAVE_UNLOCK_LEVEL = 8; const FLAME_WAVE_DAMAGE = 1;
+        const FROST_NOVA_UNLOCK_LEVEL = 12; const FROST_NOVA_DURATION = 3;
+        const HEAL_UNLOCK_LEVEL = 16; const HEAL_AMOUNT = 3;
+        const UNIT_DATA = { knight: { name: "Knight", hp: 6, atk: 1, mov: 3, team: 'player', spriteUrl: './sprites/Knight.png', deadSpriteUrl: './sprites/Knight_dead.png' }, goblin: { name: "Goblin", hp: 2, atk: 1, mov: 4, team: 'enemy', spriteUrl: './sprites/Goblin.png', deadSpriteUrl: './sprites/Goblin_dead.png' } };
+        let units = []; let selectedUnit = null; let currentTurn = 'player'; let validMoves = []; let validAttacks = []; let unitCounter = 0; let isProcessing = false;
+        let currentLevel = 1; let clickedUnitObject = null;
+        let hasFireball = false; let fireballSelected = false;
+        let hasFlameWave = false; let flameWaveSelected = false;
+        let hasFrostNova = false; let frostNovaSelected = false;
+        let hasHeal = false; let healSelected = false;
+        let resizeTimeout = null; let winCheckTimeout = null;
+        let MOVE_ANIMATION_DURATION_MS = 250;
 
-        // --- Layout & Resize (MODIFIED: calculateCellSize primarily for unit size, applyLayout updates unit sizes/positions) ---
-        function calculateCellSize() {
-             const bw = gameBoard.clientWidth;
-             const bh = gameBoard.clientHeight;
-             // Calculate based on actual board dimensions, use floor to avoid fractional pixels.
-             if (bw > 1 && bh > 1) {
-                  const cellWidth = Math.floor(bw / GRID_COLS);
-                  const cellHeight = Math.floor(bh / GRID_ROWS);
-                  // Use the smaller dimension to ensure cells fit, important for aspect ratio mismatches.
-                  currentCellSize = Math.min(cellWidth, cellHeight);
-             } else {
-                  // Fallback if board dimensions aren't available yet
-                  currentCellSize = Math.max(currentCellSize, 20); // Use previous or default
-             }
-             // Ensure a minimum practical size
-             currentCellSize = Math.max(currentCellSize, 10);
-             // console.log(`Calculated Cell Size: ${currentCellSize} (Board: ${bw}x${bh})`); // Debugging
-        }
+        // --- Layout & Resize ---
+        function calculateCellSize() { const boardWidth = gameBoard.clientWidth; const boardHeight = gameBoard.clientHeight; if (boardWidth > 1 && boardHeight > 1) { const cellWidth = Math.floor(boardWidth / GRID_COLS); const cellHeight = Math.floor(boardHeight / GRID_ROWS); currentCellSize = Math.max(1, Math.min(cellWidth, cellHeight)); } else { currentCellSize = Math.max(currentCellSize, 20); } currentCellSize = Math.max(currentCellSize, 10); }
+        function applyLayout() { if (currentCellSize < 10) calculateCellSize(); if (currentCellSize < 10) return; units.forEach(u => { if (u.element && !u.element.classList.contains('dead')) updateUnitPosition(u, true); }); document.querySelectorAll('#game-board .unit.dead').forEach(deadEl => { updateUnitPositionVisualsOnly(deadEl); }); if (selectedUnit) { highlightMoves(selectedUnit); } }
+        function updateUnitPositionVisualsOnly(element) { if (!element || currentCellSize < 10) return; const uS = Math.floor(currentCellSize * 0.8); const fS = Math.max(uS, 8); const nSPx = `${fS}px`; if (element.style.width !== nSPx) { element.style.width = nSPx; element.style.height = nSPx; } }
+        const handleResize = () => { if (resizeTimeout) clearTimeout(resizeTimeout); resizeTimeout = setTimeout(() => { if (isGameOver() || startScreen.style.display !== 'none') return; requestAnimationFrame(() => { try { calculateCellSize(); applyLayout(); } catch (e) { console.error("Resize applyLayout error:", e); }}); }, 100); };
 
-        function applyLayout() {
-             if (currentCellSize < 10) return; // Don't apply if size is invalid
-             // Update position and size for all units
-             units.forEach(u => {
-                 if (u.element) updateUnitPosition(u, true); // Force size update on resize
-             });
-             // Re-highlight moves if a unit is selected, as cell elements might have changed
-             if (selectedUnit) {
-                 highlightMoves(selectedUnit);
-             }
-             // Note: Damage popups might need recalculation if board size changes drastically,
-             // but they are short-lived, so it might not be a major issue.
-        }
-
-        const handleResize = () => {
-             if (resizeTimeout) clearTimeout(resizeTimeout);
-             resizeTimeout = setTimeout(() => {
-                 if (isGameOver() || startScreen.style.display !== 'none') return; // Don't resize if game not active
-                 requestAnimationFrame(() => { // Use rAF for smoother rendering
-                     calculateCellSize(); // Recalculate based on new dimensions
-                     applyLayout();       // Apply new sizes and potentially positions
-                 });
-             }, 100); // Debounce resize events
-        };
-
-        // --- Fullscreen API Logic (Unchanged - includes initializeAudio call) ---
+        // --- Fullscreen ---
         function isFullscreen() { return !!(document.fullscreenElement||document.webkitFullscreenElement||document.mozFullScreenElement||document.msFullscreenElement); }
-        function toggleFullscreen() {
-            initializeAudio(); // <<< Call initialize on interaction
-            if(!(document.fullscreenEnabled||document.webkitFullscreenEnabled||document.mozFullScreenEnabled||document.msFullscreenEnabled)) return;
-            if(!isFullscreen()){const el=gameContainer; if(el.requestFullscreen) el.requestFullscreen(); else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen(); else if(el.mozRequestFullScreen) el.mozRequestFullScreen(); else if(el.msRequestFullscreen) el.msRequestFullscreen();}
-            else {if(document.exitFullscreen) document.exitFullscreen(); else if(document.webkitExitFullscreen) document.webkitExitFullscreen(); else if(document.mozCancelFullScreen) document.mozCancelFullScreen(); else if(document.msExitFullscreen) document.msExitFullscreen();}
-        }
-        function updateFullscreenButton() { if(fullscreenButton){ if(isFullscreen()){fullscreenButton.innerHTML='&#x2715;'; fullscreenButton.title='Exit Fullscreen';} else {fullscreenButton.innerHTML='&#x26F6;'; fullscreenButton.title='Enter Fullscreen';} fullscreenButton.disabled=!(document.fullscreenEnabled||document.webkitFullscreenEnabled||document.mozFullScreenEnabled||document.msFullscreenEnabled);} }
+        function toggleFullscreen() { initializeAudio(); const fsEnabled = document.fullscreenEnabled||document.webkitFullscreenEnabled||document.mozFullScreenEnabled||document.msFullscreenEnabled; if (!fsEnabled) return; if (!isFullscreen()) { const el = gameContainer; if (el.requestFullscreen) el.requestFullscreen().catch(err => {}); else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen().catch(err => {}); else if (el.mozRequestFullScreen) el.mozRequestFullScreen().catch(err => {}); else if (el.msRequestFullscreen) el.msRequestFullscreen().catch(err => {}); } else { if (document.exitFullscreen) document.exitFullscreen().catch(err => {}); else if (document.webkitExitFullscreen) document.webkitExitFullscreen().catch(err => {}); else if (document.mozCancelFullScreen) document.mozCancelFullScreen().catch(err => {}); else if (document.msExitFullscreen) document.msExitFullscreen().catch(err => {}); } }
+        function updateFullscreenButton() { const fsEnabled = document.fullscreenEnabled||document.webkitFullscreenEnabled||document.mozFullScreenEnabled||document.msFullscreenEnabled; if(fullscreenButton){ fullscreenButton.disabled = !fsEnabled; fullscreenButton.innerHTML=isFullscreen()?'&#x2715;':'&#x26F6;'; fullscreenButton.title=isFullscreen()?'Exit Fullscreen (F)':'Enter Fullscreen (F)'; } }
 
-        // --- Initialization & Setup (Unchanged) ---
+        // --- Initialization (Added Heal state reset) ---
         function initGame() {
-            console.log("Init Game CALLED."); initializeAudio(); isProcessing = true; units = []; unitCounter = 0; selectedUnit = null; validMoves = []; validAttacks = []; currentTurn = 'player'; currentLevel = 1; clickedUnitObject = null; hasFireball = false; fireballSelected = false; if(winCheckTimeout) clearTimeout(winCheckTimeout); if(resizeTimeout) clearTimeout(resizeTimeout); stopMusic(); sfxGameOver.pause(); sfxGameOver.currentTime = 0;
-            const randomIndex = Math.floor(Math.random() * musicTracks.length); const selectedTrack = musicTracks[randomIndex]; console.log("Selected music:", selectedTrack); bgMusic.src = selectedTrack; bgMusic.load(); startMusic();
-            console.clear(); console.log(`Start Game - Lvl ${currentLevel}`);
+            console.log("Init Game."); console.clear(); if (!audioInitialized) initializeAudio(); playSfx(sfx.startBeep); isProcessing = true;
+            units = []; unitCounter = 0; selectedUnit = null; validMoves = []; validAttacks = []; currentTurn = 'player'; currentLevel = 1; clickedUnitObject = null;
+            fireballSelected = false; flameWaveSelected = false; frostNovaSelected = false; healSelected = false;
+            hasFireball = (currentLevel >= FIREBALL_UNLOCK_LEVEL); hasFlameWave = (currentLevel >= FLAME_WAVE_UNLOCK_LEVEL); hasFrostNova = (currentLevel >= FROST_NOVA_UNLOCK_LEVEL); hasHeal = (currentLevel >= HEAL_UNLOCK_LEVEL);
+            if(winCheckTimeout) clearTimeout(winCheckTimeout); winCheckTimeout = null; if(resizeTimeout) clearTimeout(resizeTimeout); resizeTimeout = null; stopMusic(); sfx.gameOver.pause(); sfx.gameOver.currentTime = 0; selectAndLoadMusic(); console.log(`Start Game - Lvl ${currentLevel}`);
             try {
-                setupBoard(); updateLevelDisplay(); updateSpellAreaVisibility(); updateSpellUI(); updateUnitInfo(null); feedbackArea.textContent = ''; feedbackArea.className = ''; endTurnButton.classList.remove('disabled'); endTurnButton.disabled = false; gameOverScreen.style.display = 'none'; startScreen.style.display = 'none';
-                window.addEventListener('resize', handleResize, { passive: true }); document.addEventListener('fullscreenchange', updateFullscreenButton); document.addEventListener('webkitfullscreenchange', updateFullscreenButton); document.addEventListener('mozfullscreenchange', updateFullscreenButton); document.addEventListener('MSFullscreenChange', updateFullscreenButton); updateFullscreenButton();
-                requestAnimationFrame(() => { try { calculateCellSize(); spawnInitialUnits(); updateTurnDisplay(); renderAllUnits(); } catch(rafError) { console.error("Error during initGame rAF:", rafError); } finally { isProcessing = false; console.log("Init complete. Processing unlocked."); } });
-            } catch (initError) { console.error("Error during sync initGame:", initError); isProcessing = false; }
+                setupBoard(); updateLevelDisplay(); updateSpellUI(); updateUnitInfo(null); feedbackArea.textContent = ''; feedbackArea.className = ''; endTurnButton.classList.remove('disabled'); endTurnButton.disabled = false; gameOverScreen.style.display = 'none'; startScreen.style.display = 'none'; window.addEventListener('resize', handleResize, { passive: true }); document.addEventListener('fullscreenchange', updateFullscreenButton); document.addEventListener('webkitfullscreenchange', updateFullscreenButton); document.addEventListener('mozfullscreenchange', updateFullscreenButton); document.addEventListener('MSFullscreenChange', updateFullscreenButton); updateFullscreenButton();
+                requestAnimationFrame(() => { try { calculateCellSize(); spawnInitialUnits(); units.forEach(u => { if (u.team === 'player') u.acted = false; u.isFrozen = false; u.frozenTurnsLeft = 0; }); renderAllUnits(); updateTurnDisplay(); startMusicIfNotPlaying(); } catch(rafError) { console.error("Init rAF Error:", rafError); } finally { isProcessing = false; console.log("Init complete."); } });
+            } catch (initError) { console.error("Init Error:", initError); isProcessing = false; }
         }
 
-        // --- Board & Spawning (Unchanged) ---
-        function setupBoard() {
-            gameBoard.innerHTML = ''; // Clear previous cells and units
-            gameBoard.className = ''; // Reset classes
-            // Create grid cells
-            for (let r = 0; r < GRID_ROWS; r++) {
-                for (let c = 0; c < GRID_COLS; c++) {
-                    const cell = document.createElement('div');
-                    cell.classList.add('grid-cell');
-                    cell.dataset.x = c;
-                    cell.dataset.y = r;
-                    cell.addEventListener('click', handleCellClick);
-                    // Set grid area for the cell itself (optional but good practice)
-                    cell.style.gridColumn = c + 1;
-                    cell.style.gridRow = r + 1;
-                    gameBoard.appendChild(cell);
-                }
-            }
-            // Add hover listeners for unit info display
-            gameBoard.addEventListener('mouseover', handleMouseEnterOnBoard);
-            gameBoard.addEventListener('mouseout', handleMouseLeaveOnBoard);
-        }
-        function spawnInitialUnits() { const o=new Set(); const kP=[{x:1,y:8},{x:5,y:8},{x:3,y:9},{x:7,y:8},{x:0,y:8},{x:2,y:9},{x:4,y:9},{x:6,y:9}]; let k=3+Math.floor(currentLevel/6); k=Math.min(k,kP.length); for(let i=0;i<k;i++){const p=kP[i];createUnit('knight',p.x,p.y);o.add(`${p.x},${p.y}`);} const g=3+currentLevel; const r=3; let sG=0; for(let i=0;i<g;i++){ let s=false; let a=0; const mA=GRID_COLS*r*3; while(!s&&a<mA){a++; const x=Math.floor(Math.random()*GRID_COLS); const y=Math.floor(Math.random()*r); const key=`${x},${y}`; if(!o.has(key)){createUnit('goblin',x,y); o.add(key); s=true; sG++;}} if(!s) console.warn(`G spawn fail ${i+1}`);} console.log(`Spawned ${k}k, ${sG}g.`); }
-        function createUnit(type, x, y) { const data = UNIT_DATA[type]; if(!data) return; const unit={id:unitCounter++,type,x,y,hp:data.hp,maxHp:data.hp,atk:data.atk,mov:data.mov,team:data.team,acted:false,element:null}; units.push(unit); }
+        // --- Board & Spawning ---
+        function setupBoard() { gameBoard.innerHTML = ''; gameBoard.className = ''; for (let r = 0; r < GRID_ROWS; r++) { for (let c = 0; c < GRID_COLS; c++) { const cell = document.createElement('div'); cell.classList.add('grid-cell'); cell.dataset.x = c; cell.dataset.y = r; cell.addEventListener('click', handleCellClick); cell.addEventListener('mouseenter', handleCellMouseEnter); cell.addEventListener('mouseleave', handleCellMouseLeave); cell.style.gridColumn = c + 1; cell.style.gridRow = r + 1; gameBoard.appendChild(cell); } } gameBoard.addEventListener('mouseover', handleMouseEnterOnBoard); gameBoard.addEventListener('mouseleave', handleMouseLeaveOnBoard); }
+        function spawnInitialUnits() { const occupied = new Set(); const knightPositions=[{x:1,y:8},{x:5,y:8},{x:3,y:9},{x:7,y:8},{x:0,y:8},{x:2,y:9},{x:4,y:9},{x:6,y:9}]; let numKnights=3+Math.floor(currentLevel/6); numKnights=Math.min(numKnights,knightPositions.length); for(let i=0;i<numKnights;i++){const p=knightPositions[i];createUnit('knight',p.x,p.y);occupied.add(`${p.x},${p.y}`);} const numGoblins=3+currentLevel; const enemySpawnRows=3; let spawnedGoblins=0; for(let i=0;i<numGoblins;i++){ let spawned=false; let attempts=0; const maxAttempts=GRID_COLS*enemySpawnRows*3; while(!spawned && attempts<maxAttempts){attempts++; const x=Math.floor(Math.random()*GRID_COLS); const y=Math.floor(Math.random()*enemySpawnRows); const key=`${x},${y}`; if(!occupied.has(key)){createUnit('goblin',x,y); occupied.add(key); spawned=true; spawnedGoblins++;}} if(!spawned) console.warn(`Goblin spawn fail ${i+1}`);} console.log(`Spawned ${numKnights}K, ${spawnedGoblins}G.`); }
+        function createUnit(type, x, y) { const data = UNIT_DATA[type]; if(!data) { return; } const unit={id:unitCounter++,type,x,y,hp:data.hp,maxHp:data.hp,atk:data.atk,mov:data.mov,team:data.team,acted:false,element:null, deadSpriteUrl: data.deadSpriteUrl, isFrozen: false, frozenTurnsLeft: 0 }; units.push(unit); }
 
-        // --- Rendering (MODIFIED: renderUnit appends to board, updateUnitPosition sets grid pos & size) ---
-        function renderAllUnits() {
-             // Remove only unit elements, keep grid cells
-             document.querySelectorAll('#game-board .unit').forEach(el => el.remove());
-             units.forEach(unit => renderUnit(unit));
-        }
+        // --- Rendering ---
+        function renderAllUnits() { document.querySelectorAll('#game-board .unit').forEach(el => el.remove()); units.forEach(unit => renderUnit(unit)); }
+        function renderUnit(unit) { if (unit.element?.parentNode) { unit.element.parentNode.removeChild(unit.element); } const el = document.createElement('div'); el.classList.add('unit', unit.team); el.dataset.id = unit.id; const data = UNIT_DATA[unit.type]; if (data?.spriteUrl) el.style.backgroundImage = `url('${data.spriteUrl}')`; el.classList.toggle('selected', selectedUnit?.id === unit.id); el.classList.toggle('acted', unit.acted); el.classList.toggle('frozen', unit.isFrozen); el.addEventListener('click', (ev) => { handleUnitClick(ev, unit); }); unit.element = el; gameBoard.appendChild(el); updateUnitPosition(unit, true); }
+        function updateUnitPosition(unit, forceUpdateSize = false) { if (!unit?.element || currentCellSize < 10 || unit.element.classList.contains('dead')) return; const targetCol = unit.x + 1; const targetRow = unit.y + 1; if (unit.element.style.gridColumn !== `${targetCol}`) { unit.element.style.gridColumn = `${targetCol}`; } if (unit.element.style.gridRow !== `${targetRow}`) { unit.element.style.gridRow = `${targetRow}`; } const unitSize = Math.floor(currentCellSize * 0.8); const finalSize = Math.max(unitSize, 8); const newSizePx = `${finalSize}px`; if (forceUpdateSize || unit.element.style.width !== newSizePx) { unit.element.style.width = newSizePx; unit.element.style.height = newSizePx; } unit.element.classList.toggle('acted', unit.acted); unit.element.classList.toggle('selected', selectedUnit?.id === unit.id); unit.element.classList.toggle('frozen', unit.isFrozen); if (!unit.element.classList.contains('is-moving') && (!unit.element.style.transform || unit.element.style.transform !== 'none')) { unit.element.style.transform = 'none'; } unit.element.style.opacity = '1'; }
+        function clearHighlights() { document.querySelectorAll('.grid-cell.valid-move, .grid-cell.valid-attack').forEach(c => c.classList.remove('valid-move', 'valid-attack')); validMoves = []; validAttacks = []; }
+        function highlightMoves(unit) { clearHighlights(); if (!unit || currentCellSize < 10 || unit.acted || unit.isFrozen || unit.hp <= 0 || unit.element?.classList.contains('dead')) return; validMoves = getValidMoves(unit); validAttacks = getValidAttacks(unit); validMoves.forEach(p => { const c = getCellElement(p.x, p.y); if (c) c.classList.add('valid-move'); }); validAttacks.forEach(id => { const targetUnit = units.find(u => u.id === id); if (targetUnit?.element && targetUnit.hp > 0 && !targetUnit.element.classList.contains('dead')) { const c = getCellElement(targetUnit.x, targetUnit.y); if (c) c.classList.add('valid-attack'); } }); }
+        function showDamagePopup(x, y, damage) { const popup = document.createElement('div'); popup.classList.add('damage-popup'); popup.textContent = `-${damage}`; const boardRect = gameBoard.getBoundingClientRect(); const cellEl = getCellElement(x, y); if (!cellEl) return; const cellRect = cellEl.getBoundingClientRect(); const popupX = cellRect.left - boardRect.left + cellRect.width / 2 - 10; const popupY = cellRect.top - boardRect.top + cellRect.height / 2 - 15; popup.style.left = `${popupX}px`; popup.style.top = `${popupY}px`; gameBoard.appendChild(popup); setTimeout(() => popup.remove(), 1000); }
+        function showFreezePopup(x, y) { const popup = document.createElement('div'); popup.classList.add('freeze-popup'); popup.textContent = `Frozen!`; const boardRect = gameBoard.getBoundingClientRect(); const cellEl = getCellElement(x, y); if (!cellEl) return; const cellRect = cellEl.getBoundingClientRect(); const popupX = cellRect.left - boardRect.left + cellRect.width / 2 - 15; const popupY = cellRect.top - boardRect.top + cellRect.height / 2 - 10; popup.style.left = `${popupX}px`; popup.style.top = `${popupY}px`; gameBoard.appendChild(popup); setTimeout(() => popup.remove(), 800); }
+        function showHealPopup(x, y, amount) { const popup = document.createElement('div'); popup.classList.add('heal-popup'); popup.textContent = `+${amount}`; const boardRect = gameBoard.getBoundingClientRect(); const cellEl = getCellElement(x, y); if (!cellEl) return; const cellRect = cellEl.getBoundingClientRect(); const popupX = cellRect.left - boardRect.left + cellRect.width / 2 - 10; const popupY = cellRect.top - boardRect.top + cellRect.height / 2 - 15; popup.style.left = `${popupX}px`; popup.style.top = `${popupY}px`; gameBoard.appendChild(popup); setTimeout(() => popup.remove(), 1000); }
 
-        function renderUnit(unit) {
-             // Remove existing element if it exists (e.g., during level change)
-             if (unit.element?.parentNode) {
-                 unit.element.parentNode.removeChild(unit.element);
-             }
-             const el = document.createElement('div');
-             el.classList.add('unit', unit.team);
-             el.dataset.id = unit.id;
-             const d = UNIT_DATA[unit.type];
-             if (d.spriteUrl) el.style.backgroundImage = `url('${d.spriteUrl}')`;
-             el.classList.toggle('selected', selectedUnit?.id === unit.id);
-             el.addEventListener('click', (ev) => { handleUnitClick(ev, unit); });
-             // el.style.pointerEvents = 'auto'; // Already set by #game-board .unit selector
 
-             unit.element = el;
-             gameBoard.appendChild(el); // Append directly to the grid container
-             updateUnitPosition(unit, true); // Set initial grid position and size
-        }
-
-        function updateUnitPosition(unit, forceUpdateSize = false) {
-            // Check if unit element exists and if cell size is valid
-            if (!unit.element || currentCellSize < 10) return;
-
-            // --- Position Update (Using CSS Grid) ---
-            // CSS Grid lines are 1-based
-            const targetCol = unit.x + 1;
-            const targetRow = unit.y + 1;
-
-            // Update grid position if it has changed
-            if (unit.element.style.gridColumn !== `${targetCol}`) {
-                unit.element.style.gridColumn = targetCol;
-            }
-            if (unit.element.style.gridRow !== `${targetRow}`) {
-                unit.element.style.gridRow = targetRow;
-            }
-
-            // --- Size Update ---
-            // Calculate desired size (e.g., 80% of cell size)
-            const unitSize = Math.floor(currentCellSize * 0.8);
-            const finalSize = Math.max(unitSize, 8); // Ensure minimum size
-            const newSizePx = `${finalSize}px`;
-
-            // Update size if forced or if it has changed
-            if (forceUpdateSize || unit.element.style.width !== newSizePx) {
-                unit.element.style.width = newSizePx;
-                unit.element.style.height = newSizePx;
-            }
-        }
-
-        function clearHighlights() {
-             document.querySelectorAll('.grid-cell.valid-move, .grid-cell.valid-attack').forEach(c => c.classList.remove('valid-move', 'valid-attack'));
-             validMoves = [];
-             validAttacks = [];
-        }
-
-        function highlightMoves(unit) {
-             clearHighlights();
-             if (!unit || currentCellSize < 10) return;
-             validMoves = getValidMoves(unit);
-             validAttacks = getValidAttacks(unit);
-             validMoves.forEach(p => {
-                 const c = getCellElement(p.x, p.y);
-                 if (c) c.classList.add('valid-move');
-             });
-             // Highlight the *cell* under the attackable unit
-             validAttacks.forEach(id => {
-                 const targetUnit = units.find(u => u.id === id);
-                 if (targetUnit) {
-                     const c = getCellElement(targetUnit.x, targetUnit.y);
-                     if (c) c.classList.add('valid-attack');
-                 }
-             });
-        }
-        // Damage popup positioning remains absolute relative to the board
-        function showDamagePopup(x, y, damage) {
-            playSfx(sfxHit);
-            const popup = document.createElement('div');
-            popup.classList.add('damage-popup');
-            popup.textContent = `-${damage}`;
-            // Calculate approximate center of the target cell for the popup
-            const popupX = Math.round(x * currentCellSize + currentCellSize / 2 - 10); // Adjust offset as needed
-            const popupY = Math.round(y * currentCellSize + currentCellSize / 2 - 15); // Adjust offset as needed
-            popup.style.left = `${popupX}px`;
-            popup.style.top = `${popupY}px`;
-            gameBoard.appendChild(popup); // Append to gameBoard for absolute positioning context
-            setTimeout(() => popup.remove(), 1000);
-        }
-
-        // --- UI Update Functions (Unchanged) ---
+        // --- UI Updates (Added Heal update) ---
         function updateLevelDisplay() { if(levelDisplayElement) levelDisplayElement.textContent=`Level: ${currentLevel}`; }
-        function updateSpellAreaVisibility() { if(spellAreaElement) spellAreaElement.classList.toggle('visible',currentLevel>=FIREBALL_UNLOCK_LEVEL); }
-        function updateSpellUI() { if (!fireballElement) return; fireballElement.className = 'spell-icon'; if (hasFireball) { fireballElement.classList.add('available'); if (fireballSelected) fireballElement.classList.add('selected'); fireballElement.title = "Fireball (Available)"; } else { fireballElement.classList.add('unavailable'); fireballElement.title = (currentLevel < FIREBALL_UNLOCK_LEVEL) ? `Unlock Lvl ${FIREBALL_UNLOCK_LEVEL}` : "Used this level"; } gameBoard.classList.toggle('spell-targeting', fireballSelected); }
-        function updateTurnDisplay() { if(!currentTurnDisplay||!actionsLeftDisplay) return; currentTurnDisplay.textContent=`Turn: ${currentTurn==='player'?'Player':'Enemy'}`; if(currentTurn==='player'){const rem=units.filter(u=>u.team==='player'&&!u.acted).length; actionsLeftDisplay.textContent=`Actions Left: ${rem}`; endTurnButton.disabled=false; endTurnButton.classList.remove('disabled');} else {actionsLeftDisplay.textContent=`AI Thinking...`; endTurnButton.disabled=true; endTurnButton.classList.add('disabled');}}
-        function updateUnitInfo(unit) { clickedUnitObject=unit; if(unit){const d=UNIT_DATA[unit.type]; unitNameDisplay.textContent=`${d.name}(${unit.id})`; unitHpDisplay.textContent=`HP:${unit.hp}/${unit.maxHp}`; unitAtkDisplay.textContent=`ATK:${unit.atk}`; unitMovDisplay.textContent=`MOV:${unit.mov}`;} else {unitNameDisplay.textContent='-'; unitHpDisplay.textContent='-/-'; unitAtkDisplay.textContent='-'; unitMovDisplay.textContent='-';}}
+        function updateSpellUI() {
+            const isFBUnlocked = currentLevel >= FIREBALL_UNLOCK_LEVEL; const isFWUnlocked = currentLevel >= FLAME_WAVE_UNLOCK_LEVEL; const isFNUnlocked = currentLevel >= FROST_NOVA_UNLOCK_LEVEL; const isHealUnlocked = currentLevel >= HEAL_UNLOCK_LEVEL;
+            fireballElement.className = 'spell-icon'; if (!isFBUnlocked) { fireballElement.classList.add('locked'); fireballElement.title = `Unlock at Level ${FIREBALL_UNLOCK_LEVEL}`; } else if (!hasFireball) { fireballElement.classList.add('used'); fireballElement.title = "Fireball (Used this turn)"; } else { fireballElement.classList.add('available'); fireballElement.title = "Fireball"; if (fireballSelected) fireballElement.classList.add('selected'); }
+            flameWaveElement.className = 'spell-icon'; if (!isFWUnlocked) { flameWaveElement.classList.add('locked'); flameWaveElement.title = `Unlock at Level ${FLAME_WAVE_UNLOCK_LEVEL}`; } else if (!hasFlameWave) { flameWaveElement.classList.add('used'); flameWaveElement.title = "Flame Wave (Used this turn)"; } else { flameWaveElement.classList.add('available'); flameWaveElement.title = "Flame Wave"; if (flameWaveSelected) flameWaveElement.classList.add('selected'); }
+            frostNovaElement.className = 'spell-icon'; if (!isFNUnlocked) { frostNovaElement.classList.add('locked'); frostNovaElement.title = `Unlock at Level ${FROST_NOVA_UNLOCK_LEVEL}`; } else if (!hasFrostNova) { frostNovaElement.classList.add('used'); frostNovaElement.title = "Frost Nova (Used this turn)"; } else { frostNovaElement.classList.add('available'); frostNovaElement.title = "Frost Nova"; if (frostNovaSelected) frostNovaElement.classList.add('selected'); }
+            healElement.className = 'spell-icon'; if (!isHealUnlocked) { healElement.classList.add('locked'); healElement.title = `Unlock at Level ${HEAL_UNLOCK_LEVEL}`; } else if (!hasHeal) { healElement.classList.add('used'); healElement.title = "Heal (Used this turn)"; } else { healElement.classList.add('available'); healElement.title = "Heal"; if (healSelected) healElement.classList.add('selected'); }
+            gameBoard.classList.toggle('fireball-targeting', fireballSelected); gameBoard.classList.toggle('flame-wave-targeting', flameWaveSelected); gameBoard.classList.toggle('frost-nova-targeting', frostNovaSelected); gameBoard.classList.toggle('heal-targeting', healSelected);
+        }
+        function updateTurnDisplay() { if(!currentTurnDisplay || !actionsLeftDisplay) return; const isPlayer = currentTurn === 'player'; currentTurnDisplay.textContent = `Turn: ${isPlayer ? 'Player' : 'Enemy'}`; let btnDisabled = false; let btnClassDisabled = false; if (isPlayer) { const rem = units.filter(u => u.team === 'player' && !u.acted && !u.isFrozen && u.hp > 0 && !u.element?.classList.contains('dead')).length; actionsLeftDisplay.textContent = `Actions Left: ${rem}`; btnDisabled = isProcessing; btnClassDisabled = isProcessing; } else { actionsLeftDisplay.textContent = `AI Thinking...`; btnDisabled = true; btnClassDisabled = true; } endTurnButton.disabled = btnDisabled; endTurnButton.classList.toggle('disabled', btnClassDisabled); }
+        function updateUnitInfo(unit) { clickedUnitObject=unit; if(unit && unit.hp > 0 && !unit.element?.classList.contains('dead')){ const data=UNIT_DATA[unit.type]; unitNameDisplay.textContent=`${data?.name||unit.type}`; unitHpDisplay.textContent=`HP:${unit.hp}/${unit.maxHp}`; unitAtkDisplay.textContent=`ATK:${unit.atk}`; unitMovDisplay.textContent=`MOV:${unit.mov}`; if (unit.isFrozen) { unitStatusDisplay.textContent = `Status: Frozen (${unit.frozenTurnsLeft} turns)`; } else { unitStatusDisplay.textContent = ''; } } else { unitNameDisplay.textContent='-: -'; unitHpDisplay.textContent='-/-'; unitAtkDisplay.textContent='-'; unitMovDisplay.textContent='-'; unitStatusDisplay.textContent = ''; } }
+        function showFeedback(message, type = '') { feedbackArea.textContent = message; feedbackArea.className = type; if (type !== 'feedback-levelup') { setTimeout(() => { if (feedbackArea.textContent === message) feedbackArea.textContent = ''; }, 2500); } }
 
-        // --- Game Logic Handlers (Unchanged - includes initializeAudio calls) ---
-        function handleCellClick(event) {
-            // Prevent clicks on units bubbling up to the cell if units have pointer-events: auto
-            if (event.target.classList.contains('unit') || isProcessing) return;
-
-            initializeAudio(); // Initialize on interaction
-            const cell = event.currentTarget;
-            const x = parseInt(cell.dataset.x);
-            const y = parseInt(cell.dataset.y);
-            const unitOnCell = getUnitAt(x, y); // Check if a unit is visually on this cell
-
-            // If clicking a cell while fireball is selected, try to cast or deselect fireball
-            if (fireballSelected) {
-                // Casting logic might need adjustment if targeting empty cells is intended
-                // For now, clicking empty cell deselects fireball
-                fireballSelected = false;
-                updateSpellUI();
-                updateUnitInfo(null); // Clear info panel
-                // playSfx(sfxUIClick); // Optional UI sound
-                return;
-            }
-
-            if (currentTurn === 'player') {
-                if (selectedUnit) {
-                    // Check if the clicked cell is a valid move destination
-                    const isMoveValid = validMoves.some(p => p.x === x && p.y === y);
-
-                    if (isMoveValid) {
-                        const unitToMove = selectedUnit;
-                        moveUnit(unitToMove, x, y); // Move the unit
-                        deselectUnit();             // Deselect after moving
-                        finishAction(unitToMove);   // Mark unit as acted
-                        updateUnitInfo(null);       // Clear unit info panel
-                    } else {
-                        // Clicked an invalid cell while a unit was selected
-                        deselectUnit();             // Deselect the unit
-                        updateUnitInfo(unitOnCell); // Show info for unit on cell, if any
-                        playSfx(sfxError);          // Play error sound
-                    }
-                } else {
-                    // No unit selected, just update info for unit on cell (if any)
-                    updateUnitInfo(unitOnCell);
-                }
-            } else {
-                // Not player's turn, just show info for unit on cell (if any)
-                updateUnitInfo(unitOnCell);
-            }
+        // --- Logic Handlers (Added Heal check) ---
+        async function handleCellClick(event) {
+            if (event.target.classList.contains('unit') || isProcessing) return; if (!audioInitialized) initializeAudio(); const cell = event.currentTarget; const x = parseInt(cell.dataset.x); const y = parseInt(cell.dataset.y); const unitOnCell = getUnitAt(x, y);
+            if (fireballSelected) { if (unitOnCell && unitOnCell.team === 'enemy') { castFireball(unitOnCell); } else { fireballSelected = false; updateSpellUI(); updateUnitInfo(selectedUnit || clickedUnitObject); playSfx(sfx.error); showFeedback("Target an ENEMY unit.", "feedback-error"); } return; }
+            if (frostNovaSelected) { castFrostNova(x, y); return; }
+            if (flameWaveSelected) { castFlameWave(y); return; }
+            if (healSelected) { healSelected = false; updateSpellUI(); playSfx(sfx.error); showFeedback("Select a friendly unit.", "feedback-error"); return; }
+            if (currentTurn === 'player') { if (selectedUnit) { const isMoveValid = validMoves.some(p => p.x === x && p.y === y); if (isMoveValid && !unitOnCell) { const unitToMove = selectedUnit; if(unitToMove.element) unitToMove.element.classList.remove('selected'); clearHighlights(); selectedUnit = null; isProcessing = true; updateTurnDisplay(); await moveUnit(unitToMove, x, y); finishAction(unitToMove); updateUnitInfo(null); isProcessing = false; updateTurnDisplay(); } else { playSfx(sfx.error); deselectUnit(); updateUnitInfo(unitOnCell); } } else { updateUnitInfo(unitOnCell); } } else { updateUnitInfo(unitOnCell); }
         }
         function handleUnitClick(event, clickedUnit) {
-            event.stopPropagation(); // Prevent triggering cell click
-            if (isProcessing) return;
+            event.stopPropagation(); if (isProcessing || clickedUnit.hp <= 0 || clickedUnit.element?.classList.contains('dead')) { deselectUnit(); updateUnitInfo(null); return; } if (clickedUnit.isFrozen && !frostNovaSelected) { updateUnitInfo(clickedUnit); showFeedback("Unit is Frozen!", "feedback-error"); playSfx(sfx.error); deselectUnit(false); return; } if (!audioInitialized) initializeAudio();
+            if (fireballSelected) { if (clickedUnit.team === 'enemy') { castFireball(clickedUnit); } else { fireballSelected = false; updateSpellUI(); updateUnitInfo(clickedUnit); playSfx(sfx.error); showFeedback("Target an ENEMY unit.", "feedback-error"); } return; }
+            if (frostNovaSelected) { castFrostNova(clickedUnit.x, clickedUnit.y); return; }
+            if (flameWaveSelected) { castFlameWave(clickedUnit.y); return; }
+            if (healSelected) { if (clickedUnit.team === 'player') { castHeal(clickedUnit); } else { healSelected = false; updateSpellUI(); updateUnitInfo(clickedUnit); playSfx(sfx.error); showFeedback("Target a FRIENDLY unit.", "feedback-error"); } return; }
+            updateUnitInfo(clickedUnit); if (currentTurn === 'player') { if (selectedUnit) { if (clickedUnit.team === 'enemy' && validAttacks.includes(clickedUnit.id)) { const attacker = selectedUnit; deselectUnit(false); isProcessing = true; updateTurnDisplay(); attackUnit(attacker, clickedUnit); } else if (clickedUnit.team === 'player' && clickedUnit.id !== selectedUnit.id && !clickedUnit.acted && !clickedUnit.isFrozen) { selectUnit(clickedUnit); } else if (clickedUnit.id === selectedUnit.id) { deselectUnit(); } else { playSfx(sfx.error); if(clickedUnit.team === 'player' && clickedUnit.acted) showFeedback("Unit already acted.", "feedback-error"); else if(clickedUnit.team === 'enemy' && !validAttacks.includes(clickedUnit.id)) showFeedback("Enemy out of range.", "feedback-error"); else showFeedback("Invalid action.", "feedback-error"); deselectUnit(false); updateUnitInfo(clickedUnit); } } else { if (clickedUnit.team === 'player' && !clickedUnit.acted && !clickedUnit.isFrozen) { selectUnit(clickedUnit); } else if (clickedUnit.team === 'player' && clickedUnit.acted) { showFeedback("Unit already acted.", "feedback-error"); playSfx(sfx.error); } else if (clickedUnit.team === 'player' && clickedUnit.isFrozen) { showFeedback("Unit is Frozen!", "feedback-error"); playSfx(sfx.error); } } }
+        }
+        function handleMouseEnterOnBoard(event) { if (isProcessing || fireballSelected || flameWaveSelected || frostNovaSelected || healSelected) return; if(event.target.classList.contains('unit') && !event.target.classList.contains('dead')) { const unitId = parseInt(event.target.dataset.id); const hoveredUnit = units.find(un => un.id === unitId); if(hoveredUnit && hoveredUnit !== selectedUnit && hoveredUnit !== clickedUnitObject) { updateUnitInfo(hoveredUnit); } } }
+        function handleMouseLeaveOnBoard(event) { if (isProcessing || fireballSelected || flameWaveSelected || frostNovaSelected || healSelected) return; if(event.target.classList.contains('unit') && !event.target.classList.contains('dead')) { const restoreTarget = selectedUnit || (clickedUnitObject && clickedUnitObject.hp > 0 && !clickedUnitObject.element?.classList.contains('dead') ? clickedUnitObject : null); updateUnitInfo(restoreTarget); } if (!flameWaveSelected) { gameBoard.style.removeProperty('--hover-col'); } }
+        function handleCellMouseEnter(event) { if (flameWaveSelected && !isProcessing) { const cell = event.currentTarget; const colIndex = parseInt(cell.dataset.x); gameBoard.style.setProperty('--hover-col', colIndex); } else if (frostNovaSelected && !isProcessing) { clearFrostNovaPreview(); const cell = event.currentTarget; const x = parseInt(cell.dataset.x); const y = parseInt(cell.dataset.y); highlightFrostNovaArea(x, y); } }
+        function handleCellMouseLeave(event) { if (frostNovaSelected && !isProcessing) { clearFrostNovaPreview(); } }
+        function highlightFrostNovaArea(centerX, centerY) { for (let dx = -1; dx <= 1; dx++) { for (let dy = -1; dy <= 1; dy++) { const targetX = centerX + dx; const targetY = centerY + dy; if (targetX >= 0 && targetX < GRID_COLS && targetY >= 0 && targetY < GRID_ROWS) { const cell = getCellElement(targetX, targetY); if (cell) { cell.classList.add('frost-aoe-preview'); } } } } }
+        function clearFrostNovaPreview() { document.querySelectorAll('.grid-cell.frost-aoe-preview').forEach(cell => cell.classList.remove('frost-aoe-preview')); }
 
-            initializeAudio(); // Initialize on interaction
+        // --- Spell Actions (Added Heal handler) ---
+        function handleFireballClick() { if (isProcessing || currentTurn !== 'player' || !(currentLevel >= FIREBALL_UNLOCK_LEVEL) || !hasFireball) { if(currentLevel < FIREBALL_UNLOCK_LEVEL) showFeedback(`Unlock at Level ${FIREBALL_UNLOCK_LEVEL}!`, "feedback-error"); else if (!hasFireball) { showFeedback('Fireball used this turn.', 'feedback-error'); playSfx(sfx.error); } else { playSfx(sfx.error); } return; } if (!audioInitialized) initializeAudio(); const wasSelected = fireballSelected; fireballSelected = false; flameWaveSelected = false; frostNovaSelected = false; healSelected = false; clearFrostNovaPreview(); if (!wasSelected) { fireballSelected = true; deselectUnit(); showFeedback('Select ENEMY target for Fireball.'); playSfx(sfx.select); } else { showFeedback(''); playSfx(sfx.select); } updateSpellUI(); }
+        function handleFlameWaveClick() { if (isProcessing || currentTurn !== 'player' || !(currentLevel >= FLAME_WAVE_UNLOCK_LEVEL) || !hasFlameWave) { if(currentLevel < FLAME_WAVE_UNLOCK_LEVEL) showFeedback(`Unlock at Level ${FLAME_WAVE_UNLOCK_LEVEL}!`, "feedback-error"); else if (!hasFlameWave) { showFeedback('Flame Wave used this turn.', 'feedback-error'); playSfx(sfx.error); } else { playSfx(sfx.error); } return; } if (!audioInitialized) initializeAudio(); const wasSelected = flameWaveSelected; fireballSelected = false; flameWaveSelected = false; frostNovaSelected = false; healSelected = false; clearFrostNovaPreview(); if (!wasSelected) { flameWaveSelected = true; deselectUnit(); showFeedback('Click target ROW for Flame Wave.'); playSfx(sfx.select); } else { showFeedback(''); playSfx(sfx.select); gameBoard.style.removeProperty('--hover-col'); } updateSpellUI(); }
+        function handleFrostNovaClick() { if (isProcessing || currentTurn !== 'player' || !(currentLevel >= FROST_NOVA_UNLOCK_LEVEL) || !hasFrostNova) { if(currentLevel < FROST_NOVA_UNLOCK_LEVEL) showFeedback(`Unlock at Level ${FROST_NOVA_UNLOCK_LEVEL}!`, "feedback-error"); else if (!hasFrostNova) { showFeedback('Frost Nova used this turn.', 'feedback-error'); playSfx(sfx.error); } else { playSfx(sfx.error); } return; } if (!audioInitialized) initializeAudio(); const wasSelected = frostNovaSelected; fireballSelected = false; flameWaveSelected = false; frostNovaSelected = false; healSelected = false; gameBoard.style.removeProperty('--hover-col'); if (!wasSelected) { frostNovaSelected = true; deselectUnit(); showFeedback('Select CENTER cell for Frost Nova.'); playSfx(sfx.select); } else { showFeedback(''); playSfx(sfx.select); clearFrostNovaPreview(); } updateSpellUI(); }
+        function handleHealClick() { if (isProcessing || currentTurn !== 'player' || !(currentLevel >= HEAL_UNLOCK_LEVEL) || !hasHeal) { if(currentLevel < HEAL_UNLOCK_LEVEL) showFeedback(`Unlock at Level ${HEAL_UNLOCK_LEVEL}!`, "feedback-error"); else if (!hasHeal) { showFeedback('Heal used this turn.', 'feedback-error'); playSfx(sfx.error); } else { playSfx(sfx.error); } return; } if (!audioInitialized) initializeAudio(); const wasSelected = healSelected; fireballSelected = false; flameWaveSelected = false; frostNovaSelected = false; healSelected = false; clearFrostNovaPreview(); if (!wasSelected) { healSelected = true; deselectUnit(); showFeedback('Select FRIENDLY unit to Heal.'); playSfx(sfx.select); } else { showFeedback(''); playSfx(sfx.select); } updateSpellUI(); }
 
-            // If fireball is selected, target the clicked unit
-            if (fireballSelected) {
-                if (clickedUnit.team === 'enemy') {
-                    castFireball(clickedUnit);
-                    hasFireball = false;       // Mark fireball as used for this level/turn
-                    fireballSelected = false;  // Deselect fireball mode
-                    updateSpellUI();
-                    updateUnitInfo(null);      // Clear info panel
-                } else {
-                    // Clicked friendly unit or self with fireball selected, just deselect fireball
-                    fireballSelected = false;
-                    updateSpellUI();
-                    updateUnitInfo(clickedUnit); // Show info for the clicked friendly unit
-                    // playSfx(sfxUIClick); // Optional UI sound
-                }
-                return; // Action handled (cast or cancel fireball)
-            }
-
-            // Update info panel regardless of whose turn it is
-            updateUnitInfo(clickedUnit);
-
-            // Handle clicks during player's turn
-            if (currentTurn === 'player') {
-                if (selectedUnit) {
-                    // A unit is already selected
-                    if (clickedUnit.team === 'enemy' && validAttacks.includes(clickedUnit.id)) {
-                        // Clicked a valid enemy target to attack
-                        const attacker = selectedUnit;
-                        attackUnit(attacker, clickedUnit);
-                        deselectUnit();
-                        finishAction(attacker);
-                    } else if (clickedUnit.team === 'player' && clickedUnit.id !== selectedUnit.id && !clickedUnit.acted) {
-                        // Clicked another friendly unit that hasn't acted yet -> switch selection
-                        selectUnit(clickedUnit);
-                    } else if (clickedUnit.id === selectedUnit.id) {
-                        // Clicked the selected unit again -> deselect
-                        deselectUnit();
-                        updateUnitInfo(null); // Clear info panel on deselect
-                        // playSfx(sfxUIClick); // Optional UI sound
-                    } else {
-                        // Clicked an invalid target (e.g., friendly acted unit, enemy out of range)
-                        // Keep current selection, play error sound? Or deselect? Let's deselect.
-                        deselectUnit();
-                        updateUnitInfo(clickedUnit); // Show info for the clicked unit
-                        playSfx(sfxError);
-                    }
-                } else {
-                    // No unit currently selected
-                    if (clickedUnit.team === 'player' && !clickedUnit.acted) {
-                        // Clicked a friendly unit that can act -> select it
-                        selectUnit(clickedUnit);
-                    }
-                    // If clicked enemy or acted friendly, info is already updated, do nothing else
-                }
-            }
-            // If it's not the player's turn, clicking units only updates the info panel
+        // --- Unit Actions ---
+        function selectUnit(unit) { if (!unit || unit.acted || unit.isFrozen || unit.team !== 'player' || currentTurn !== 'player' || isProcessing || unit.hp <= 0 || unit.element?.classList.contains('dead')) { if (unit?.isFrozen) { showFeedback("Unit is Frozen!", "feedback-error"); playSfx(sfx.error); } return; } if (fireballSelected || flameWaveSelected || frostNovaSelected || healSelected) { fireballSelected = false; flameWaveSelected = false; frostNovaSelected = false; healSelected = false; updateSpellUI(); showFeedback(''); gameBoard.className = ''; clearFrostNovaPreview(); } if (selectedUnit === unit) return; deselectUnit(false); selectedUnit = unit; if (unit.element) unit.element.classList.add('selected'); highlightMoves(unit); updateUnitInfo(unit); playSfx(sfx.select); }
+        function deselectUnit(updateInfo = true) { if (selectedUnit?.element) { selectedUnit.element.classList.remove('selected'); } selectedUnit = null; clearHighlights(); if (updateInfo) { const r = (clickedUnitObject && clickedUnitObject.hp > 0 && !clickedUnitObject.element?.classList.contains('dead')) ? clickedUnitObject : null; updateUnitInfo(r); } }
+        function finishAction(unit) { if (!unit || unit.acted || unit.hp <= 0 || unit.element?.classList.contains('dead')) { console.log(`FinishAction skipped for ${unit?.id} (acted: ${unit?.acted}, hp: ${unit?.hp})`); return; } unit.acted = true; console.log(`Action finished: ${unit.type} ${unit.id}`); if (unit.element) { unit.element.classList.add('acted'); unit.element.classList.remove('selected'); } if (selectedUnit?.id === unit.id) { selectedUnit = null; clearHighlights(); } updateUnitPosition(unit); checkWinLossConditions(); }
+        function moveUnit(unit, targetX, targetY) { /* (Code identical to previous version) */
+            return new Promise((resolve) => {
+                if (!unit || unit.isFrozen || unit.hp <= 0 || !unit.element || unit.element.classList.contains('dead')) { console.warn(`Move cancelled for unit ${unit?.id}`); resolve(); return; }
+                const startX = unit.x; const startY = unit.y; const deltaX = targetX - startX; const deltaY = targetY - startY; if (deltaX === 0 && deltaY === 0) { resolve(); return; }
+                const translateX = deltaX * currentCellSize; const translateY = deltaY * currentCellSize; unit.element.style.transform = 'none'; unit.element.style.gridColumn = `${startX + 1}`; unit.element.style.gridRow = `${startY + 1}`; unit.element.classList.add('is-moving'); void unit.element.offsetWidth; unit.element.style.transform = `translate(${translateX}px, ${translateY}px)`; playSfx(sfx.move);
+                let moveFinalized = false; const finalizeMove = () => { if (moveFinalized || !unit.element) return; moveFinalized = true; unit.element.removeEventListener('transitionend', transitionEndHandler); unit.element.classList.remove('is-moving'); unit.x = targetX; unit.y = targetY; unit.element.style.transition = 'none'; unit.element.style.transform = 'none'; unit.element.style.gridColumn = `${targetX + 1}`; unit.element.style.gridRow = `${targetY + 1}`; void unit.element.offsetWidth; unit.element.style.transition = ''; console.log(`Unit ${unit.id} finished move to (${targetX}, ${targetY})`); resolve(); };
+                const transitionEndHandler = (event) => { if (event.target === unit.element && event.propertyName === 'transform') { finalizeMove(); } }; unit.element.addEventListener('transitionend', transitionEndHandler);
+                setTimeout(() => { if(unit.element) { finalizeMove(); } else { console.warn(`Unit ${unit.id} element removed before move fallback timeout.`); resolve(); } }, MOVE_ANIMATION_DURATION_MS + 50);
+            });
+        }
+        function attackUnit(attacker, defender) { /* (Code identical to previous version) */
+            if (!attacker || !defender || attacker.acted || attacker.isFrozen || attacker.hp <= 0 || attacker.element?.classList.contains('dead') || defender.hp <= 0 || defender.element?.classList.contains('dead')) { console.warn(`Attack cancelled pre-cond: A=${attacker?.id}(Acted:${attacker?.acted},Frozen:${attacker?.isFrozen},HP:${attacker?.hp}) D=${defender?.id}(HP:${defender?.hp})`); if (currentTurn === 'enemy' && attacker && !attacker.acted && !attacker.isFrozen && attacker.hp > 0) { finishAction(attacker); } else if (currentTurn === 'player'){ isProcessing = false; updateTurnDisplay(); } return; }
+            const attackerElement = attacker.element; const defenderElement = defender.element; if (!attackerElement?.parentNode || !defenderElement?.parentNode) { console.warn("Attack cancelled: Attacker or defender element missing."); if (currentTurn === 'enemy' && attacker && !attacker.acted && !attacker.isFrozen && attacker.hp > 0) { finishAction(attacker); } else if(currentTurn === 'player') { isProcessing = false; updateTurnDisplay(); } return; }
+            console.log(`ATTACK ANIM (Tap): ${attacker.id} -> ${defender.id}`); if(currentTurn === 'player' && !isProcessing) { isProcessing = true; updateTurnDisplay(); }
+            const originalZIndex = window.getComputedStyle(attackerElement).zIndex || '10'; const attackZIndex = '25'; const deltaX = defender.x - attacker.x; const deltaY = defender.y - attacker.y; const tapDistanceFactor = 0.4 * currentCellSize; const translateX = deltaX * tapDistanceFactor; const translateY = deltaY * tapDistanceFactor; const transformValue = `translate(${translateX}px, ${translateY}px)`; const animDurationString = getComputedStyle(document.documentElement).getPropertyValue('--attack-anim-time').trim().toLowerCase(); let animDurationMs = 80; if (animDurationString.endsWith('ms')) animDurationMs = parseFloat(animDurationString); else if (animDurationString.endsWith('s')) animDurationMs = parseFloat(animDurationString) * 1000; const strikePause = 50; const returnPause = 60; const damage = attacker.atk; const isFatal = damage >= defender.hp; let defenderDiedVisually = false;
+            if (isFatal) { defender.hp = 0; const defenderData = UNIT_DATA[defender.type]; if (defenderData?.deadSpriteUrl) { defenderElement.style.backgroundImage = `url('${defenderData.deadSpriteUrl}')`; } defenderElement.classList.add('dead'); defenderElement.classList.remove('selected', 'acted', 'unit-hit-flash', 'player', 'enemy', 'valid-attack', 'valid-move', 'frozen'); defenderElement.style.filter = 'none'; defenderElement.style.boxShadow = 'none'; defenderElement.style.transform = 'none'; defenderElement.style.pointerEvents = 'none'; playSfx(defender.team === 'player' ? sfx.playerDie : sfx.defeat); defenderDiedVisually = true; if (clickedUnitObject?.id === defender.id) { updateUnitInfo(null); } }
+            attackerElement.style.zIndex = attackZIndex; attackerElement.style.transform = transformValue; if (!defenderDiedVisually) { playSfx(sfx.move); }
+            setTimeout(() => { if (attackerElement?.parentNode) { attackerElement.style.transform = 'none'; attackerElement.style.zIndex = originalZIndex; } else { console.warn(`Attacker ${attacker.id} removed mid-anim return.`); }
+                setTimeout(() => { const stillAttacker = units.find(u => u.id === attacker.id); const stillDefender = units.find(u => u.id === defender.id); if (!stillAttacker || !stillDefender) { console.warn(`Attacker or Defender invalid after attack anim. Attacker: ${!!stillAttacker}, Defender: ${!!stillDefender}`); if (stillAttacker && !stillAttacker.acted && stillAttacker.hp > 0) finishAction(stillAttacker); if (currentTurn === 'player') { isProcessing = false; updateTurnDisplay(); } return; }
+                    if (!defenderDiedVisually && stillDefender.hp > 0 && !stillDefender.element?.classList.contains('dead')) { playSfx(sfx.hit); defender.hp -= damage; if (defender.hp < 0) defender.hp = 0; showDamagePopup(defender.x, defender.y, damage); if (defenderElement?.parentNode) { defenderElement.classList.add('unit-hit-flash'); setTimeout(() => { defenderElement?.classList.remove('unit-hit-flash'); }, 200); } if (clickedUnitObject?.id === defender.id) { updateUnitInfo(defender); } if (defender.hp <= 0) { removeUnit(defender); } } else if (defenderDiedVisually) { removeUnit(defender); } else { console.log(`Attack effects skipped: Defender ${defender.id} state changed or already dead.`); }
+                    if (stillAttacker && stillAttacker.hp > 0 && !stillAttacker.acted && !stillAttacker.element?.classList.contains('dead')) { finishAction(stillAttacker); } else { console.warn(`Attacker ${attacker?.id} could not finish action (HP:${stillAttacker?.hp}, Acted:${stillAttacker?.acted}).`); } if (currentTurn === 'player') { isProcessing = false; } updateTurnDisplay();
+                }, animDurationMs + returnPause);
+            }, animDurationMs + strikePause);
         }
 
-        // --- Mouse Over/Out (Unchanged) ---
-        function handleMouseEnterOnBoard(event) { if(event.target.classList.contains('unit')){const u=units.find(un=>un.id===parseInt(event.target.dataset.id)); if(u&&u!==clickedUnitObject) updateUnitInfo(u);}}
-        function handleMouseLeaveOnBoard(event) { if(event.target.classList.contains('unit')){ updateUnitInfo(selectedUnit||clickedUnitObject||null);}}
+        // --- Spell Casting (Added castHeal) ---
+        function castFireball(targetUnit) { if (!targetUnit || targetUnit.team !== 'enemy' || isProcessing || targetUnit.hp <= 0 || targetUnit.element?.classList.contains('dead')) { showFeedback("Invalid Fireball target.", "feedback-error"); playSfx(sfx.error); fireballSelected = false; updateSpellUI(); if(isProcessing && currentTurn === 'player') isProcessing = false; return; } isProcessing = true; updateTurnDisplay(); fireballSelected = false; hasFireball = false; updateSpellUI(); gameBoard.classList.remove('fireball-targeting'); playSfx(sfx.fireballCast); console.log(`Casting Fireball on ${targetUnit.id}`); setTimeout(() => { if (targetUnit && targetUnit.hp > 0 && targetUnit.element && !targetUnit.element.classList.contains('dead')) { playSfx(sfx.fireballHit); targetUnit.hp -= FIREBALL_DAMAGE; if (targetUnit.hp < 0) targetUnit.hp = 0; showDamagePopup(targetUnit.x, targetUnit.y, FIREBALL_DAMAGE); targetUnit.element.classList.add('unit-hit-flash'); setTimeout(() => { targetUnit.element?.classList.remove('unit-hit-flash'); }, 200); if (clickedUnitObject?.id === targetUnit.id) { updateUnitInfo(targetUnit); } if (targetUnit.hp <= 0) removeUnit(targetUnit); } else { console.log("Fireball target became invalid before impact."); } isProcessing = false; checkWinLossConditions(); updateTurnDisplay(); }, 300); }
+        function castFlameWave(targetRow) { if (isProcessing || currentTurn !== 'player' || !(currentLevel >= FLAME_WAVE_UNLOCK_LEVEL) || !hasFlameWave || targetRow < 0 || targetRow >= GRID_ROWS) { showFeedback("Invalid Flame Wave target/state.", "feedback-error"); playSfx(sfx.error); flameWaveSelected = false; updateSpellUI(); if(isProcessing && currentTurn === 'player') isProcessing = false; return; } isProcessing = true; updateTurnDisplay(); flameWaveSelected = false; hasFlameWave = false; updateSpellUI(); gameBoard.classList.remove('flame-wave-targeting'); gameBoard.style.removeProperty('--hover-col'); playSfx(sfx.fireballCast); console.log(`Casting Flame Wave on row ${targetRow}`); const cellsInRow = []; for (let x = 0; x < GRID_COLS; x++) { const cell = getCellElement(x, targetRow); if (cell) { cellsInRow.push(cell); cell.style.backgroundColor = 'rgba(255, 100, 0, 0.6)'; cell.style.transition = 'background-color 0.3s ease-out'; } } setTimeout(() => { cellsInRow.forEach(cell => { cell.style.backgroundColor = ''; cell.style.transition = ''; }); }, 300); setTimeout(() => { const unitsInRow = units.filter(u => u.y === targetRow && u.hp > 0 && !u.element?.classList.contains('dead')); let soundPlayed = false; let unitsKilled = []; unitsInRow.forEach(unit => { if (!soundPlayed) { playSfx(sfx.fireballHit); soundPlayed = true; } unit.hp -= FLAME_WAVE_DAMAGE; if (unit.hp < 0) unit.hp = 0; showDamagePopup(unit.x, unit.y, FLAME_WAVE_DAMAGE); if (unit.element) { unit.element.classList.add('unit-hit-flash'); setTimeout(() => { unit.element?.classList.remove('unit-hit-flash'); }, 200); } if (clickedUnitObject?.id === unit.id) { updateUnitInfo(unit); } if (unit.hp <= 0) { unitsKilled.push(unit); } }); unitsKilled.forEach(unit => removeUnit(unit)); isProcessing = false; checkWinLossConditions(); updateTurnDisplay(); }, 150); }
+        function castFrostNova(centerX, centerY) { if (isProcessing || currentTurn !== 'player' || !(currentLevel >= FROST_NOVA_UNLOCK_LEVEL) || !hasFrostNova) { showFeedback("Cannot cast Frost Nova now.", "feedback-error"); playSfx(sfx.error); frostNovaSelected = false; updateSpellUI(); clearFrostNovaPreview(); if(isProcessing && currentTurn === 'player') isProcessing = false; return; } isProcessing = true; updateTurnDisplay(); frostNovaSelected = false; hasFrostNova = false; updateSpellUI(); gameBoard.classList.remove('frost-nova-targeting'); clearFrostNovaPreview(); playSfx(sfx.frostNovaCast); console.log(`Casting Frost Nova centered at (${centerX}, ${centerY})`); setTimeout(() => { let unitsFrozenCount = 0; let newlyFrozen = false; for (let dx = -1; dx <= 1; dx++) { for (let dy = -1; dy <= 1; dy++) { const targetX = centerX + dx; const targetY = centerY + dy; if (targetX >= 0 && targetX < GRID_COLS && targetY >= 0 && targetY < GRID_ROWS) { const unit = getUnitAt(targetX, targetY); if (unit && unit.team === 'enemy' && unit.hp > 0 && !unit.element?.classList.contains('dead')) { if (!unit.isFrozen) newlyFrozen = true; unit.isFrozen = true; unit.frozenTurnsLeft = FROST_NOVA_DURATION; console.log(`Froze unit ${unit.id} for ${unit.frozenTurnsLeft} turns.`); showFreezePopup(unit.x, unit.y); updateUnitPosition(unit); if (clickedUnitObject?.id === unit.id) { updateUnitInfo(unit); } unitsFrozenCount++; } } } } if (unitsFrozenCount > 0 && newlyFrozen) { playSfx(sfx.frostNovaHit); } else if (unitsFrozenCount === 0) { playSfx(sfx.error); showFeedback("No enemies hit by Frost Nova.", "feedback-error"); } isProcessing = false; checkWinLossConditions(); updateTurnDisplay(); }, 200); }
+        function castHeal(targetUnit) { if (!targetUnit || targetUnit.team !== 'player' || targetUnit.hp <= 0 || targetUnit.element?.classList.contains('dead')) { showFeedback("Invalid Heal target.", "feedback-error"); playSfx(sfx.error); healSelected = false; updateSpellUI(); if(isProcessing && currentTurn === 'player') isProcessing = false; return; } if (targetUnit.hp >= targetUnit.maxHp) { showFeedback("Unit already at full HP.", "feedback-error"); playSfx(sfx.error); healSelected = false; updateSpellUI(); if(isProcessing && currentTurn === 'player') isProcessing = false; return; } isProcessing = true; updateTurnDisplay(); healSelected = false; hasHeal = false; updateSpellUI(); gameBoard.classList.remove('heal-targeting'); playSfx(sfx.heal); console.log(`Casting Heal on ${targetUnit.id}`); const healApplied = Math.min(HEAL_AMOUNT, targetUnit.maxHp - targetUnit.hp); targetUnit.hp += healApplied; showHealPopup(targetUnit.x, targetUnit.y, healApplied); if (targetUnit.element) { targetUnit.element.classList.add('unit-hit-flash'); setTimeout(() => { targetUnit.element?.classList.remove('unit-hit-flash'); }, 200); } if (clickedUnitObject?.id === targetUnit.id) { updateUnitInfo(targetUnit); } isProcessing = false; updateTurnDisplay(); checkWinLossConditions(); }
 
-        // --- Game Logic Actions (MODIFIED: moveUnit calls updated updateUnitPosition) ---
-        function handleFireballClick() {
-            if (isProcessing || currentTurn !== 'player' || !hasFireball) return;
-            initializeAudio(); // Initialize on interaction
-            fireballSelected = !fireballSelected;
-            if (fireballSelected && selectedUnit) { deselectUnit(); } // Deselect unit if selecting fireball
-            // playSfx(sfxUIClick); // Optional UI sound
-            console.log(`Fireball toggled: ${fireballSelected}`);
-            updateSpellUI(); // Update visual state of fireball icon and board cursor
-        }
-        function selectUnit(unit) {
-             if (!unit || unit.acted || unit.team !== 'player' || currentTurn !== 'player') return;
-             if (fireballSelected) { fireballSelected = false; updateSpellUI(); } // Cancel fireball if selecting unit
-             deselectUnit(); // Deselect any previously selected unit
-             selectedUnit = unit;
-             if (unit.element) unit.element.classList.add('selected');
-             highlightMoves(unit); // Show valid moves/attacks
-             updateUnitInfo(unit); // Update UI panel
-             playSfx(sfxSelect);
-        }
-        function deselectUnit() {
-             if (selectedUnit?.element) selectedUnit.element.classList.remove('selected');
-             selectedUnit = null;
-             clearHighlights(); // Remove move/attack highlights
-             // Don't clear unit info here, let clicks handle that
-        }
-        function finishAction(unit) {
-             if (!unit || unit.acted) return;
-             unit.acted = true;
-             console.log(`Action finished for ${unit.type} ${unit.id}, acted=${unit.acted}`);
-             updateTurnDisplay(); // Update actions left count
-             checkWinLossConditions(); // Check game state after action
-        }
-        function moveUnit(unit, targetX, targetY) {
-             if (!unit) return;
-             unit.x = targetX;
-             unit.y = targetY;
-             updateUnitPosition(unit); // Update the element's grid position
-             playSfx(sfxMove);
-        }
-        function attackUnit(attacker, defender) {
-             if (!attacker || !defender) return;
-             playSfx(sfxSuccess); // Sound for successful attack start
-             const dmg = attacker.atk;
-             defender.hp -= dmg;
-             if (defender.hp < 0) defender.hp = 0;
-             showDamagePopup(defender.x, defender.y, dmg); // Display damage number (also plays sfxHit)
-             if (defender.element) { // Visual feedback on hit
-                 defender.element.style.filter = 'brightness(1.8)';
-                 setTimeout(() => { if (defender.element) defender.element.style.filter = ''; }, 150);
-             }
-             updateUnitInfo(clickedUnitObject?.id === defender.id ? defender : clickedUnitObject); // Update info if defender was being viewed
-             if (defender.hp <= 0) {
-                 removeUnit(defender); // Handle unit death (plays sfxDefeat)
-             }
-             checkWinLossConditions(); // Check game state after attack resolves
-        }
-        function castFireball(targetUnit) {
-            if (!targetUnit || targetUnit.team !== 'enemy') return;
-            playSfx(sfxFireballCast); // Play cast sound
-            isProcessing = true; // Prevent other actions during animation/effect
-            // Visual effect on target before damage
-            if (targetUnit.element) {
-                targetUnit.element.style.filter = 'sepia(1) saturate(3) hue-rotate(-40deg) brightness(1.2)';
-                setTimeout(() => { if (targetUnit.element) targetUnit.element.style.filter = ''; }, 250);
-            }
-            // Apply damage after a short delay
-            setTimeout(() => {
-                playSfx(sfxFireballHit); // Play hit sound
-                targetUnit.hp -= FIREBALL_DAMAGE;
-                if (targetUnit.hp < 0) targetUnit.hp = 0;
-                showDamagePopup(targetUnit.x, targetUnit.y, FIREBALL_DAMAGE); // Display damage (also plays sfxHit)
-                updateUnitInfo(clickedUnitObject?.id === targetUnit.id ? targetUnit : clickedUnitObject); // Update info if target was viewed
-                if (targetUnit.hp <= 0) {
-                    removeUnit(targetUnit); // Handle unit death (plays sfxDefeat)
-                }
-                checkWinLossConditions(); // Check game state
-                isProcessing = false; // Allow actions again
-            }, 100); // Delay matches sound/visual timing potentially
-        }
-        function removeUnit(unit) {
-            if (!unit) return;
-            playSfx(sfxDefeat); // Play death sound
-            unit.element?.remove(); // Remove element from DOM
-            units = units.filter(u => u.id !== unit.id); // Remove from active units array
-            // If the removed unit was selected or being viewed, clear selection/info
-            if (selectedUnit?.id === unit.id) { deselectUnit(); updateUnitInfo(null); }
-            else if (clickedUnitObject?.id === unit.id) { updateUnitInfo(null); }
-            updateTurnDisplay(); // May affect actions left if player unit is removed (unlikely scenario)
-            checkWinLossConditions(); // Check game state after removal
-        }
+        // --- Unit Removal ---
+        function removeUnit(unit) { /* (Code identical to previous version) */
+             if (!unit) return; const unitIndex = units.findIndex(u => u.id === unit.id); const unitElement = unit.element || gameBoard.querySelector(`.unit[data-id='${unit.id}']`); unit.hp = 0; if (unitIndex !== -1) { units.splice(unitIndex, 1); }
+             if (unitElement && unitElement.parentNode) { if (!unitElement.classList.contains('dead')) { const deathSpriteUrl = UNIT_DATA[unit.type]?.deadSpriteUrl; if (deathSpriteUrl) { unitElement.style.backgroundImage = `url('${deathSpriteUrl}')`; } unitElement.classList.add('dead'); unitElement.classList.remove('selected', 'acted', 'unit-hit-flash', 'player', 'enemy', 'valid-attack', 'valid-move', 'frozen', 'is-moving'); unitElement.style.filter = 'none'; unitElement.style.boxShadow = 'none'; unitElement.style.opacity = '1'; unitElement.style.transform = 'none'; unitElement.style.pointerEvents = 'none'; } const deathDisplayTime = 1500; const fadeDurationString = getComputedStyle(document.documentElement).getPropertyValue('--death-fade-time').trim().toLowerCase(); let fadeDuration = 1000; if (fadeDurationString.endsWith('ms')) fadeDuration = parseFloat(fadeDurationString); else if (fadeDurationString.endsWith('s')) fadeDuration = parseFloat(fadeDurationString) * 1000; fadeDuration = Math.max(fadeDuration, 100); setTimeout(() => { if (unitElement?.parentNode && unitElement.classList.contains('dead') && !unitElement.classList.contains('fading-out')) { unitElement.classList.add('fading-out'); setTimeout(() => { unitElement?.remove(); }, fadeDuration); } }, deathDisplayTime); } else { console.log(`Unit ${unit.id} element not found for removal.`); }
+             if (selectedUnit?.id === unit.id) { deselectUnit(); } else if (clickedUnitObject?.id === unit.id) { updateUnitInfo(null); } checkWinLossConditions();
+         }
 
-        // --- Utility Functions (Unchanged) ---
-        function getUnitAt(x, y) { return units.find(unit => unit.x === x && unit.y === y); }
+        // --- Utilities ---
+        function getUnitAt(x, y) { return units.find(unit => unit.x === x && unit.y === y && unit.hp > 0 && !unit.element?.classList.contains('dead')); }
         function getCellElement(x, y) { return gameBoard.querySelector(`.grid-cell[data-x='${x}'][data-y='${y}']`); }
         function getDistance(unitA, unitB) { if (!unitA || !unitB) return Infinity; return Math.abs(unitA.x - unitB.x) + Math.abs(unitA.y - unitB.y); }
-        function getValidMoves(unit) { if (!unit) return []; const moves = []; const queue = [{ x: unit.x, y: unit.y, distance: 0 }]; const visited = new Set([`${unit.x},${unit.y}`]); while (queue.length > 0) { const current = queue.shift(); const neighbors = [{ x: current.x, y: current.y - 1 }, { x: current.x, y: current.y + 1 }, { x: current.x - 1, y: current.y }, { x: current.x + 1, y: current.y }]; for (const neighbor of neighbors) { const key = `${neighbor.x},${neighbor.y}`; if (neighbor.x < 0 || neighbor.x >= GRID_COLS || neighbor.y < 0 || neighbor.y >= GRID_ROWS || visited.has(key)) continue; const newDistance = current.distance + 1; if (newDistance > unit.mov) continue; const unitAtNeighbor = getUnitAt(neighbor.x, neighbor.y); if (unitAtNeighbor) continue; /* Cannot move onto occupied cell */ moves.push({ x: neighbor.x, y: neighbor.y }); visited.add(key); queue.push({ x: neighbor.x, y: neighbor.y, distance: newDistance }); } } return moves; }
-        function getValidAttacks(unit) { const attacks = []; if (!unit) return attacks; units.forEach(target => { if (target.team !== unit.team && target.hp > 0 && getDistance(unit, target) === 1) { attacks.push(target.id); } }); return attacks; }
+        function getValidMoves(unit) { if (!unit || unit.acted || unit.isFrozen || unit.hp <= 0 || unit.element?.classList.contains('dead')) return []; const moves = []; const queue = [{ x: unit.x, y: unit.y, distance: 0 }]; const visited = new Set([`${unit.x},${unit.y}`]); while (queue.length > 0) { const current = queue.shift(); const neighbors = [ { x: current.x, y: current.y - 1 }, { x: current.x, y: current.y + 1 }, { x: current.x - 1, y: current.y }, { x: current.x + 1, y: current.y } ]; for (const neighbor of neighbors) { const key = `${neighbor.x},${neighbor.y}`; if (neighbor.x < 0 || neighbor.x >= GRID_COLS || neighbor.y < 0 || neighbor.y >= GRID_ROWS || visited.has(key)) continue; const newDistance = current.distance + 1; if (newDistance > unit.mov) continue; const unitAtNeighbor = getUnitAt(neighbor.x, neighbor.y); if (unitAtNeighbor) continue; moves.push({ x: neighbor.x, y: neighbor.y }); visited.add(key); queue.push({ x: neighbor.x, y: neighbor.y, distance: newDistance }); } } return moves; }
+        function getValidAttacks(unit) { const attacks = []; if (!unit || unit.acted || unit.isFrozen || unit.hp <= 0 || unit.element?.classList.contains('dead')) return attacks; units.forEach(target => { if (target.team !== unit.team && target.hp > 0 && !target.element?.classList.contains('dead') && getDistance(unit, target) === 1) { attacks.push(target.id); } }); return attacks; }
 
-        // --- Turn Management & AI (Unchanged - includes initializeAudio call in endTurn) ---
-        function endTurn() {
-            if ((currentTurn === 'player' && isProcessing) || currentTurn === 'enemy') return;
-            initializeAudio(); // Initialize on interaction
-            // playSfx(sfxUIClick); // Optional UI sound
-            deselectUnit(); // Clear player selection
-            fireballSelected = false; updateSpellUI(); // Reset fireball state
-            updateUnitInfo(null); // Clear info panel
-            feedbackArea.textContent = ''; feedbackArea.className = ''; // Clear feedback messages
-
-            if (currentTurn === 'player') {
-                 isProcessing = true; // Block player input during AI turn
-                 currentTurn = 'enemy';
-                 units.filter(u => u.team === 'enemy').forEach(u => u.acted = false); // Reset enemy actions
-                 updateTurnDisplay(); // Show "AI Thinking..."
-                 setTimeout(runAITurn, 50); // Start AI logic after a brief delay
-            }
-            // No transition from enemy to player here, AI turn completion handles that
+        // --- Turn Management & AI ---
+        function processFreezeTicks(team) { let thawedCount = 0; units.filter(u => u.team === team && u.isFrozen && u.hp > 0 && !u.element?.classList.contains('dead')).forEach(unit => { unit.frozenTurnsLeft--; console.log(`Unit ${unit.id} freeze ticks down to ${unit.frozenTurnsLeft}`); if (unit.frozenTurnsLeft <= 0) { unit.isFrozen = false; thawedCount++; console.log(`Unit ${unit.id} thawed.`); updateUnitPosition(unit); } if (clickedUnitObject?.id === unit.id) { updateUnitInfo(unit); } }); return thawedCount; }
+        function endTurn() { if (currentTurn !== 'player' || isProcessing || isGameOver()) { return; } if (!audioInitialized) initializeAudio(); playSfx(sfx.select); console.log("--- Player Ends Turn ---"); isProcessing = true; deselectUnit(); fireballSelected = false; flameWaveSelected = false; frostNovaSelected = false; healSelected = false; updateSpellUI(); gameBoard.className = ''; clearFrostNovaPreview(); updateUnitInfo(null); showFeedback(''); currentTurn = 'enemy'; console.log("Processing enemy freeze ticks..."); processFreezeTicks('enemy'); units.filter(u => u.team === 'enemy' && u.hp > 0 && !u.element?.classList.contains('dead')).forEach(u => { u.acted = false; updateUnitPosition(u); }); updateTurnDisplay(); setTimeout(runAITurn, 400); }
+        endTurnButton.addEventListener('click', () => { if (currentTurn === 'player' && !isProcessing && !isGameOver()) endTurn(); });
+        function runAITurn() { /* (Code identical to previous version) */
+            console.log("--- AI Turn Start ---"); const unitsToAct = units.filter(u => u.team === 'enemy' && u.hp > 0 && !u.acted && !u.isFrozen && !u.element?.classList.contains('dead')); let currentAIUnitIndex = 0; const totalActions = unitsToAct.length; const actionInterval = 150; const minActionDuration = MOVE_ANIMATION_DURATION_MS + 100; console.log(`AI processing ${totalActions} active units (Interval: ${actionInterval}ms, Min Duration: ${minActionDuration}ms)`);
+            async function processNextAIUnit() { if (isGameOver()) { console.log("AI turn interrupted: Game Over."); endAITurnSequence(true); return; } if (currentAIUnitIndex >= totalActions) { endAITurnSequence(false); return; } const unitToProcess = unitsToAct[currentAIUnitIndex]; currentAIUnitIndex++; const stillValidUnit = units.find(u => u.id === unitToProcess.id && u.hp > 0 && !u.acted && !u.isFrozen && !u.element?.classList.contains('dead'));
+                if (stillValidUnit) { const actionStartTime = Date.now(); try { isProcessing = true; updateTurnDisplay(); await performAIAction(stillValidUnit); } catch(e) { console.error(`AI Error processing ${stillValidUnit?.id}:`, e); if (stillValidUnit && !stillValidUnit.acted && stillValidUnit.hp > 0) { finishAction(stillValidUnit); } } finally { isProcessing = false; const actionEndTime = Date.now(); const duration = actionEndTime - actionStartTime; const delayNeeded = Math.max(actionInterval, minActionDuration - duration); console.log(`AI Action ${stillValidUnit.id} took ${duration}ms. Delaying next by ${delayNeeded}ms`); setTimeout(processNextAIUnit, delayNeeded); } } else { console.log(`AI skipping ${unitToProcess.id} (invalid)`); setTimeout(processNextAIUnit, 50); } }
+            function endAITurnSequence(interrupted) { console.log(`--- AI Turn End --- (Interrupted: ${interrupted})`); isProcessing = true; if (!isGameOver()) { currentTurn='player'; console.log("Processing player freeze ticks..."); processFreezeTicks('player'); units.forEach(u => { if (u.team === 'player' && u.hp > 0 && !u.element?.classList.contains('dead')) { u.acted = false; updateUnitPosition(u); } }); hasFireball = (currentLevel >= FIREBALL_UNLOCK_LEVEL); hasFlameWave = (currentLevel >= FLAME_WAVE_UNLOCK_LEVEL); hasFrostNova = (currentLevel >= FROST_NOVA_UNLOCK_LEVEL); hasHeal = (currentLevel >= HEAL_UNLOCK_LEVEL); updateSpellUI(); showFeedback("Player Turn!"); isProcessing = false; updateTurnDisplay(); console.log("Player turn started."); } else { console.log("AI turn ended, game over state detected."); endTurnButton.disabled = true; endTurnButton.classList.add('disabled'); isProcessing = true; updateTurnDisplay(); } }
+            if (totalActions === 0) { console.log("AI: No active units to act."); endAITurnSequence(false); } else { setTimeout(processNextAIUnit, 100); }
         }
-        endTurnButton.addEventListener('click', () => { if (currentTurn === 'player' && !isProcessing) endTurn(); });
+        async function performAIAction(unit) { /* (Code identical to previous version) */
+            const livingPlayers = units.filter(u => u.team === 'player' && u.hp > 0 && !u.element?.classList.contains('dead')); if (livingPlayers.length === 0) { if (!unit.acted) finishAction(unit); return; }
+            const possibleAttacks = getValidAttacks(unit); if (possibleAttacks.length > 0) { let targetToAttack = null; let lowestHp = Infinity; possibleAttacks.forEach(id => { const target = units.find(u => u.id === id); if (target && target.hp > 0 && !target.element?.classList.contains('dead')) { if (target.hp < lowestHp) { lowestHp = target.hp; targetToAttack = target; } else if (!targetToAttack) { targetToAttack = target; lowestHp = target.hp; } } }); if (targetToAttack) { console.log(`AI ${unit.id} attacking ${targetToAttack.id}`); attackUnit(unit, targetToAttack); return; } }
+            let nearestPlayer = null; let minDistance = Infinity; livingPlayers.forEach(p => { if(p.hp > 0 && !p.element?.classList.contains('dead')) { const d = getDistance(unit, p); if (d < minDistance) { minDistance = d; nearestPlayer = p; } } }); if (nearestPlayer) { const possibleMoves = getValidMoves(unit); if (possibleMoves.length > 0) { let bestMove = null; let shortestDistToTarget = minDistance; possibleMoves.forEach(moveOption => { const distAfterMove = Math.abs(moveOption.x - nearestPlayer.x) + Math.abs(moveOption.y - nearestPlayer.y); if (distAfterMove < shortestDistToTarget) { shortestDistToTarget = distAfterMove; bestMove = moveOption; } else if (!bestMove && distAfterMove < minDistance) { bestMove = moveOption; shortestDistToTarget = distAfterMove; } else if (!bestMove) { bestMove = moveOption; } }); if (bestMove) { console.log(`AI ${unit.id} moving to (${bestMove.x}, ${bestMove.y}) towards ${nearestPlayer.id}`); await moveUnit(unit, bestMove.x, bestMove.y); finishAction(unit); return; } } }
+            console.log(`AI ${unit.id} cannot attack or move effectively. Ending action.`); finishAction(unit);
+        }
 
-        // --- AI Logic (Unchanged) ---
-        function runAITurn() { isProcessing=true; const toAct=units.filter(u=>u.team==='enemy'&&u.hp>0&&!u.acted); let done=0; const total=toAct.length; const interval=350; let delay=0; function checkDone(){ done++; if(done>=total) setTimeout(()=>{if(!isGameOver()){currentTurn='player'; units.filter(u=>u.team==='player').forEach(u=>u.acted=false); updateTurnDisplay(); isProcessing=false; console.log("AI Turn End. Player Turn.");} else { isProcessing = false; }}, 50);} if(total===0){ setTimeout(()=>{if(!isGameOver()){currentTurn='player'; units.filter(u=>u.team==='player').forEach(u=>u.acted=false); updateTurnDisplay(); isProcessing=false; console.log("AI Turn End (no units). Player Turn.");}}, 100); return; } toAct.forEach(u=>{ setTimeout(()=>{ if(isGameOver()){checkDone(); return;} try { const stillValid=units.find(un=>un.id===u.id&&un.hp>0&&!un.acted); if(stillValid) performAIAction(stillValid); else if(u) u.acted=true;} catch(e){console.error(`AI Error ${u?.id}:`,e); if(u) u.acted=true;} finally {checkDone();} }, delay); delay+=interval; }); }
-        function performAIAction(unit) { const targets=units.filter(u=>u.team==='player'&&u.hp>0); if(targets.length===0){unit.acted=true; return;} let attackTarget=null; const attacks=getValidAttacks(unit); if(attacks.length>0){let lowHP=Infinity; attacks.forEach(id=>{const t=units.find(u=>u.id===id); if(t && t.hp < lowHP) {lowHP=t.hp; attackTarget=t;}}); } if(attackTarget){attackUnit(unit,attackTarget); unit.acted=true; return;} let nearest=null; let minDist=Infinity; targets.forEach(t=>{const d=getDistance(unit,t); if(d<minDist){minDist=d; nearest=t;}}); if(nearest){ const moves=getValidMoves(unit); if(moves.length > 0){let bestMove=null; let closest=minDist; moves.forEach(m=>{const d = Math.abs(m.x-nearest.x)+Math.abs(m.y-nearest.y); if(d<closest){closest=d; bestMove=m;}}); if(bestMove && (bestMove.x!==unit.x || bestMove.y !== unit.y)){moveUnit(unit,bestMove.x,bestMove.y); unit.acted=true; return;}}} unit.acted=true;}
-
-        // --- Win/Loss & Level Progression (Unchanged) ---
-        function checkWinLossConditions() { if (winCheckTimeout) clearTimeout(winCheckTimeout); winCheckTimeout = setTimeout(() => { if (isGameOver() || isProcessing) return; const pLeft = units.some(u => u.team === 'player' && u.hp > 0); const eLeft = units.some(u => u.team === 'enemy' && u.hp > 0); if (!eLeft && pLeft) { console.log(`Level ${currentLevel} Cleared!`); /* playSfx(sfxLevelWin); */ isProcessing = true; feedbackArea.textContent = `Level ${currentLevel} Cleared!`; feedbackArea.className = 'feedback-levelup'; setTimeout(startNextLevel, 1500); } else if (!pLeft) { gameOver(false); } }, 250); }
-        function startNextLevel() { currentLevel++; console.log(`--- Start Lvl ${currentLevel} ---`); stopMusic(); const randomIndex = Math.floor(Math.random() * musicTracks.length); const selectedTrack = musicTracks[randomIndex]; console.log("Selected music for next level:", selectedTrack); bgMusic.src = selectedTrack; bgMusic.load(); startMusic(); hasFireball = (currentLevel >= FIREBALL_UNLOCK_LEVEL); fireballSelected = false; units = []; unitCounter = 0; selectedUnit = null; validMoves = []; validAttacks = []; currentTurn = 'player'; document.querySelectorAll('#game-board .unit, #game-board .damage-popup').forEach(el => el.remove()); clearHighlights(); updateLevelDisplay(); updateSpellAreaVisibility(); updateSpellUI(); updateUnitInfo(null); endTurnButton.disabled = false; endTurnButton.classList.remove('disabled'); feedbackArea.textContent = `Lvl ${currentLevel} Start!`; feedbackArea.className = 'feedback-levelup'; setTimeout(() => { if (!isGameOver()) { feedbackArea.textContent = ''; feedbackArea.className = ''; } }, 2000); requestAnimationFrame(() => { calculateCellSize(); spawnInitialUnits(); updateTurnDisplay(); renderAllUnits(); isProcessing = false; console.log(`Lvl ${currentLevel} ready.`); }); }
+        // --- Win/Loss & Level Progression (Added Heal reset) ---
+        function checkWinLossConditions() { if (winCheckTimeout) clearTimeout(winCheckTimeout); winCheckTimeout = setTimeout(() => { if (isGameOver()) { winCheckTimeout = null; return; } const playersLeft = units.some(u => u.team === 'player' && u.hp > 0 && !u.element?.classList.contains('dead')); const enemiesLeft = units.some(u => u.team === 'enemy' && u.hp > 0 && !u.element?.classList.contains('dead')); console.log(`WinCheck: Players=${playersLeft}, Enemies=${enemiesLeft}`); if (!enemiesLeft && playersLeft) { console.log(`Lvl ${currentLevel} Cleared!`); playSfx(sfx.success); isProcessing = true; updateTurnDisplay(); showFeedback(`Level ${currentLevel} Cleared!`, 'feedback-levelup'); setTimeout(startNextLevel, 1800); } else if (!playersLeft) { console.log("Loss Condition Met."); gameOver(false); } winCheckTimeout = null; }, 100); }
+        function startNextLevel() { if (isGameOver()) { return; } currentLevel++; console.log(`--- Start Lvl ${currentLevel} ---`); stopMusic(); selectAndLoadMusic(); isProcessing = true; units = []; unitCounter = 0; selectedUnit = null; clickedUnitObject = null; validMoves = []; validAttacks = []; currentTurn = 'player'; fireballSelected = false; flameWaveSelected = false; frostNovaSelected = false; healSelected = false;
+            hasFireball = (currentLevel >= FIREBALL_UNLOCK_LEVEL); hasFlameWave = (currentLevel >= FLAME_WAVE_UNLOCK_LEVEL); hasFrostNova = (currentLevel >= FROST_NOVA_UNLOCK_LEVEL); hasHeal = (currentLevel >= HEAL_UNLOCK_LEVEL);
+            document.querySelectorAll('#game-board .unit, #game-board .damage-popup, #game-board .freeze-popup, #game-board .heal-popup').forEach(el => el.remove()); clearHighlights(); gameBoard.className = ''; updateLevelDisplay();
+            updateSpellUI(); updateUnitInfo(null); endTurnButton.disabled = false; endTurnButton.classList.remove('disabled'); showFeedback(`Level ${currentLevel} Start!`, 'feedback-levelup'); setTimeout(() => { if (!isGameOver() && feedbackArea.textContent === `Level ${currentLevel} Start!`) showFeedback(''); }, 2000); requestAnimationFrame(() => { try { calculateCellSize(); spawnInitialUnits(); units.forEach(u => { if (u.team === 'player') u.acted = false; u.isFrozen = false; u.frozenTurnsLeft = 0; }); renderAllUnits(); updateTurnDisplay(); isProcessing = false; startMusicIfNotPlaying(); console.log(`Lvl ${currentLevel} ready.`); } catch (e) { console.error("Error during startNextLevel rAF:", e); isProcessing = false; } }); }
         function isGameOver() { return gameOverScreen.style.display !== 'none'; }
-        function gameOver(playerWon) { if (playerWon || isGameOver()) return; console.log(`--- Game Over Lvl ${currentLevel} ---`); stopMusic(); playSfx(sfxGameOver); isProcessing = true; deselectUnit(); updateUnitInfo(null); endTurnButton.disabled = true; endTurnButton.classList.add('disabled'); gameOverTitle.textContent = "Defeat!"; gameOverMessage.textContent = `Fallen on Level ${currentLevel}!`; gameOverScreen.style.display = 'flex'; window.removeEventListener('resize', handleResize); document.removeEventListener('fullscreenchange', updateFullscreenButton); document.removeEventListener('webkitfullscreenchange', updateFullscreenButton); document.removeEventListener('mozfullscreenchange', updateFullscreenButton); document.removeEventListener('MSFullscreenChange', updateFullscreenButton); if (winCheckTimeout) clearTimeout(winCheckTimeout); if (resizeTimeout) clearTimeout(resizeTimeout); }
+        function gameOver(playerWon) { if (isGameOver()) { return; } console.log(`--- Game Over --- Player Won: ${playerWon}, Final Level: ${currentLevel}`); stopMusic(); if (!playerWon) { playSfx(sfx.gameOver); } else { playSfx(sfx.success); } isProcessing = true; deselectUnit(); updateUnitInfo(null); fireballSelected = false; flameWaveSelected = false; frostNovaSelected = false; healSelected = false; updateSpellUI(); gameBoard.className = ''; clearFrostNovaPreview(); endTurnButton.disabled = true; endTurnButton.classList.add('disabled'); gameOverTitle.textContent = playerWon ? "Victory!" : "Defeat!"; gameOverMessage.textContent = playerWon ? `You are victorious!` : `You have fallen on Level ${currentLevel}!`; gameOverScreen.style.display = 'flex'; window.removeEventListener('resize', handleResize); document.removeEventListener('fullscreenchange', updateFullscreenButton); document.removeEventListener('webkitfullscreenchange', updateFullscreenButton); document.removeEventListener('mozfullscreenchange', updateFullscreenButton); document.removeEventListener('MSFullscreenChange', updateFullscreenButton); if (winCheckTimeout) clearTimeout(winCheckTimeout); winCheckTimeout = null; if (resizeTimeout) clearTimeout(resizeTimeout); resizeTimeout = null; updateTurnDisplay(); }
 
-        // --- Global Event Listeners (Unchanged) ---
+        // --- Mute Function ---
+        function toggleMute() { if (!audioInitialized) initializeAudio(); isMuted = !isMuted; bgMusic.muted = isMuted; Object.values(sfx).forEach(s => s.muted = isMuted); updateMuteButtonVisual(); if (!isMuted && audioInitialized && !isGameOver() && startScreen.style.display === 'none') { startMusicIfNotPlaying(); } else if (isMuted) { stopMusic(); } console.log("Muted:", isMuted); }
+        function updateMuteButtonVisual() { if (muteButton) { muteButton.innerHTML = isMuted ? '🔇' : '🔊'; muteButton.title = isMuted ? 'Unmute (M)' : 'Mute Sound (M)'; } }
+
+        // --- Global Listeners (Added Heal listener) ---
         document.addEventListener('DOMContentLoaded', () => {
-            console.log("DOMContentLoaded Fired.");
-            if (muteButton) {
-                muteButton.addEventListener('click', () => {
-                    initializeAudio(); // Initialize on interaction
-                    isMuted = !isMuted;
-                    bgMusic.muted = isMuted; sfxSuccess.muted = isMuted; sfxError.muted = isMuted; sfxGameOver.muted = isMuted; sfxHit.muted = isMuted; sfxDefeat.muted = isMuted; sfxMove.muted = isMuted; sfxSelect.muted = isMuted; sfxFireballCast.muted = isMuted; sfxFireballHit.muted = isMuted;
-                    updateMuteButtonVisual();
-                    if (!isMuted && audioInitialized && !isGameOver() && startScreen.style.display === 'none') { startMusic(); } else if (isMuted) { bgMusic.pause(); }
-                });
-            } else { console.error("Mute button not found!"); }
-
-            const fbElement = document.getElementById('fireball-spell'); if(fbElement){fbElement.addEventListener('click', handleFireballClick);} else {console.error("FB Spell not found!");}
-            if(fullscreenButton){fullscreenButton.addEventListener('click', toggleFullscreen);} else {console.error("Fullscreen button not found!");}
-            if(startButton){startButton.addEventListener('click', () => { initGame(); });} else {console.error("Start Button not found!");}
-            if(restartButton){restartButton.addEventListener('click', () => { initGame(); });} else {console.error("Restart Button not found!");}
-
-            startScreen.style.display = 'flex'; gameOverScreen.style.display = 'none'; endTurnButton.classList.add('disabled'); endTurnButton.disabled = true; updateUnitInfo(null); updateLevelDisplay(); updateSpellAreaVisibility(); updateSpellUI(); updateTurnDisplay(); updateMuteButtonVisual(); setupBoard(); // Setup board structure initially
-            requestAnimationFrame(() => { calculateCellSize(); updateFullscreenButton(); }); // Calculate initial size after layout
-            console.log("Initial setup complete. Waiting for user interaction.");
+            console.log("DOMContentLoaded.");
+            try { const durationStr = getComputedStyle(document.documentElement).getPropertyValue('--move-anim-time').trim(); if (durationStr.endsWith('ms')) { MOVE_ANIMATION_DURATION_MS = parseFloat(durationStr); } else if (durationStr.endsWith('s')) { MOVE_ANIMATION_DURATION_MS = parseFloat(durationStr) * 1000; } console.log(`Move animation duration set to: ${MOVE_ANIMATION_DURATION_MS}ms`); } catch (e) { console.warn("Could not read --move-anim-time from CSS, using default 250ms.", e); MOVE_ANIMATION_DURATION_MS = 250; }
+            if (muteButton) muteButton.addEventListener('click', toggleMute);
+            if (fireballElement) fireballElement.addEventListener('click', handleFireballClick);
+            if (flameWaveElement) flameWaveElement.addEventListener('click', handleFlameWaveClick);
+            if (frostNovaElement) frostNovaElement.addEventListener('click', handleFrostNovaClick);
+            if (healElement) healElement.addEventListener('click', handleHealClick); // <<< NEW
+            if (fullscreenButton) fullscreenButton.addEventListener('click', toggleFullscreen);
+            if (startButton) startButton.addEventListener('click', () => { if (!audioInitialized) initializeAudio(); initGame(); });
+            if (restartButton) restartButton.addEventListener('click', () => { if (!audioInitialized) initializeAudio(); initGame(); });
+            startScreen.style.display = 'flex'; gameOverScreen.style.display = 'none'; endTurnButton.classList.add('disabled'); endTurnButton.disabled = true; updateUnitInfo(null); updateLevelDisplay(); setupBoard(); updateSpellUI(); updateTurnDisplay(); updateMuteButtonVisual(); requestAnimationFrame(() => { try { calculateCellSize(); updateFullscreenButton(); } catch(e) { console.error("Initial rAF error:", e)} }); window.addEventListener('keydown', handleKeyDown); console.log("Initial setup complete.");
         });
-        function updateMuteButtonVisual() { if (muteButton) { muteButton.innerHTML = isMuted ? '🔇' : '🔊'; muteButton.title = isMuted ? 'Unmute' : 'Mute Sound'; } }
-        window.addEventListener('keydown', function(event) { if (event.shiftKey && event.code === 'KeyT') { if (isGameOver() || startScreen.style.display !== 'none' || isProcessing || currentTurn === 'enemy') return; console.warn("CHEAT: Skip Level!"); isProcessing = true; setTimeout(startNextLevel, 50); } });
+
+        // --- Hotkey Handler (Added Heal hotkey, Escape key) ---
+        function handleKeyDown(event) {
+            if (isProcessing || (event.metaKey || event.ctrlKey || event.altKey) && !(event.shiftKey && event.code === 'KeyT')) return;
+            const gameActive = startScreen.style.display === 'none' && gameOverScreen.style.display === 'none';
+            switch(event.key.toLowerCase()) {
+                case '1': if (gameActive && currentTurn === 'player') { handleFireballClick(); event.preventDefault(); } break;
+                case '2': if (gameActive && currentTurn === 'player') { handleFlameWaveClick(); event.preventDefault(); } break;
+                case '3': if (gameActive && currentTurn === 'player') { handleFrostNovaClick(); event.preventDefault(); } break;
+                case '4': if (gameActive && currentTurn === 'player') { handleHealClick(); event.preventDefault(); } break; // <<< NEW
+                case 'e': if (gameActive && currentTurn === 'player') { endTurn(); event.preventDefault(); } break;
+                case 'm': toggleMute(); event.preventDefault(); break;
+                case 'f': toggleFullscreen(); event.preventDefault(); break;
+                case 't': if (event.shiftKey && gameActive && currentTurn === 'player') { console.warn("CHEAT: Skip Level!"); isProcessing = true; updateTurnDisplay(); deselectUnit(); showFeedback("Cheating...", "feedback-levelup"); playSfx(sfx.success); setTimeout(startNextLevel, 100); event.preventDefault(); } break;
+                case 'escape': if (gameActive && currentTurn === 'player') { if (selectedUnit) { deselectUnit(); playSfx(sfx.select); event.preventDefault(); } else if (fireballSelected || flameWaveSelected || frostNovaSelected || healSelected) { fireballSelected = false; flameWaveSelected = false; frostNovaSelected = false; healSelected = false; updateSpellUI(); showFeedback(''); playSfx(sfx.select); event.preventDefault(); } } break;
+            }
+        }
 
     </script>
 </body>
