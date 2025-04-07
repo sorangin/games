@@ -68,7 +68,7 @@
 
         // --- Asset Loading & Audio (No changes) ---
         const assets = { knight:null,goblin:null,fireball:null,coin:null,rook:null,bishop:null,speedBoost:null,magicBolt:null };
-        const assetSources = { knight:'sprites/Knight.png',goblin:'sprites/Goblin.png',fireball:'sprites/sFireball1.png',coin:'sprites/Coin.png',rook:'sprites/bRook.png',bishop:'sprites/wBishop.png',speedBoost:'sprites/wQueen.png',magicBolt:'sprites/sFireball1.png' };
+        const assetSources = { knight:'sprites/Knight.png',goblin:'sprites/Goblin.png',fireball:'sprites/sFireball1.png',coin:'sprites/coin.png',rook:'sprites/bRook.png',bishop:'sprites/wBishop.png',speedBoost:'sprites/wQueen.png',magicBolt:'sprites/sFireball1.png' };
         const htmlAudioElements = {};
         const audioSources = { jump: 'audio/jump.wav', shoot: 'audio/shoot.wav', coin: 'audio/coin.wav', powerup: 'audio/powerup.wav', playerHurt: 'audio/player_hurt.wav', playerDie: 'audio/player_die.wav', enemyHit: 'audio/enemy_hit.wav', start: 'audio/start_beep.wav', bgm: 'audio/bgm.mp3' };
         let assetsLoaded = 0; let totalAssetsToLoad = Object.keys(assetSources).length + Object.keys(audioSources).length; let gameReady = false; let loadError = false; let assetsLoadingStarted = false; let userInteracted = false;
