@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Knights Vs Goblins (Gold Update v3 - Integrated UI v2 - Fireball FX v3)</title>
+    <style>
+        /* --- Base Styles (Keep Original) --- */
+        :root {
+            --grid-cols: 8;
+            --grid-rows: 10;
+            --board-aspect-ratio: var(--grid-cols) / var(--grid-rows);
+            font-size: clamp(8px, 1.8vmin, 16px);
+            --death-fade-time: 1s;
+            --attack-anim-time: 0.08s;
+            --move-anim-time: 0.25s;
+            --arrow-fly-time: 0.3s;
+            /* Fireball/Flame Wave Animation Times */
+            --fireball-fly-time: 0.4s;
+            --fireball-explode-time: 0.8s; /* 8 frames * 0.1s per frame */
+            --flame-wave-stagger-delay: 50ms; /* Delay between explosions in a row */
+
+            --frost-nova-hover-bg: rgba(100, 150, 255, 0.3);
+            --frost-nova-hover-border: rgba(150, 200, 255, 0.7);
+            --frozen-filter-base: brightness(0.9) sepia(1) hue-rotate(180deg) saturate(5);
+            --frozen-filter-shadow: drop-shadow(0 0 2px rgba(150, 220, 255, 0.9));
+            --frozen-filter: var(--frozen-filter-base) var(--frozen-filter-shadow);
+            --frozen-shadow: 0 0 6px rgba(100, 180, 255, 0.8);
+            --spell-locked-filter: grayscale(80%) brightness(0.6) saturate(3) hue-rotate(350deg) contrast(0.9);
+            --spell-used-filter: grayscale(90%) brightness(60%);
+            --hover-outline-color-player: yellow;
+            --hover-outline-color-enemy: red; /* Kept for enemy hover drop-shadow */
+            --heal-color: #50ff50;
+            --cell-size: 30px;
+            --gold-color: #FFD700;
+            --stack-offset-x: 3px;
+            --stack-offset-y: -3px;
+            /* UPDATED Tooltip Variables */
+            --tooltip-bg: rgba(10, 10, 10, 0.88); /* Darker tooltip */
+            --tooltip-text: #eee;
+            --tooltip-border: #555;
+            --tooltip-shadow: 2px 2px 6px rgba(0,0,0,0.6);
+        }
+        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+        body { display: flex; justify-content: center; align-items: center; background-color: #3a4a3a; font-family: 'Courier New', Courier, monospace; color: #eee; padding: 5px; box-sizing: border-box; position: relative; }
+        #game-container { display: flex; max-width: 100%; max-height: 100%; width: 100%; height: 100%; border: clamp(2px, 0.5vmin, 5px) solid #1e281e; background-color: #1e281e; box-shadow: 0 0 15px rgba(0,0,0,0.5); flex-direction: row; align-items: stretch; justify-content: center; padding: clamp(3px, 1vmin, 10px); box-sizing: border-box; gap: clamp(5px, 1vmin, 10px); position: relative; }
+        #game-container:fullscreen { padding: 0; border: none; gap: 5px; width: 100vw; height: 100vh; max-width: 100vw; max-height: 100vh; }
+        #game-container:fullscreen > #ui-panel { border-left-color: #333; }
+
+        /* --- Game Board & Cells (Keep Original + Targeting) --- */
+        #game-board { display: grid; border: clamp(1px, 0.3vmin, 2px) solid #1e281e; position: relative; flex-grow: 0; flex-shrink: 1; grid-template-columns: repeat(var(--grid-cols), 1fr); grid-template-rows: repeat(var(--grid-rows), 1fr); aspect-ratio: var(--board-aspect-ratio); max-width: 100%; max-height: 100%; box-sizing: border-box; min-width: 160px; min-height: calc(160px / var(--board-aspect-ratio)); overflow: hidden; }
+        #game-board.fireball-targeting { cursor: crosshair !important; }
+        #game-board.fireball-targeting .grid-cell:hover:not(.has-obstacle) { background-color: rgba(255, 100, 100, 0.4) !important; box-shadow: inset 0 0 0 2px rgba(255, 0, 0, 0.7); }
+        #game-board.flame-wave-targeting .grid-cell:hover:not(.has-obstacle) { background-color: rgba(255, 150, 50, 0.3) !important; box-shadow: none; }
+        /* Removed ::before for flame wave targeting, as explosion preview is better */
+        #game-board.frost-nova-targeting { cursor: cell !important; }
+        #game-board.frost-nova-targeting .grid-cell:hover:not(.has-obstacle) { background-color: transparent !important; box-shadow: none; }
+        #game-board.frost-nova-targeting .grid-cell.frost-aoe-preview:not(.has-obstacle) { background-color: var(--frost-nova-hover-bg) !important; box-shadow: inset 0 0 0 1px var(--frost-nova-hover-border); z-index: 2; }
+        #game-board.heal-targeting { cursor: help !important; }
+        #game-board.heal-targeting .unit.player:not(.dead):not(.acted):not(.frozen):hover { filter: drop-shadow(0 0 3px var(--heal-color)); box-shadow: 0 0 0 2px var(--heal-color); }
+        .grid-cell { border: 1px solid #7a8a7a; background-color: #6a7a6a; position: relative; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: background-color 0.2s, box-shadow 0.2s; box-sizing: border-box; image-rendering: pixelated; min-width: 1px; min-height: 1px; overflow: hidden; grid-column: auto; grid-row: auto; }
+        .grid-cell.valid-move:not(.has-obstacle) { background-color: #aaeaaa; opacity: 0.8; cursor: pointer; }
+        .grid-cell.has-obstacle { cursor: not-allowed !important; background-color: #5a6a5a; }
+
+        /* --- Obstacles & Items (Keep Original) --- */
+        .obstacle { grid-column: var(--obs-x, 1); grid-row: var(--obs-y, 1); align-self: center; justify-self: center; width: calc(var(--cell-size) * 0.8); height: calc(var(--cell-size) * 0.8); background-size: contain; background-repeat: no-repeat; background-position: center; z-index: 2; pointer-events: none; image-rendering: pixelated; box-sizing: border-box; transition: width 0.1s, height 0.1s; }
+        .obstacle.rock { background-image: url('./sprites/rock.png'); }
+        .obstacle.wall_rock { background-image: url('./sprites/wall_rock.png'); width: 100%; height: 100%; align-self: stretch; justify-self: stretch; }
+        .item { position: absolute; left: calc((var(--item-x) - 1) * var(--cell-size) + var(--cell-size) * 0.5); top: calc((var(--item-y) - 1) * var(--cell-size) + var(--cell-size) * 0.5); transform: translate(calc(-50% + var(--stackIndex, 0) * var(--stack-offset-x)), calc(-50% + var(--stackIndex, 0) * var(--stack-offset-y))); width: calc(var(--cell-size) * 0.6); height: calc(var(--cell-size) * 0.6); background-size: contain; background-repeat: no-repeat; background-position: center; z-index: 6; pointer-events: none; image-rendering: pixelated; box-sizing: border-box; transition: width 0.1s, height 0.1s, opacity 0.3s ease-out, left 0.1s, top 0.1s, transform 0.1s ease-out; opacity: 1; --stackIndex: 0; }
+        .item.gold-coin { background-image: url('./sprites/gold.png'); }
+
+        /* --- Units (Modify hover, Keep rest original) --- */
+        .unit { grid-column: var(--unit-x, 1); grid-row: var(--unit-y, 1); align-self: center; justify-self: center; border-radius: 3px; display: flex; justify-content: center; align-items: center; font-weight: bold; z-index: 10; transition: filter 0.2s, box-shadow 0.2s, width 0.1s, height 0.1s, opacity var(--death-fade-time) ease-in-out, background-image 0.1s ease-in, transform var(--move-anim-time) ease-out; transform: none; box-sizing: border-box; background-color: transparent; image-rendering: pixelated; background-size: contain; background-repeat: no-repeat; background-position: center; pointer-events: none; width: calc(var(--cell-size) * 0.8); height: calc(var(--cell-size) * 0.8); opacity: 1; filter: none; }
+        #game-board .unit { pointer-events: auto; }
+        .unit.is-moving { z-index: 15; }
+        .unit.selected { box-shadow: 0 0 0 clamp(1px, 0.5vmin, 3px) yellow; z-index: 13; }
+        .unit.selected:not(:hover) { filter: drop-shadow(0 0 3px yellow); }
+        .unit.acted:not(:hover):not(.is-moving):not(.frozen) { /* Added :not(.frozen) */
+            filter: grayscale(50%) brightness(80%);
+        }
+        .unit.frozen:not(:hover):not(.is-moving) {
+            filter: var(--frozen-filter);
+            box-shadow: var(--frozen-shadow);
+        }
+        .unit.selected.frozen:not(:hover):not(.is-moving) {
+            filter: var(--frozen-filter) drop-shadow(0 0 3px yellow);
+            box-shadow: var(--frozen-shadow), 0 0 0 clamp(1px, 0.5vmin, 3px) yellow;
+        }
+        .unit.unit-hit-flash { animation: simple-hit-flash 0.2s ease-out; }
+        @keyframes simple-hit-flash { 50% { filter: brightness(1.8); } }
+        /* MODIFIED Hover: Added :not(.frozen) to prevent hover effect overriding frozen look */
+        #game-board .unit:not(.dead):not(.fading-out):not(.selected):not(.is-moving):hover { z-index: 12; cursor: pointer; }
+        #game-board .unit.player:not(.dead):not(.fading-out):not(.selected):not(.is-moving):not(.frozen):hover {
+            filter: drop-shadow( 1px 0px 0 var(--hover-outline-color-player)) drop-shadow(-1px 0px 0 var(--hover-outline-color-player)) drop-shadow( 0px 1px 0 var(--hover-outline-color-player)) drop-shadow( 0px -1px 0 var(--hover-outline-color-player));
+        }
+        #game-board .unit.enemy:not(.dead):not(.fading-out):not(.selected):not(.is-moving):not(.frozen):hover {
+            filter: drop-shadow( 1px 0px 0 var(--hover-outline-color-enemy)) drop-shadow(-1px 0px 0 var(--hover-outline-color-enemy)) drop-shadow( 0px 1px 0 var(--hover-outline-color-enemy)) drop-shadow( 0px -1px 0 var(--hover-outline-color-enemy));
+        }
+        /* END MODIFIED Hover */
+        .unit.dead { z-index: 5; pointer-events: none !important; filter: none !important; box-shadow: none !important; opacity: 1; transition: opacity var(--death-fade-time) ease-in-out; transform: none !important; }
+        .unit.fading-out { opacity: 0 !important; }
+
+        /* --- Projectiles (Arrow original, Fireball MODIFIED) --- */
+        .projectile { position: absolute; background-size: contain; background-repeat: no-repeat; background-position: center; z-index: 22; pointer-events: none; image-rendering: pixelated; transform-origin: center center; }
+        .projectile.arrow { width: 26px; height: 7px; background-image: url('./sprites/arrow.png'); transition: left var(--arrow-fly-time) linear, top var(--arrow-fly-time) linear; }
+        /* MODIFIED: Fireball Projectile Size & Rotation handled by JS */
+        .projectile.fireball-projectile {
+            background-image: url('./sprites/sFireball1.png');
+            width: 72px; /* Scaled up from 24px (300%) */
+            height: 72px;
+            transition: left var(--fireball-fly-time) linear, top var(--fireball-fly-time) linear;
+            z-index: 23; /* Slightly above arrows if needed */
+            /* Rotation is set via inline style */
+        }
+
+        /* --- MODIFIED: Fireball/Flame Wave Explosion --- */
+        .fireball-explosion {
+            position: absolute;
+            width: 120px; /* Original frame width */
+            height: 120px; /* Original frame height */
+            background-image: url('./sprites/fireball_explode.png');
+            background-repeat: no-repeat;
+            background-position: 0 0; /* Start at first frame */
+            z-index: 25; /* Above units and projectiles */
+            pointer-events: none;
+            image-rendering: pixelated;
+            transform: scale(0.75); /* Scale down visually */
+            transform-origin: center center; /* Scale from the center */
+            animation: fireball-explode-anim var(--fireball-explode-time) steps(8) forwards;
+        }
+
+        /* Keyframes remain the same, operating on the original background image dimensions */
+        @keyframes fireball-explode-anim {
+            from { background-position: 0 0; }
+            to { background-position: -960px 0; } /* 8 frames * 120px width */
+        }
+
+
+        /* --- UI Panel (Integrate Top Bar Layout) --- */
+        #ui-panel {
+            width: clamp(180px, 28vmin, 240px); flex-shrink: 0; max-height: 100%;
+            padding: clamp(0.5rem, 1vmin, 1rem); background-color: #4a5a4a;
+            border-left: clamp(1px, 0.4vmin, 3px) solid #1e281e; display: flex; flex-direction: column;
+            overflow-y: auto; font-size: 1.4rem; box-sizing: border-box; position: relative;
+        }
+        /* --- Top Bar Layout --- */
+        #top-bar-ui { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; gap: 5px; flex-wrap: wrap; }
+        #level-gold-container { display: flex; flex-direction: column; gap: 0.3rem; flex-grow: 1; }
+        #level-display, #gold-display { text-align: center; margin-bottom: 0; font-weight: bold; background-color:#5a6a5a; padding: 0.3rem 0.5rem; border: 1px solid #1e281e; border-radius: 3px; font-size: 1.4rem; white-space: nowrap; }
+        #level-display { color: #ffd700; }
+        #gold-display { color: var(--gold-color); text-shadow: 1px 1px 1px #6b5700; }
+        #control-buttons-container { display: flex; gap: 5px; }
+        .ui-button { padding: 3px 5px; background-color: rgba(30, 40, 30, 0.6); border: 1px solid #7a8a7a; color: #eee; font-size: 1.6rem; line-height: 1; border-radius: 3px; cursor: pointer; z-index: 55; transition: background-color 0.2s; min-width: 25px; min-height: 25px; display: inline-flex; justify-content: center; align-items: center; user-select: none; -webkit-tap-highlight-color: transparent; }
+        .ui-button:hover { background-color: rgba(60, 80, 60, 0.8); }
+        .ui-button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* --- Unit Info Panel (Integrate Portrait Layout) --- */
+        #unit-info {
+            background-color: #5a6a5a; padding: 0.8rem; margin-bottom: 1rem;
+            border: 1px solid #1e281e; border-radius: 3px; min-height: auto;
+            display: flex; align-items: center; gap: 10px;
+        }
+        #unit-portrait {
+            width: 48px; height: 48px; border: 1px solid #333; background-color: #444;
+            background-size: contain; background-repeat: no-repeat; background-position: center;
+            image-rendering: pixelated; flex-shrink: 0; border-radius: 2px;
+            opacity: 0; transition: opacity 0.2s; /* Fade in/out */
+        }
+         #unit-portrait[style*="url"] { /* Show only if image is set */
+            opacity: 1;
+         }
+        #unit-details { display: flex; flex-direction: column; flex-grow: 1; font-size: 1.2rem; }
+        #unit-info h3 { margin: 0 0 0.4rem 0; border-bottom: 1px solid #7a8a7a; padding-bottom: 0.3rem; color: #eee; font-size: 1.3rem; }
+        #unit-info p { margin: 0.2rem 0; color: #ddd; line-height: 1.3; white-space: nowrap; }
+        #unit-status { color: #aadeff; font-style: italic; min-height: 1.3em; }
+
+        /* --- Turn Info (Keep Original) --- */
+        #turn-info { background-color: #5a6a5a; padding: 0.8rem; margin-bottom: 1rem; border: 1px solid #1e281e; border-radius: 3px; min-height: auto; font-size: 1.3rem; }
+        #turn-info h3 { margin: 0 0 0.5rem 0; border-bottom: 1px solid #7a8a7a; padding-bottom: 0.3rem; color: #eee; font-size: 1.4rem; }
+        #turn-info p { margin: 0.3rem 0; color: #ddd; }
+
+        /* --- Spell Area (Keep Original) --- */
+        #spell-area { margin-top: auto; margin-bottom: 1.5rem; padding: clamp(0.5rem, 1vmin, 1rem); background-color:#5a6a5a; border: 1px solid #1e281e; border-radius: 3px; min-height: auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: clamp(8px, 1.5vmin, 15px); place-items: center; align-content: center; }
+        .spell-container { display: flex; flex-direction: column; align-items: center; text-align: center; width: 100%; }
+        .spell-icon { position: relative; display: inline-block; width: clamp(30px, 4.5vmin, 40px); height: clamp(30px, 4.5vmin, 40px); border: clamp(1px, 0.3vmin, 2px) solid #333; border-radius: 4px; background-color: #444; background-size: contain; background-repeat: no-repeat; background-position: center; margin-bottom: 3px; transition: border-color 0.2s, box-shadow 0.2s, filter 0.2s; image-rendering: pixelated; vertical-align: middle; filter: none; cursor: default; box-shadow: none; overflow: hidden; }
+        .spell-icon .hotkey-display { position: absolute; top: 0; left: 0; font-size: clamp(0.8rem, 1.3vmin, 1rem); font-weight: bold; color: var(--gold-color); background-color: rgba(0, 0, 0, 0.6); padding: 1px 3px; line-height: 1; border-bottom-right-radius: 3px; text-shadow: 1px 1px #332200; }
+        #fireball-spell { background-image: url('./sprites/sFireball1.png'); }
+        #flame-wave-spell { background-image: url('./sprites/flame_wave.png'); }
+        #frost-nova-spell { background-image: url('./sprites/sFrostbolt1.png'); }
+        #heal-spell { background-image: url('./sprites/heal.png'); }
+        .spell-label { font-size: clamp(0.9rem, 1.5vmin, 1.1rem); font-weight: bold; color: #eee; text-shadow: 1px 1px #111; line-height: 1.2; }
+        .spell-icon.locked { filter: var(--spell-locked-filter); cursor: not-allowed; border-color: #600; }
+        .spell-icon.locked + .spell-label { color: #a85858; }
+        .spell-icon.used { filter: var(--spell-used-filter); cursor: not-allowed; border-color: #555; }
+        .spell-icon.used + .spell-label { color: #aaa; }
+        .spell-icon.available { filter: none; cursor: pointer; border-color: #888; }
+        .spell-icon.available:hover { border-color: #eee; }
+        .spell-icon.available + .spell-label { color: #eee; }
+        .spell-icon.selected { filter: none !important; cursor: pointer; border-color: yellow !important; box-shadow: 0 0 8px yellow !important; }
+        .spell-icon.selected + .spell-label { color: #eee; }
+        .spell-icon.cheat-available { border-color: lime !important; box-shadow: 0 0 5px lime !important; }
+        .spell-icon.cheat-available + .spell-label { color: lime; }
+
+        /* --- Feedback Area (Keep Original) --- */
+        #feedback-area { margin-bottom: 1rem; min-height: 2rem; font-size: 1.4rem; font-weight: bold; color: #fff; text-align: center; }
+        .feedback-levelup { color: #ffd700; text-shadow: 1px 1px #443300; }
+        .feedback-error { color: #ff8888; text-shadow: 1px 1px #550000; }
+        .feedback-gold { color: var(--gold-color); text-shadow: 1px 1px #6b5700; }
+        .feedback-cheat { color: lime; text-shadow: 1px 1px #004400; }
+
+        /* --- End Turn Button (Keep Original) --- */
+        #end-turn-button { padding: 1rem 1.5rem; background-color: #a0522d; border: 2px solid #1e281e; color: white; font-family: 'Courier New', Courier, monospace; cursor: pointer; font-size: 1.4rem; border-radius: 3px; text-align: center; transition: background-color 0.2s; width: 100%; box-sizing: border-box;}
+        #end-turn-button:hover:not(.disabled) { background-color: #8B4513; }
+        #end-turn-button.disabled { background-color: #888; cursor: not-allowed; color: #bbb; }
+        #end-turn-button.next-level-mode { background-color: #4CAF50; }
+        #end-turn-button.next-level-mode:hover:not(.disabled) { background-color: #45a049; }
+        #end-turn-button .hotkey-e { color: var(--gold-color); font-weight: bold; }
+
+        /* --- Popups & Overlays (Adjust Z-index) --- */
+        .damage-popup, .freeze-popup, .heal-popup { position: absolute; font-weight: bold; animation: moveUpFadeOut 1s forwards; z-index: 30; /* Higher than explosion */ pointer-events: none; }
+        .damage-popup { color: red; font-size: clamp(1.2rem, 2vmin, 1.8rem); text-shadow: 1px 1px white; }
+        .freeze-popup { color: #aadeff; font-size: clamp(1.2rem, 2vmin, 1.6rem); text-shadow: 1px 1px #112233; animation-duration: 0.8s; }
+        .heal-popup { color: var(--heal-color); font-size: clamp(1.2rem, 2vmin, 1.8rem); text-shadow: 1px 1px #003300; }
+        @keyframes moveUpFadeOut { 0% { opacity: 1; transform: translateY(0) translateX(-50%); } 100% { opacity: 0; transform: translateY(-30px) translateX(-50%); } }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; z-index: 50; padding: 20px; box-sizing: border-box; }
+        .overlay h2 { color: #ffd700; margin-bottom: 2rem; font-size: clamp(2rem, 6vmin, 2.5rem); }
+        .overlay p { font-size: clamp(1.2rem, 4vmin, 1.5rem); line-height: 1.6; margin-bottom: 2rem;}
+        .overlay button { padding: clamp(0.8rem, 3vmin, 1rem) clamp(1.5rem, 6vmin, 2rem); font-size: clamp(1.2rem, 4vmin, 1.6rem); cursor: pointer; background-color: #a0522d; border: 2px solid #1e281e; color: white; font-family: 'Courier New', Courier, monospace; border-radius: 3px; }
+        .overlay button:hover { background-color: #8B4513; }
+
+        /* --- Tooltip (Integrate new styles) --- */
+        #unit-tooltip {
+            position: fixed; /* Use fixed for viewport positioning */
+            background-color: var(--tooltip-bg);
+            color: var(--tooltip-text);
+            border: 1px solid var(--tooltip-border);
+            padding: 6px 10px; /* Adjusted padding */
+            border-radius: 4px;
+            font-size: 1.2rem; /* Slightly larger */
+            line-height: 1.4; /* Better spacing */
+            z-index: 60;
+            pointer-events: none;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.15s ease-in-out; /* Smoother fade */
+            box-shadow: var(--tooltip-shadow);
+            transform: translate(12px, 18px); /* Default offset from cursor */
+        }
+        #unit-tooltip.visible {
+            opacity: 1;
+        }
+        #unit-tooltip b { /* Style for unit name */
+             color: #f0e68c; /* Khaki/gold color for name */
+             display: block; /* Put name on its own line */
+             margin-bottom: 3px;
+        }
+        #unit-tooltip span[style*="color:#aadeff"] { /* Style for frozen status */
+            font-style: italic;
+        }
+
+
+        /* --- Media Query (Keep Original, adjust new elements) --- */
+        @media (max-width: 700px), (max-aspect-ratio: 1/1) {
+             #game-container { flex-direction: column; justify-content: flex-start; align-items: stretch; }
+             #game-board { width: 100%; height: auto; margin: 0; min-height: calc(160px / var(--board-aspect-ratio)); }
+             #ui-panel { width: 100%; height: auto; flex-grow: 1; flex-shrink: 1; border-left: none; border-top: clamp(1px, 0.4vmin, 3px) solid #1e281e; min-height: 100px; max-height: 40vh; font-size: 1.3rem; }
+             #top-bar-ui { flex-wrap: wrap; }
+             .ui-button { font-size: 1.4rem; }
+             #unit-info { font-size: 1.1rem; gap: 5px; padding: 0.5rem;}
+             #unit-portrait { width: 36px; height: 36px;}
+             #unit-details { font-size: 1.1rem;}
+             #unit-info h3 { font-size: 1.2rem;}
+             #unit-info p { font-size: 1.1rem;}
+             #game-container:fullscreen > #ui-panel { border-top-color: #333; }
+             .spell-icon { width: clamp(28px, 4.5vmin, 40px); height: clamp(28px, 4.5vmin, 40px); }
+             .spell-label { font-size: 1.0rem; }
+             #unit-tooltip { font-size: 1.0rem; }
+             .spell-icon .hotkey-display { font-size: 0.9rem; padding: 0 2px; }
+             .projectile.fireball-projectile { width: 60px; height: 60px; } /* Adjust scaled projectile size for smaller screens */
+             /* Explosion scaling via transform remains proportional */
+             :root { --flame-wave-stagger-delay: 75ms; } /* Slightly increase stagger on smaller screens? */
+         }
+    </style>
+</head>
+<body>
+    <!-- HTML structure (No changes needed here) -->
+    <div id="game-container">
+        <div id="game-board"></div>
+        <div id="ui-panel">
+            <!-- Integrated Top Bar Layout -->
+            <div id="top-bar-ui">
+                <div id="level-gold-container">
+                    <div id="level-display">Level: 1</div>
+                    <div id="gold-display">Gold: 0</div>
+                </div>
+                <div id="control-buttons-container">
+                    <button id="mute-button" class="ui-button" title="Toggle Sound (M)">🔊</button>
+                    <button id="fullscreen-button" class="ui-button" title="Toggle Fullscreen (F)" disabled>&#x26F6;</button>
+                </div>
+            </div>
+            <!-- End Integrated Top Bar Layout -->
+
+            <div id="turn-info">
+                <h3 id="current-turn">Turn: Player</h3>
+                <p id="actions-left">Actions Left: 0</p>
+            </div>
+
+            <!-- Integrated Unit Info Panel Structure -->
+            <div id="unit-info">
+                <img id="unit-portrait" src="" alt=""> <!-- Alt text cleared, set by JS -->
+                <div id="unit-details">
+                    <h3 id="unit-name">Unit Info</h3>
+                    <p id="unit-hp">HP: -/-</p>
+                    <p id="unit-atk">ATK: -</p>
+                    <p id="unit-mov">MOV: -</p>
+                    <p id="unit-rng">RNG: -</p>
+                    <p id="unit-status"></p>
+                </div>
+            </div>
+            <!-- End Integrated Unit Info Panel -->
+
+            <!-- Keep Original Spell Area -->
+            <div id="spell-area">
+                 <div id="fireball-container" class="spell-container"><div id="fireball-spell" class="spell-icon locked" title="Unlock at Level 4"><span class="hotkey-display">1</span></div><span class="spell-label">Fireball</span></div>
+                 <div id="flame-wave-container" class="spell-container"><div id="flame-wave-spell" class="spell-icon locked" title="Unlock at Level 8"><span class="hotkey-display">2</span></div><span class="spell-label">Flame Wave</span></div>
+                 <div id="frost-nova-container" class="spell-container"><div id="frost-nova-spell" class="spell-icon locked" title="Unlock at Level 12"><span class="hotkey-display">3</span></div><span class="spell-label">Frost Nova</span></div>
+                 <div id="heal-container" class="spell-container"><div id="heal-spell" class="spell-icon locked" title="Unlock at Level 16"><span class="hotkey-display">4</span></div><span class="spell-label">Heal</span></div>
+            </div>
+            <div id="feedback-area"></div>
+            <button id="end-turn-button" title="End Player Turn (E)"></button>
+        </div>
+        <!-- Keep Original Overlays -->
+        <div id="start-screen" class="overlay"><h2>Knights Vs Goblins</h2><p>Defeat all Goblins to advance levels.<br>Collect gold dropped by enemies!<br>Spells can only be used ONCE per level (unless you CHEAT)!</p><button id="start-button">Begin Conquest!</button></div>
+        <div id="game-over-screen" class="overlay" style="display: none;"><h2 id="game-over-title">Defeat!</h2><p id="game-over-message"></p><button id="restart-button">Restart Level</button></div>
+        <!-- Keep Original Tooltip Element -->
+        <div id="unit-tooltip"></div>
+    </div>
+
+    <script>
+        // --- DOM Elements (Declare with let) ---
+        let gameContainer;
+        let gameBoard;
+        let uiPanel;
+        let levelDisplayElement;
+        let goldDisplayElement;
+        let spellAreaElement;
+        let fireballElement;
+        let flameWaveElement;
+        let frostNovaElement;
+        let healElement;
+        let turnInfo;
+        let unitInfo;
+        let unitPortraitElement;
+        let currentTurnDisplay;
+        let actionsLeftDisplay;
+        let unitNameDisplay;
+        let unitHpDisplay;
+        let unitAtkDisplay;
+        let unitMovDisplay;
+        let unitRngDisplay; // ADDED
+        let unitStatusDisplay;
+        let feedbackArea;
+        let endTurnButton;
+        let startScreen;
+        let gameOverScreen;
+        let startButton;
+        let restartButton;
+        let gameOverTitle;
+        let gameOverMessage;
+        let fullscreenButton;
+        let muteButton;
+        let tooltipElement;
+
+        // --- Audio Setup (Added fireballShoot) ---
+        const musicTracks = [ 'audio/music_Treasure.mp3', 'audio/music_AoiUsagi-Die.mp3', 'audio/music_WormsTheme.mp3', 'audio/bgm.mp3' ];
+        const sfx = {
+            success: new Audio('audio/Success.wav'),
+            error: new Audio('audio/Error.wav'),
+            gameOver: new Audio('audio/GameOver.wav'),
+            hit: new Audio('audio/sfxHit.wav'),
+            defeat: new Audio('audio/sfxGoblinDead.wav'),
+            move: new Audio('audio/sfxMove.wav'),
+            select: new Audio('audio/sfxSelect.wav'),
+            fireballShoot: new Audio('audio/fireball_shoot.wav'), // ADDED
+            fireballHit: new Audio('audio/sfxFireballHit.wav'),
+            frostNovaCast: new Audio('audio/sfxFrostboltCast.wav'),
+            frostNovaHit: new Audio('audio/sfxFrostboltHit.wav'),
+            playerDie: new Audio('audio/player_die.wav'),
+            startBeep: new Audio('audio/start_beep.wav'),
+            heal: new Audio('audio/heal.wav'),
+            arrowShoot: new Audio('audio/arrow_shoot.wav'),
+            pickup: new Audio('audio/pickup.wav'),
+            goldDrop: new Audio('audio/gold_drop.wav'),
+            cheat: new Audio('audio/Success.wav')
+        };
+        let bgMusic = new Audio(); bgMusic.loop = true; bgMusic.volume = 0.3;
+        let isMuted = false; let audioInitialized = false;
+        Object.values(sfx).forEach(sound => { sound.volume = 0.6; sound.preload = 'auto'; });
+        sfx.gameOver.volume = 0.8;
+        sfx.fireballShoot.volume = 0.7; // Adjust volume
+        sfx.fireballHit.volume = 0.8;
+        sfx.frostNovaHit.volume = 0.7; sfx.move.volume = 0.4; sfx.select.volume = 0.5; sfx.hit.volume = 0.7; sfx.defeat.volume = 0.7; sfx.playerDie.volume = 0.7; sfx.heal.volume = 0.7; sfx.arrowShoot.volume = 0.5; sfx.pickup.volume = 0.7; sfx.goldDrop.volume = 0.6; sfx.cheat.volume = 0.7;
+        function playSfx(sound) { if (isMuted || !audioInitialized || !sound) return; try { sound.currentTime = 0; sound.play().catch(e => console.warn(`SFX Play Fail: ${sound.src.split('/').pop()} - ${e.name} (${e.message})`)); } catch(e) { console.error("SFX play error", e); }}
+        function startMusic() { if (isMuted || !audioInitialized) return; if (!bgMusic.src) { selectAndLoadMusic(); if (!bgMusic.src) { return; } } const playPromise = bgMusic.play(); if (playPromise !== undefined) { playPromise.catch(error => { if (error.name === 'NotAllowedError') { console.log("Music autoplay blocked."); } }); } }
+        function stopMusic() { if (bgMusic && !bgMusic.paused) { bgMusic.pause(); bgMusic.currentTime = 0; } }
+        function selectAndLoadMusic() { const i = Math.floor(Math.random() * musicTracks.length); const t = musicTracks[i]; bgMusic.src = t; bgMusic.load(); }
+        function initializeAudio() { if (audioInitialized) return true; const AC = window.AudioContext || window.webkitAudioContext; if (!AC) { let success = false; try { const dummyAudio = new Audio(); dummyAudio.volume=0; dummyAudio.play().then(()=>{dummyAudio.pause(); success=true;}).catch(()=>{}); } catch(e){} audioInitialized = success; return audioInitialized; } const context = new AC(); const unlockAudio = () => { context.resume().then(() => { audioInitialized = true; startMusicIfNotPlaying(); document.removeEventListener('click', unlockAudio, true); document.removeEventListener('keydown', unlockAudio, true); }).catch(e => {}); }; if (context.state === 'suspended') { document.addEventListener('click', unlockAudio, { once: true, capture: true }); document.addEventListener('keydown', unlockAudio, { once: true, capture: true }); } else { audioInitialized = true; } return audioInitialized; }
+        function startMusicIfNotPlaying() { if (!isGameOver() && startScreen.style.display === 'none' && !isMuted && bgMusic.paused) { startMusic(); } }
+
+        // --- Game Config & State (Added FLAME_WAVE_STAGGER_DELAY_MS) ---
+        const GRID_COLS = 8; const GRID_ROWS = 10; let currentCellSize = 30;
+        const FIREBALL_UNLOCK_LEVEL = 4; const FIREBALL_DAMAGE = 2;
+        const FLAME_WAVE_UNLOCK_LEVEL = 8; const FLAME_WAVE_DAMAGE = 1;
+        const FROST_NOVA_UNLOCK_LEVEL = 12; const FROST_NOVA_DURATION = 3;
+        const HEAL_UNLOCK_LEVEL = 16; const HEAL_AMOUNT = 3;
+        const ARCHER_INTRO_LEVEL = 3; const CLUBBER_INTRO_LEVEL = 7;
+        const ARROW_FLY_DURATION_MS = 300;
+        const FIREBALL_PROJECTILE_DURATION_MS = 400; // Corresponds to CSS --fireball-fly-time
+        const FIREBALL_EXPLOSION_DURATION_MS = 800; // Corresponds to CSS --fireball-explode-time
+        const FLAME_WAVE_STAGGER_DELAY_MS = 50; // NEW: Delay between row explosions
+        const ENEMY_SPAWN_ROWS = 3; const PLAYER_SPAWN_ROWS = 2;
+        const MIN_OBSTACLES = 2; const MAX_OBSTACLES_PER_LEVEL = 0.75; const WALL_ROCK_CHANCE = 0.4;
+        const GOLD_DROP_CHANCE = 0.6; const BASE_GOLD_DROP_AMOUNT = 1;
+        const ADVANCED_GOBLIN_TYPES = ['goblin_archer', 'goblin_clubber'];
+        const ADVANCED_GOBLIN_EXTRA_GOLD_CHANCE = 0.25; const ADVANCED_GOBLIN_EXTRA_GOLD_AMOUNT = 1;
+        const UNIT_DATA = { knight: { name: "Knight", hp: 6, atk: 1, mov: 3, range: 1, team: 'player', spriteUrl: './sprites/Knight.png', deadSpriteUrl: './sprites/Knight_dead.png', portraitUrl: './sprites/knight_portrait.png' }, goblin: { name: "Goblin", hp: 2, atk: 1, mov: 4, range: 1, team: 'enemy', spriteUrl: './sprites/Goblin.png', deadSpriteUrl: './sprites/Goblin_dead.png', portraitUrl: './sprites/goblin_portrait.png' }, goblin_archer: { name: "Goblin Archer", hp: 1, atk: 1, mov: 3, range: 4, team: 'enemy', spriteUrl: './sprites/goblin_archer.png', deadSpriteUrl: './sprites/Goblin_dead.png', portraitUrl: './sprites/goblin_archer_portrait.png' }, goblin_clubber: { name: "Goblin Clubber", hp: 3, atk: 2, mov: 3, range: 1, knockback: true, team: 'enemy', spriteUrl: './sprites/goblin_club.png', deadSpriteUrl: './sprites/Goblin_dead.png', portraitUrl: './sprites/goblin_club_portrait.png' } };
+        const OBSTACLE_TYPES = { rock: { blocksMove: true, blocksLOS: false, spriteClass: 'rock' }, wall_rock: { blocksMove: true, blocksLOS: true, spriteClass: 'wall_rock' } };
+        let units = []; let selectedUnit = null; let currentTurn = 'player'; let validMoves = []; let validAttacks = []; let unitCounter = 0; let isProcessing = false;
+        let currentLevel = 1; let playerGold = 0;
+        let levelToRestartOnLoss = 1;
+        let currentSpell = null;
+        let spellUses = { fireball: false, flameWave: false, frostNova: false, heal: false };
+        let unlimitedSpellsCheat = false;
+        let resizeTimeout = null; let winCheckTimeout = null;
+        let MOVE_ANIMATION_DURATION_MS = 250;
+        let gridState = [];
+        let droppedGold = [];
+        let levelClearedAwaitingInput = false;
+        let currentMouseX = 0;
+        let currentMouseY = 0;
+
+        // --- Helper Functions (Keep Original) ---
+        function isUnitAliveAndValid(unit) { return unit && unit.hp > 0 && !unit.element?.classList.contains('dead'); }
+        function isCellInBounds(x, y) { return x >= 0 && x < GRID_COLS && y >= 0 && y < GRID_ROWS; }
+        function getObstacleAt(x, y) { if (!isCellInBounds(x,y) || !gridState[y] || gridState[y].length <= x) return null; const obstacleType = gridState[y][x]; return obstacleType ? OBSTACLE_TYPES[obstacleType] : null; }
+        function getGoldAt(x, y) { return droppedGold.some(gold => gold.x === x && gold.y === y); }
+        function resetSpellStateForNewLevel() { console.log(`Resetting spell charges for level ${currentLevel}.`); currentSpell = null; spellUses = { fireball: currentLevel >= FIREBALL_UNLOCK_LEVEL, flameWave: currentLevel >= FLAME_WAVE_UNLOCK_LEVEL, frostNova: currentLevel >= FROST_NOVA_UNLOCK_LEVEL, heal: currentLevel >= HEAL_UNLOCK_LEVEL }; if (unlimitedSpellsCheat) { spellUses = { fireball: true, flameWave: true, frostNova: true, heal: true }; } console.log("Spell availability:", spellUses); updateSpellUI(); gameBoard.className = ''; clearFrostNovaPreview(); gameBoard.style.removeProperty('--hover-col'); }
+        function clearDroppedGold() { droppedGold.forEach(gold => gold.element?.remove()); droppedGold = []; console.log("Cleared dropped gold from previous level."); }
+        function resetLevelState() { console.log("Resetting level state..."); units = []; unitCounter = 0; selectedUnit = null; clickedUnitObject = null; validMoves = []; validAttacks = []; currentTurn = 'player'; gridState = []; clearDroppedGold(); levelClearedAwaitingInput = false; if(winCheckTimeout) clearTimeout(winCheckTimeout); winCheckTimeout = null; if(resizeTimeout) clearTimeout(resizeTimeout); resizeTimeout = null; isProcessing = false; document.querySelectorAll('#game-board .unit, #game-board .damage-popup, #game-board .freeze-popup, #game-board .heal-popup, #game-board .projectile, #game-board .obstacle, #game-board .item, #game-board .fireball-explosion').forEach(el => el.remove()); document.querySelectorAll('#game-board .grid-cell').forEach(cell => cell.classList.remove('has-obstacle')); clearHighlights(); if(endTurnButton){ endTurnButton.textContent = "End Turn"; endTurnButton.title = "End Player Turn (E)"; endTurnButton.classList.remove('next-level-mode');} console.log("Level state reset complete."); }
+
+        // --- Layout & Resize (Keep Original) ---
+        function calculateCellSize() { if(!gameBoard) return; const boardWidth = gameBoard.clientWidth; const boardHeight = gameBoard.clientHeight; if (boardWidth > 1 && boardHeight > 1) { const cellWidth = Math.floor(boardWidth / GRID_COLS); const cellHeight = Math.floor(boardHeight / GRID_ROWS); currentCellSize = Math.max(1, Math.min(cellWidth, cellHeight)); } else { currentCellSize = Math.max(currentCellSize, 20); } currentCellSize = Math.max(currentCellSize, 10); document.documentElement.style.setProperty('--cell-size', `${currentCellSize}px`); }
+        function applyLayout() { if (currentCellSize < 10) calculateCellSize(); if (currentCellSize < 10) return; units.forEach(u => { if (u.element && !u.element.classList.contains('dead')) updateUnitPosition(u, true); }); document.querySelectorAll('#game-board .unit.dead').forEach(deadEl => { updateUnitPositionVisualsOnly(deadEl); }); droppedGold.forEach(gold => { if(gold.element) updateItemPosition(gold.element, gold.x, gold.y, gold.stackIndex); }); if (selectedUnit) { highlightMoves(selectedUnit); } }
+        function updateUnitPositionVisualsOnly(element) { if (!element) return; }
+        const handleResize = () => { if (resizeTimeout) clearTimeout(resizeTimeout); resizeTimeout = setTimeout(() => { if (isGameOver() || startScreen.style.display !== 'none') return; requestAnimationFrame(() => { try { calculateCellSize(); applyLayout(); } catch (e) { console.error("Resize applyLayout error:", e); }}); }, 100); };
+
+        // --- Fullscreen (Keep Original) ---
+        function isFullscreen() { return !!(document.fullscreenElement||document.webkitFullscreenElement||document.mozFullScreenElement||document.msFullscreenElement); }
+        function toggleFullscreen() { initializeAudio(); const fsEnabled = document.fullscreenEnabled||document.webkitFullscreenEnabled||document.mozFullScreenEnabled||document.msFullscreenEnabled; if (!fsEnabled) return; if (!isFullscreen()) { const el = gameContainer; if (el.requestFullscreen) el.requestFullscreen().catch(err => {}); else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen().catch(err => {}); else if (el.mozRequestFullScreen) el.mozRequestFullScreen().catch(err => {}); else if (el.msRequestFullscreen) el.msRequestFullscreen().catch(err => {}); } else { if (document.exitFullscreen) document.exitFullscreen().catch(err => {}); else if (document.webkitExitFullscreen) document.webkitExitFullscreen().catch(err => {}); else if (document.mozCancelFullScreen) document.mozCancelFullScreen().catch(err => {}); else if (document.msExitFullscreen) document.msExitFullscreen().catch(err => {}); } }
+        function updateFullscreenButton() { const fsEnabled = document.fullscreenEnabled||document.webkitFullscreenEnabled||document.mozFullScreenEnabled||document.msFullscreenEnabled; if(fullscreenButton){ fullscreenButton.disabled = !fsEnabled; fullscreenButton.innerHTML=isFullscreen()?'&#x2715;':'&#x26F6;'; fullscreenButton.title=isFullscreen()?'Exit Fullscreen (F)':'Enter Fullscreen (F)'; } }
+
+        // --- Initialization (Read new CSS var) ---
+        function initGame(startLevel = 1) { console.clear(); console.log("Init Game starting..."); isProcessing = true; if (!audioInitialized) initializeAudio(); playSfx(sfx.startBeep); currentLevel = startLevel; if (startLevel === 1) { playerGold = 0; } resetLevelState(); resetSpellStateForNewLevel(); isProcessing = true; stopMusic(); sfx.gameOver.pause(); sfx.gameOver.currentTime = 0; selectAndLoadMusic(); console.log(`Start Game - Lvl ${currentLevel}`); try { setupBoard(); initializeGridState(); updateLevelDisplay(); updateGoldDisplay(); updateUnitInfo(null); feedbackArea.textContent = ''; feedbackArea.className = ''; if(endTurnButton) {endTurnButton.classList.remove('disabled'); endTurnButton.disabled = false;} if(gameOverScreen) gameOverScreen.style.display = 'none'; if(startScreen) startScreen.style.display = 'none'; window.addEventListener('resize', handleResize, { passive: true }); document.addEventListener('fullscreenchange', updateFullscreenButton); document.addEventListener('webkitfullscreenchange', updateFullscreenButton); document.addEventListener('mozfullscreenchange', updateFullscreenButton); document.addEventListener('MSFullscreenChange', updateFullscreenButton); updateFullscreenButton(); document.addEventListener('mousemove', trackMousePosition); requestAnimationFrame(() => { console.log("Init rAF started."); try { calculateCellSize(); spawnObstacles(); spawnInitialUnits(); units.forEach(u => { if (u.team === 'player') u.acted = false; u.isFrozen = false; u.frozenTurnsLeft = 0; }); renderAllUnits(); applyLayout(); updateTurnDisplay(); startMusicIfNotPlaying(); } catch(rafError) { console.error("Init rAF Main Error:", rafError); isProcessing = false; updateTurnDisplay(); } finally { isProcessing = false; updateTurnDisplay(); console.log("Init rAF finished."); } }); } catch (initError) { console.error("Outer Init Error (before rAF):", initError); isProcessing = false; updateTurnDisplay(); } }
+
+        // --- Board & Spawning (Keep Original) ---
+        function setupBoard() { if(!gameBoard) return; gameBoard.innerHTML = ''; gameBoard.className = ''; for (let r = 0; r < GRID_ROWS; r++) { for (let c = 0; c < GRID_COLS; c++) { const cell = document.createElement('div'); cell.classList.add('grid-cell'); cell.dataset.x = c; cell.dataset.y = r; cell.addEventListener('click', handleCellClick); cell.addEventListener('mouseenter', handleCellMouseEnter); cell.addEventListener('mouseleave', handleCellMouseLeave); cell.style.gridColumn = c + 1; cell.style.gridRow = r + 1; gameBoard.appendChild(cell); } } gameBoard.addEventListener('mouseover', handleMouseEnterOnBoard); gameBoard.addEventListener('mouseleave', handleMouseLeaveOnBoard); }
+        function initializeGridState() { gridState = Array.from({ length: GRID_ROWS }, () => Array(GRID_COLS).fill(null)); console.log("Grid state initialized."); }
+        function spawnObstacles() { const numObstacles = MIN_OBSTACLES + Math.floor(currentLevel * MAX_OBSTACLES_PER_LEVEL); const validSpawnMinY = ENEMY_SPAWN_ROWS; const validSpawnMaxY = GRID_ROWS - PLAYER_SPAWN_ROWS - 1; let spawnedCount = 0; let attempts = 0; const maxAttempts = numObstacles * 20; console.log(`Attempting to spawn ${numObstacles} obstacles.`); if (validSpawnMinY > validSpawnMaxY) { console.warn("No valid rows for obstacle spawning."); return; } while (spawnedCount < numObstacles && attempts < maxAttempts) { attempts++; const x = Math.floor(Math.random() * GRID_COLS); const y = Math.floor(Math.random() * (validSpawnMaxY - validSpawnMinY + 1)) + validSpawnMinY; if (isCellInBounds(x, y) && gridState[y]?.[x] === null) { const isWall = Math.random() < WALL_ROCK_CHANCE; const obstacleType = isWall ? 'wall_rock' : 'rock'; gridState[y][x] = obstacleType; const obstacleData = OBSTACLE_TYPES[obstacleType]; const obsEl = document.createElement('div'); obsEl.classList.add('obstacle', obstacleData.spriteClass); obsEl.style.setProperty('--obs-x', x + 1); obsEl.style.setProperty('--obs-y', y + 1); gameBoard.appendChild(obsEl); const cellEl = getCellElement(x, y); if (cellEl) cellEl.classList.add('has-obstacle'); spawnedCount++; } } if (spawnedCount < numObstacles) console.warn(`Could only spawn ${spawnedCount}/${numObstacles} obstacles.`); }
+        function spawnInitialUnits() { const occupied = new Set(); const knightPositions = [{ x: 1, y: GRID_ROWS - 1 }, { x: 3, y: GRID_ROWS - 1 }, { x: 5, y: GRID_ROWS - 1 }, { x: 7, y: GRID_ROWS - 1 }, { x: 0, y: GRID_ROWS - 2 }, { x: 2, y: GRID_ROWS - 2 }, { x: 4, y: GRID_ROWS - 2 }, { x: 6, y: GRID_ROWS - 2 }]; let numKnights = 3 + Math.floor(currentLevel / 6); numKnights = Math.min(numKnights, knightPositions.length); let knightsSpawned = 0; for (let i = 0; i < knightPositions.length && knightsSpawned < numKnights; i++) { const p = knightPositions[i]; if (isCellInBounds(p.x, p.y) && gridState[p.y]?.[p.x] === null) { createUnit('knight', p.x, p.y); occupied.add(`${p.x},${p.y}`); knightsSpawned++; } else { console.warn(`Skipping knight spawn at (${p.x}, ${p.y})`); } } if (knightsSpawned < numKnights) console.warn(`Could only spawn ${knightsSpawned}/${numKnights} knights.`); const numEnemies = 3 + currentLevel; let spawnedEnemies = 0; const unitsToSpawn = []; if (currentLevel === ARCHER_INTRO_LEVEL) { unitsToSpawn.push('goblin_archer'); for (let i=0; i<numEnemies-1; i++) unitsToSpawn.push('goblin'); } else if (currentLevel === CLUBBER_INTRO_LEVEL) { unitsToSpawn.push('goblin_clubber'); const remaining = ['goblin']; if (currentLevel >= ARCHER_INTRO_LEVEL) remaining.push('goblin_archer'); for (let i=0; i<numEnemies-1; i++) unitsToSpawn.push(remaining[Math.floor(Math.random() * remaining.length)]); } else { const types = ['goblin']; if (currentLevel >= ARCHER_INTRO_LEVEL) types.push('goblin_archer'); if (currentLevel >= CLUBBER_INTRO_LEVEL) types.push('goblin_clubber'); for (let i=0; i<numEnemies; i++) unitsToSpawn.push(types[Math.floor(Math.random() * types.length)]); } for (const typeToSpawn of unitsToSpawn) { let spawned = false; let attempts = 0; const maxAttempts = GRID_COLS * ENEMY_SPAWN_ROWS * 3; while (!spawned && attempts < maxAttempts) { attempts++; const x = Math.floor(Math.random() * GRID_COLS); const y = Math.floor(Math.random() * ENEMY_SPAWN_ROWS); const key = `${x},${y}`; if (isCellInBounds(x, y) && gridState[y]?.[x] === null && !occupied.has(key)) { createUnit(typeToSpawn, x, y); occupied.add(key); spawned = true; spawnedEnemies++; } } if (!spawned) console.warn(`Enemy spawn failed for type ${typeToSpawn}.`); } console.log(`Spawned ${knightsSpawned} Knights, ${spawnedEnemies} Enemies.`); }
+        function createUnit(type, x, y) { const data = UNIT_DATA[type]; if(!data) { console.warn(`Unit data not found: ${type}`); return; } const unit={id:unitCounter++,type,x,y,hp:data.hp,maxHp:data.hp,atk:data.atk,mov:data.mov,range:data.range, knockback: data.knockback || false, team:data.team,acted:false,element:null, deadSpriteUrl: data.deadSpriteUrl, isFrozen: false, frozenTurnsLeft: 0 }; units.push(unit); }
+
+        // --- Rendering (Integrate Tooltip listeners) ---
+        function renderAllUnits() { if(!gameBoard) return; document.querySelectorAll('#game-board .unit').forEach(el => el.remove()); units.forEach(unit => renderUnit(unit)); }
+        function renderUnit(unit) { if(!gameBoard) return; if (unit.element?.parentNode) { unit.element.parentNode.removeChild(unit.element); } const el = document.createElement('div'); el.classList.add('unit', unit.team); el.dataset.id = unit.id; const data = UNIT_DATA[unit.type]; if (data?.spriteUrl) el.style.backgroundImage = `url('${data.spriteUrl}')`; el.classList.toggle('selected', selectedUnit?.id === unit.id); el.classList.toggle('acted', unit.acted); el.classList.toggle('frozen', unit.isFrozen); el.addEventListener('click', (ev) => { handleUnitClick(ev, unit); }); el.addEventListener('mouseenter', (ev) => handleUnitMouseEnter(ev, unit)); el.addEventListener('mouseleave', (ev) => handleUnitMouseLeave(ev, unit)); unit.element = el; gameBoard.appendChild(el); updateUnitPosition(unit, true); }
+        function updateUnitPosition(unit, forceUpdateSize = false) { if (!unit?.element || unit.element.classList.contains('dead')) return; const targetCol = unit.x + 1; const targetRow = unit.y + 1; unit.element.style.setProperty('--unit-x', targetCol); unit.element.style.setProperty('--unit-y', targetRow); unit.element.classList.toggle('acted', unit.acted); unit.element.classList.toggle('selected', selectedUnit?.id === unit.id); unit.element.classList.toggle('frozen', unit.isFrozen); if (!unit.element.classList.contains('is-moving') && (!unit.element.style.transform || unit.element.style.transform !== 'none')) { unit.element.style.transform = 'none'; } unit.element.style.opacity = '1'; }
+        function updateItemPosition(element, x, y, stackIndex = 0) { if (!element) return; element.style.setProperty('--item-x', x + 1); element.style.setProperty('--item-y', y + 1); element.style.setProperty('--stackIndex', stackIndex); }
+        function clearHighlights() { document.querySelectorAll('.grid-cell.valid-move').forEach(c => c.classList.remove('valid-move')); validMoves = []; validAttacks = []; }
+
+        // MODIFIED highlightMoves: Removed cell background highlight for attack
+        function highlightMoves(unit) { clearHighlights(); if (!unit || (!levelClearedAwaitingInput && unit.acted) || unit.isFrozen || !isUnitAliveAndValid(unit)) return; validMoves = getValidMoves(unit); validAttacks = getValidAttacks(unit); validMoves.forEach(p => { const c = getCellElement(p.x, p.y); if (c && !c.classList.contains('has-obstacle')) c.classList.add('valid-move'); }); /* Attack targets are now only indicated by unit hover effects/cursor */ }
+        // --- Popups (Keep Original) ---
+        function showPopup(x, y, text, className) { if(!gameBoard) return; const popup = document.createElement('div'); popup.classList.add(className); popup.textContent = text; const boardRect = gameBoard.getBoundingClientRect(); const cellEl = getCellElement(x, y); if (!cellEl) return; const cellRect = cellEl.getBoundingClientRect(); const popupX = cellRect.left - boardRect.left + cellRect.width / 2; const popupY = cellRect.top - boardRect.top + cellRect.height / 2 - 15; popup.style.left = `${popupX}px`; popup.style.top = `${popupY}px`; popup.style.transform = 'translateX(-50%)'; gameBoard.appendChild(popup); const duration = (className === 'freeze-popup') ? 800 : 1000; setTimeout(() => popup.remove(), duration); }
+        function showDamagePopup(x, y, damage) { showPopup(x, y, `-${damage}`, 'damage-popup'); }
+        function showFreezePopup(x, y) { showPopup(x, y, `Frozen!`, 'freeze-popup'); }
+        function showHealPopup(x, y, amount) { showPopup(x, y, `+${amount}`, 'heal-popup'); }
+
+        // --- UI Updates (Integrate new unit info panel) ---
+        function updateLevelDisplay() { if(levelDisplayElement) levelDisplayElement.textContent=`Level: ${currentLevel}`; }
+        function updateGoldDisplay() { if (goldDisplayElement) goldDisplayElement.textContent = `Gold: ${playerGold}`; }
+        function updateSpellUI() { if(!fireballElement || !flameWaveElement || !frostNovaElement || !healElement) return; const spellData = [ {el: fireballElement, name: 'fireball', unlock: FIREBALL_UNLOCK_LEVEL, label: "Fireball"}, {el: flameWaveElement, name: 'flameWave', unlock: FLAME_WAVE_UNLOCK_LEVEL, label: "Flame Wave"}, {el: frostNovaElement, name: 'frostNova', unlock: FROST_NOVA_UNLOCK_LEVEL, label: "Frost Nova"}, {el: healElement, name: 'heal', unlock: HEAL_UNLOCK_LEVEL, label: "Heal"} ]; spellData.forEach(spell => { if (!spell.el) return; const normallyUnlocked = currentLevel >= spell.unlock; const cheatActive = unlimitedSpellsCheat; const isEffectivelyUnlocked = normallyUnlocked || cheatActive; const isAvailableThisLevel = spellUses[spell.name] || cheatActive; spell.el.className = 'spell-icon'; if (!isEffectivelyUnlocked) { spell.el.classList.add('locked'); spell.el.title = `Unlock at Level ${spell.unlock}`; } else if (!isAvailableThisLevel) { spell.el.classList.add('used'); spell.el.title = `${spell.label} (Used this level)`; } else { spell.el.classList.add('available'); if (cheatActive) { spell.el.classList.add('cheat-available'); if (!normallyUnlocked) { spell.el.title = `${spell.label} (CHEAT UNLOCKED)`; } else { spell.el.title = `${spell.label} (CHEAT ACTIVE)`; } } else { spell.el.title = spell.label; } if (currentSpell === spell.name) { spell.el.classList.add('selected'); } } }); gameBoard.classList.toggle('fireball-targeting', currentSpell === 'fireball'); gameBoard.classList.toggle('flame-wave-targeting', currentSpell === 'flameWave'); gameBoard.classList.toggle('frost-nova-targeting', currentSpell === 'frostNova'); gameBoard.classList.toggle('heal-targeting', currentSpell === 'heal'); }
+        function updateTurnDisplay() { if(!currentTurnDisplay || !actionsLeftDisplay || !endTurnButton) return; const isPlayer = currentTurn === 'player'; currentTurnDisplay.textContent = `Turn: ${isPlayer ? 'Player' : 'Enemy'}`; let btnDisabled = false; let btnClassDisabled = false; if (isPlayer) { const rem = units.filter(u => u.team === 'player' && !u.acted && !u.isFrozen && isUnitAliveAndValid(u)).length; actionsLeftDisplay.textContent = levelClearedAwaitingInput ? `Collect Gold!` : `Actions Left: ${rem}`; btnDisabled = isProcessing; btnClassDisabled = isProcessing; } else { actionsLeftDisplay.textContent = `AI Thinking...`; btnDisabled = true; btnClassDisabled = true; } endTurnButton.disabled = btnDisabled; endTurnButton.classList.toggle('disabled', btnClassDisabled); if (levelClearedAwaitingInput) { endTurnButton.innerHTML = `N<span class="hotkey-e">[E]</span>xt Level`; endTurnButton.title = "Proceed to Next Level (E)"; endTurnButton.classList.add('next-level-mode'); endTurnButton.disabled = false; endTurnButton.classList.remove('disabled'); } else { endTurnButton.innerHTML = `<span class="hotkey-e">[E]</span>nd Turn`; endTurnButton.title = "End Player Turn (E)"; endTurnButton.classList.remove('next-level-mode'); } endTurnButton.disabled = btnDisabled; endTurnButton.classList.toggle('disabled', btnClassDisabled); }
+
+        function updateUnitInfo(unit) {
+             // Check if the main container element exists first
+             if (!unitInfo || !unitNameDisplay || !unitHpDisplay || !unitAtkDisplay || !unitMovDisplay || !unitRngDisplay || !unitStatusDisplay || !unitPortraitElement) return;
+
+             if (isUnitAliveAndValid(unit)) {
+                 // *** Make the panel visible first ***
+                 unitInfo.style.display = 'flex'; // Use 'flex' because that's how it's styled in CSS
+
+                 const data = UNIT_DATA[unit.type];
+                 unitNameDisplay.textContent = `${data?.name || unit.type}`;
+                 unitHpDisplay.textContent = `HP: ${unit.hp}/${unit.maxHp}`;
+                 unitAtkDisplay.textContent = `ATK: ${unit.atk}`;
+                 unitMovDisplay.textContent = `MOV: ${unit.mov}`;
+
+                 // Handle Range Display
+                 if (unit.range > 1) {
+                     unitRngDisplay.textContent = `RNG: ${unit.range}`;
+                     unitRngDisplay.style.display = ''; // Or 'block'/'inline' depending on desired layout
+                 } else {
+                     unitRngDisplay.style.display = 'none';
+                 }
+
+                 // Handle Status Display
+                 if (unit.isFrozen) {
+                     unitStatusDisplay.textContent = `❄️ Status: Frozen (${unit.frozenTurnsLeft} turns)`;
+                     unitStatusDisplay.style.display = ''; // Ensure visible
+                 } else {
+                     unitStatusDisplay.textContent = '';
+                     unitStatusDisplay.style.display = 'none'; // Hide if no status
+                 }
+
+                 // Handle Portrait Display
+                 const portraitUrl = data?.portraitUrl || '';
+                 if (portraitUrl) {
+                     unitPortraitElement.style.backgroundImage = `url('${portraitUrl}')`;
+                     unitPortraitElement.style.display = 'block'; // Or 'inline-block' etc.
+                     unitPortraitElement.style.opacity = '1';
+                 } else {
+                     unitPortraitElement.style.backgroundImage = '';
+                     unitPortraitElement.alt = 'No Portrait';
+                     unitPortraitElement.style.display = 'none'; // Hide if no portrait
+                 }
+
+             } else {
+                 // *** Hide the ENTIRE panel ***
+                 unitInfo.style.display = 'none';
+             }
+         }
+         
+        // --- End INTEGRATED updateUnitInfo ---
+
+        function showFeedback(message, type = '') { if(!feedbackArea) return; feedbackArea.textContent = message; feedbackArea.className = type; if (type !== 'feedback-levelup' && type !== 'feedback-gold' && type !== 'feedback-cheat') { setTimeout(() => { if (feedbackArea.textContent === message) feedbackArea.textContent = ''; }, 2500); } else if (type === 'feedback-gold' || type === 'feedback-cheat') { setTimeout(() => { if (feedbackArea.textContent === message) feedbackArea.textContent = ''; }, 1500); } }
+
+        // --- Spell Selection (Keep Original) ---
+        function setActiveSpell(spellName) { if (!audioInitialized) initializeAudio(); if (levelClearedAwaitingInput) return; const wasSelected = currentSpell === spellName; currentSpell = null; clearFrostNovaPreview(); gameBoard.style.removeProperty('--hover-col'); if (wasSelected) { showFeedback(''); playSfx(sfx.select); } else if (spellName) { const spellDataMap = { fireball: { unlock: FIREBALL_UNLOCK_LEVEL, available: spellUses.fireball, feedback: 'Select ENEMY target for Fireball.' }, flameWave: { unlock: FLAME_WAVE_UNLOCK_LEVEL, available: spellUses.flameWave, feedback: 'Click target ROW for Flame Wave.' }, frostNova: { unlock: FROST_NOVA_UNLOCK_LEVEL, available: spellUses.frostNova, feedback: 'Select CENTER cell for Frost Nova.' }, heal: { unlock: HEAL_UNLOCK_LEVEL, available: spellUses.heal, feedback: 'Select FRIENDLY unit to Heal.' } }; const data = spellDataMap[spellName]; const normallyUnlocked = currentLevel >= data.unlock; const cheatActive = unlimitedSpellsCheat; const isEffectivelyUnlocked = normallyUnlocked || cheatActive; const isAvailableThisLevel = data.available || cheatActive; if (isProcessing || currentTurn !== 'player' || !isEffectivelyUnlocked || !isAvailableThisLevel) { if (!isEffectivelyUnlocked) { showFeedback(`Unlock at Level ${data.unlock}!`, "feedback-error"); } else if (!isAvailableThisLevel) { const formattedName = spellName.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()); showFeedback(`${formattedName} already used this level.`, 'feedback-error'); } else { showFeedback("Cannot select spell now.", "feedback-error"); } playSfx(sfx.error); } else { currentSpell = spellName; showFeedback(data.feedback); playSfx(sfx.select); } } updateSpellUI(); }
+
+        // --- Logic Handlers (Keep Original) ---
+        async function handleCellClick(event) { if (event.target.classList.contains('unit') || isProcessing) return; if (!audioInitialized) initializeAudio(); const cell = event.currentTarget; const x = parseInt(cell.dataset.x); const y = parseInt(cell.dataset.y); if (!isCellInBounds(x, y) || (gridState[y]?.[x] !== null)) { playSfx(sfx.error); showFeedback("Cannot target obstacle.", "feedback-error"); if (currentSpell) setActiveSpell(null); if (selectedUnit) deselectUnit(); return; } const unitOnCell = getUnitAt(x, y); if (!levelClearedAwaitingInput) { switch (currentSpell) { case 'fireball': if (unitOnCell && unitOnCell.team === 'enemy') castFireball(unitOnCell); else { playSfx(sfx.error); showFeedback("Target an ENEMY unit.", "feedback-error"); setActiveSpell(null); } return; case 'frostNova': castFrostNova(x, y); return; case 'flameWave': castFlameWave(y); return; case 'heal': playSfx(sfx.error); showFeedback("Select a FRIENDLY unit.", "feedback-error"); setActiveSpell(null); return; } } else if (currentSpell) { setActiveSpell(null); showFeedback("Level cleared, cannot cast spells.", "feedback-error"); playSfx(sfx.error); return; } if (currentTurn === 'player') { if (selectedUnit) { const isMoveValid = validMoves.some(p => p.x === x && p.y === y); if (isMoveValid && !unitOnCell && isCellInBounds(x,y) && gridState[y]?.[x] === null) { const unitToMove = selectedUnit; if(unitToMove.element) unitToMove.element.classList.remove('selected'); clearHighlights(); selectedUnit = null; isProcessing = true; updateTurnDisplay(); await moveUnit(unitToMove, x, y); checkForGoldPickup(unitToMove, x, y); if (!levelClearedAwaitingInput) { finishAction(unitToMove); } else { updateUnitPosition(unitToMove); } updateUnitInfo(null); isProcessing = false; updateTurnDisplay(); if (levelClearedAwaitingInput && droppedGold.length === 0) { showFeedback("All gold collected! Press [E] for Next Level.", "feedback-levelup"); } } else { playSfx(sfx.error); deselectUnit(); updateUnitInfo(unitOnCell); } } else { updateUnitInfo(unitOnCell); } } else { updateUnitInfo(unitOnCell); } }
+        function handleUnitClick(event, clickedUnit) { event.stopPropagation(); if (isProcessing || !isUnitAliveAndValid(clickedUnit)) { deselectUnit(); updateUnitInfo(null); return; } if (!audioInitialized) initializeAudio(); if (!levelClearedAwaitingInput && currentSpell) { switch (currentSpell) { case 'fireball': if (clickedUnit.team === 'enemy') castFireball(clickedUnit); else { playSfx(sfx.error); showFeedback("Target an ENEMY unit.", "feedback-error"); setActiveSpell(null); updateUnitInfo(clickedUnit); } return; case 'frostNova': castFrostNova(clickedUnit.x, clickedUnit.y); return; case 'flameWave': castFlameWave(clickedUnit.y); return; case 'heal': if (clickedUnit.team === 'player') castHeal(clickedUnit); else { playSfx(sfx.error); showFeedback("Target a FRIENDLY unit.", "feedback-error"); setActiveSpell(null); updateUnitInfo(clickedUnit); } return; } } else if (levelClearedAwaitingInput && currentSpell) { setActiveSpell(null); showFeedback("Level cleared, cannot cast spells.", "feedback-error"); playSfx(sfx.error); return; } updateUnitInfo(clickedUnit); if (currentTurn === 'player') { if (selectedUnit) { if (!levelClearedAwaitingInput && clickedUnit.team === 'enemy' && validAttacks.includes(clickedUnit.id)) { const attacker = selectedUnit; deselectUnit(); isProcessing = true; updateTurnDisplay(); attackUnit(attacker, clickedUnit); } else if (clickedUnit.team === 'player' && clickedUnit.id !== selectedUnit.id) { if ((!clickedUnit.acted || levelClearedAwaitingInput) && !clickedUnit.isFrozen) { selectUnit(clickedUnit); } else if (clickedUnit.isFrozen) { showFeedback("Cannot select: Unit is Frozen!", "feedback-error"); playSfx(sfx.error); } else if (clickedUnit.acted && !levelClearedAwaitingInput) { showFeedback("Cannot select: Unit already acted.", "feedback-error"); playSfx(sfx.error); } } else if (clickedUnit.id === selectedUnit.id) { deselectUnit(); } else { playSfx(sfx.error); if (levelClearedAwaitingInput && clickedUnit.team === 'enemy') showFeedback("Level cleared, cannot attack.", "feedback-error"); else if(clickedUnit.team === 'player' && clickedUnit.acted && !levelClearedAwaitingInput) showFeedback("Unit already acted.", "feedback-error"); else if(clickedUnit.team === 'player' && clickedUnit.isFrozen) showFeedback("Player unit is Frozen!", "feedback-error"); else if(clickedUnit.team === 'enemy' && !validAttacks.includes(clickedUnit.id)) { const targetExists = units.find(u => u.id === clickedUnit.id && isUnitAliveAndValid(u)); if (targetExists) { if (getDistance(selectedUnit, targetExists) > selectedUnit.range) showFeedback("Enemy out of range.", "feedback-error"); else if (selectedUnit.range > 1 && !hasLineOfSight(selectedUnit.x, selectedUnit.y, targetExists.x, targetExists.y)) showFeedback("Line of sight blocked.", "feedback-error"); else showFeedback("Invalid target.", "feedback-error"); } else showFeedback("Invalid target.", "feedback-error"); } else showFeedback("Invalid action.", "feedback-error"); } } else { if (clickedUnit.team === 'player' && (!clickedUnit.acted || levelClearedAwaitingInput) && !clickedUnit.isFrozen) { selectUnit(clickedUnit); } else if (clickedUnit.team === 'player' && clickedUnit.acted && !levelClearedAwaitingInput) { showFeedback("Unit already acted.", "feedback-error"); playSfx(sfx.error); } else if (clickedUnit.team === 'player' && clickedUnit.isFrozen) { showFeedback("Unit is Frozen!", "feedback-error"); playSfx(sfx.error); } } } }
+          function handleMouseEnterOnBoard(event) {
+            if (isProcessing || currentSpell) return;
+            // Let handleUnitMouseEnter deal with showing info
+            // if(event.target.classList.contains('unit') && !event.target.classList.contains('dead')) {
+            //     const unitId = parseInt(event.target.dataset.id);
+            //     const hoveredUnit = units.find(un => un.id === unitId);
+            //     // REMOVED: updateUnitInfo call
+            // }
+         }
+                function handleMouseLeaveOnBoard(event) {
+            if (isProcessing || currentSpell) return;
+
+            // If the mouse leaves the board entirely, revert to selected unit info or hide it.
+            if (selectedUnit) {
+                updateUnitInfo(selectedUnit);
+            } else {
+                updateUnitInfo(null);
+            }
+
+            // Keep spell-related UI clearing
+            if (currentSpell !== 'flameWave') {
+                gameBoard.style.removeProperty('--hover-col');
+            }
+            if (currentSpell === 'frostNova') { // Or just clear it always if simpler
+                 clearFrostNovaPreview();
+            }
+        }
+        function handleCellMouseEnter(event) { /* Keep original */ if (isProcessing) return; const cell = event.currentTarget; if (cell.classList.contains('has-obstacle')) { clearFrostNovaPreview(); return; } if (currentSpell === 'flameWave') { const colIndex = parseInt(cell.dataset.x); gameBoard.style.setProperty('--hover-col', colIndex); } else if (currentSpell === 'frostNova') { clearFrostNovaPreview(); const x = parseInt(cell.dataset.x); const y = parseInt(cell.dataset.y); highlightFrostNovaArea(x, y); } }
+        function handleCellMouseLeave(event) { /* Keep original */ if (currentSpell === 'frostNova' && !isProcessing) { clearFrostNovaPreview(); } }
+        function highlightFrostNovaArea(centerX, centerY) { /* Keep original */ for (let dx = -1; dx <= 1; dx++) { for (let dy = -1; dy <= 1; dy++) { const targetX = centerX + dx; const targetY = centerY + dy; if (isCellInBounds(targetX, targetY) && gridState[targetY]?.[targetX] === null) { const cell = getCellElement(targetX, targetY); if (cell) { cell.classList.add('frost-aoe-preview'); } } } } }
+        function clearFrostNovaPreview() { /* Keep original */ document.querySelectorAll('.grid-cell.frost-aoe-preview').forEach(cell => cell.classList.remove('frost-aoe-preview')); }
+
+        // --- INTEGRATED Tooltip Functions ---
+        function trackMousePosition(event) { currentMouseX = event.clientX; currentMouseY = event.clientY; if (tooltipElement && tooltipElement.classList.contains('visible')) { positionTooltip(); } }
+        function showTooltip(unit) { if (!tooltipElement || !unit || !isUnitAliveAndValid(unit)) return; const unitData = UNIT_DATA[unit.type]; let tooltipContent = `<b>${unitData?.name || unit.type}</b>HP: ${unit.hp}/${unit.maxHp}`; if (unit.isFrozen) { tooltipContent += `<br><span style="color:#aadeff;">❄️ Frozen (${unit.frozenTurnsLeft}t)</span>`; } tooltipElement.innerHTML = tooltipContent; tooltipElement.classList.add('visible'); positionTooltip(); }
+        function hideTooltip() { if (!tooltipElement) return; tooltipElement.classList.remove('visible'); }
+        function positionTooltip() { if (!tooltipElement || !tooltipElement.classList.contains('visible')) return; const tooltipRect = tooltipElement.getBoundingClientRect(); const containerRect = document.body.getBoundingClientRect(); const transformStyle = getComputedStyle(tooltipElement).transform; let offsetX = 12; let offsetY = 18; if (transformStyle && transformStyle !== 'none') { try { const matrix = new DOMMatrixReadOnly(transformStyle); offsetX = matrix.m41; offsetY = matrix.m42; } catch (e) { console.warn("Could not parse tooltip transform offset."); } } let top = currentMouseY + offsetY; let left = currentMouseX + offsetX; if (top + tooltipRect.height > containerRect.height - 5) { top = currentMouseY - tooltipRect.height - 10; } if (left + tooltipRect.width > containerRect.width - 5) { left = currentMouseX - tooltipRect.width - 10; } if (top < 5) { top = 5; } if (left < 5) { left = 5; } tooltipElement.style.left = `${left}px`; tooltipElement.style.top = `${top}px`; }
+                function handleUnitMouseEnter(event, unit) {
+            if (isProcessing || !isUnitAliveAndValid(unit)) return;
+            showTooltip(unit);
+            // Always show info for the hovered unit
+            updateUnitInfo(unit);
+        }
+                function handleUnitMouseLeave(event, unit) {
+            hideTooltip();
+            // If a unit is selected, revert to showing its info.
+            // Otherwise, hide the info panel.
+            if (selectedUnit) {
+                updateUnitInfo(selectedUnit);
+            } else {
+                updateUnitInfo(null);
+            }
+        }
+        // --- End INTEGRATED Tooltip Functions ---
+
+        // --- Unit Actions (Keep Original) ---
+        function selectUnit(unit) { if (!unit || (!levelClearedAwaitingInput && unit.acted) || unit.isFrozen || unit.team !== 'player' || currentTurn !== 'player' || isProcessing || !isUnitAliveAndValid(unit)) { if (unit?.isFrozen) { showFeedback("Cannot select: Unit is Frozen!", "feedback-error"); playSfx(sfx.error); } else if (unit?.acted && !levelClearedAwaitingInput) { showFeedback("Unit already acted.", "feedback-error"); playSfx(sfx.error); } return; } if (currentSpell) setActiveSpell(null); if (selectedUnit === unit) return; deselectUnit(false); selectedUnit = unit; if (unit.element) unit.element.classList.add('selected'); highlightMoves(unit); updateUnitInfo(unit); playSfx(sfx.select); }
+                function deselectUnit() { // Removed updateInfo parameter
+            if (selectedUnit?.element) {
+                selectedUnit.element.classList.remove('selected');
+            }
+            selectedUnit = null;
+            clearHighlights();
+            // Always hide the info panel when deselecting
+            updateUnitInfo(null);
+        }
+        function finishAction(unit) { if (!unit || (unit.acted && !levelClearedAwaitingInput) || !isUnitAliveAndValid(unit) || levelClearedAwaitingInput) return; unit.acted = true; console.log(`Action finished: ${unit.type} ${unit.id}`); if (unit.element) { unit.element.classList.add('acted'); unit.element.classList.remove('selected'); } if (selectedUnit?.id === unit.id) { selectedUnit = null; clearHighlights(); } updateUnitPosition(unit); checkWinLossConditions(); }
+        function moveUnit(unit, targetX, targetY) { return new Promise((resolve) => { if (!unit || (!levelClearedAwaitingInput && unit.acted) || unit.isFrozen || !isUnitAliveAndValid(unit) || !unit.element || !isCellInBounds(targetX, targetY) || (gridState[targetY]?.[targetX] !== null)) { console.warn(`Move cancelled: Unit ${unit?.id} State (Acted:${unit?.acted}, Frozen:${unit?.isFrozen}, Alive:${isUnitAliveAndValid(unit)}, LvlClear:${levelClearedAwaitingInput}) or Target (${targetX},${targetY}) invalid.`); resolve(); return; } const startX = unit.x; const startY = unit.y; const deltaX = targetX - startX; const deltaY = targetY - startY; if (deltaX === 0 && deltaY === 0) { resolve(); return; } const translateX = deltaX * currentCellSize; const translateY = deltaY * currentCellSize; unit.element.style.transform = 'none'; unit.element.style.setProperty('--unit-x', startX + 1); unit.element.style.setProperty('--unit-y', startY + 1); unit.element.classList.add('is-moving'); void unit.element.offsetWidth; unit.element.style.transform = `translate(${translateX}px, ${translateY}px)`; playSfx(sfx.move); let moveFinalized = false; const finalizeMove = () => { if (moveFinalized || !unit.element) return; moveFinalized = true; unit.element.removeEventListener('transitionend', transitionEndHandler); unit.element.classList.remove('is-moving'); unit.x = targetX; unit.y = targetY; unit.element.style.transition = 'none'; unit.element.style.transform = 'none'; unit.element.style.setProperty('--unit-x', targetX + 1); unit.element.style.setProperty('--unit-y', targetY + 1); void unit.element.offsetWidth; unit.element.style.transition = ''; resolve(); }; const transitionEndHandler = (event) => { if (event.target === unit.element && event.propertyName === 'transform') { finalizeMove(); } }; unit.element.addEventListener('transitionend', transitionEndHandler); setTimeout(() => { if(unit.element && !moveFinalized) { console.warn(`Unit ${unit.id} move finalize fallback.`); finalizeMove(); } else if (!unit.element) { console.warn(`Unit ${unit.id} removed before move fallback.`); resolve(); } }, MOVE_ANIMATION_DURATION_MS + 50); }); }
+        function checkForGoldPickup(unit, x, y) { if (!unit || unit.team !== 'player' || !isUnitAliveAndValid(unit)) return; const goldStack = droppedGold.filter(gold => gold.x === x && gold.y === y); if (goldStack.length > 0) { const totalAmountPickedUp = goldStack.length; playerGold += totalAmountPickedUp; console.log(`Player ${unit.type} ${unit.id} picked up stack of ${totalAmountPickedUp} gold at (${x}, ${y}). Total: ${playerGold}`); playSfx(sfx.pickup); showFeedback(`+${totalAmountPickedUp} Gold!`, 'feedback-gold'); updateGoldDisplay(); goldStack.forEach(goldItem => goldItem.element?.remove()); droppedGold = droppedGold.filter(gold => gold.x !== x || gold.y !== y); if (levelClearedAwaitingInput && droppedGold.length === 0) { showFeedback("All gold collected! Press [E] for Next Level.", "feedback-levelup"); } } }
+        function shootArrow(attacker, defender) { if(!gameBoard) return; const projectile = document.createElement('div'); projectile.classList.add('projectile', 'arrow'); const attackerEl = attacker.element; const defenderEl = defender.element; if (!attackerEl || !defenderEl) return; const boardRect = gameBoard.getBoundingClientRect(); const startRect = attackerEl.getBoundingClientRect(); const endRect = defenderEl.getBoundingClientRect(); const startX = startRect.left - boardRect.left + startRect.width / 2; const startY = startRect.top - boardRect.top + startRect.height / 2; const endX = endRect.left - boardRect.left + endRect.width / 2; const endY = endRect.top - boardRect.top + endRect.height / 2; const angleRad = Math.atan2(endY - startY, endX - startX); const angleDeg = angleRad * (180 / Math.PI); projectile.style.left = `${startX}px`; projectile.style.top = `${startY}px`; projectile.style.transform = `rotate(${angleDeg}deg)`; gameBoard.appendChild(projectile); playSfx(sfx.arrowShoot); void projectile.offsetWidth; projectile.style.left = `${endX}px`; projectile.style.top = `${endY}px`; setTimeout(() => { projectile.remove(); }, ARROW_FLY_DURATION_MS); }
+        function attackUnit(attacker, defender) { /* Keep original logic */ if (levelClearedAwaitingInput) { console.warn("Attack cancelled: Level cleared."); playSfx(sfx.error); showFeedback("Level cleared, cannot attack.", "feedback-error"); if (currentTurn === 'player') { isProcessing = false; updateTurnDisplay(); } return; } if (!attacker || !defender || attacker.acted || attacker.isFrozen || !isUnitAliveAndValid(attacker) || !isUnitAliveAndValid(defender)) { console.warn(`Attack cancelled pre-cond. Attacker frozen: ${attacker?.isFrozen}, Defender alive: ${isUnitAliveAndValid(defender)}`); if (currentTurn === 'enemy' && attacker && !attacker.acted && !attacker.isFrozen && isUnitAliveAndValid(attacker)) { finishAction(attacker); } else if (currentTurn === 'player'){ isProcessing = false; updateTurnDisplay(); } return; } const attackerElement = attacker.element; const defenderElement = defender.element; if (!attackerElement?.parentNode || !defenderElement?.parentNode) { console.warn("Attack cancelled: Elements missing."); if (currentTurn === 'enemy' && attacker && !attacker.acted && !attacker.isFrozen && isUnitAliveAndValid(attacker)) { finishAction(attacker); } else if(currentTurn === 'player') { isProcessing = false; updateTurnDisplay(); } return; } const originalZIndex = window.getComputedStyle(attackerElement).zIndex || '10'; const attackZIndex = '25'; const distance = getDistance(attacker, defender); const isRangedArcherAttack = attacker.type === 'goblin_archer' && distance > 1; if (isRangedArcherAttack) shootArrow(attacker, defender); const deltaX = defender.x - attacker.x; const deltaY = defender.y - attacker.y; const tapDistanceFactor = 0.4 * currentCellSize; const translateX = deltaX * tapDistanceFactor; const translateY = deltaY * tapDistanceFactor; const transformValue = `translate(${translateX}px, ${translateY}px)`; const animDurationString = getComputedStyle(document.documentElement).getPropertyValue('--attack-anim-time').trim().toLowerCase(); let animDurationMs = 80; if (animDurationString.endsWith('ms')) animDurationMs = parseFloat(animDurationString); else if (animDurationString.endsWith('s')) animDurationMs = parseFloat(animDurationString) * 1000; const strikePause = 50; const returnPause = 60; const damage = attacker.atk; const isFatal = damage >= defender.hp; let defenderDiedVisually = false; if (isFatal) { defender.hp = 0; const defenderData = UNIT_DATA[defender.type]; if (defenderData?.deadSpriteUrl) { defenderElement.style.backgroundImage = `url('${defenderData.deadSpriteUrl}')`; } defenderElement.classList.add('dead'); defenderElement.classList.remove('selected', 'acted', 'unit-hit-flash', 'player', 'enemy', 'valid-attack', 'valid-move', 'frozen'); defenderElement.style.filter = 'none'; defenderElement.style.boxShadow = 'none'; defenderElement.style.transform = 'none'; defenderElement.style.pointerEvents = 'none'; playSfx(defender.team === 'player' ? sfx.playerDie : sfx.defeat); defenderDiedVisually = true; if (clickedUnitObject?.id === defender.id) { updateUnitInfo(null); } hideTooltip(); } if (!isRangedArcherAttack) { attackerElement.style.zIndex = attackZIndex; attackerElement.style.transform = transformValue; if (!defenderDiedVisually) { playSfx(sfx.move); } } const impactDelay = isRangedArcherAttack ? Math.max(ARROW_FLY_DURATION_MS, animDurationMs + strikePause) : animDurationMs + strikePause; setTimeout(() => { if (attackerElement?.parentNode && !isRangedArcherAttack) { attackerElement.style.transform = 'none'; attackerElement.style.zIndex = originalZIndex; } else if (!attackerElement?.parentNode) console.warn(`Attacker ${attacker.id} removed mid-anim.`); const effectDelay = isRangedArcherAttack ? 50 : returnPause; setTimeout(() => { const stillAttacker = units.find(u => u.id === attacker.id); const stillDefender = units.find(u => u.id === defender.id); const originalDefenderData = { x: defender.x, y: defender.y, team: defender.team, id: defender.id, type: defender.type }; if (!stillAttacker || (!stillDefender && !defenderDiedVisually)) { console.warn(`Attacker/Defender invalid post-anim.`); if (stillAttacker && isUnitAliveAndValid(stillAttacker) && !stillAttacker.acted) finishAction(stillAttacker); if (currentTurn === 'player') { isProcessing = false; updateTurnDisplay(); } return; } let wasKnockedBack = false; if (!defenderDiedVisually && isUnitAliveAndValid(stillDefender)) { playSfx(sfx.hit); stillDefender.hp -= damage; if (stillDefender.hp < 0) stillDefender.hp = 0; showDamagePopup(stillDefender.x, stillDefender.y, damage); if (defenderElement?.parentNode) { defenderElement.classList.add('unit-hit-flash'); setTimeout(() => { defenderElement?.classList.remove('unit-hit-flash'); }, 200); } if (clickedUnitObject?.id === stillDefender.id) { updateUnitInfo(stillDefender); } showTooltip(stillDefender); if (attacker.knockback && stillDefender.hp > 0) { const kbDirX = Math.sign(stillDefender.x - attacker.x); const kbDirY = Math.sign(stillDefender.y - attacker.y); const kbX = stillDefender.x + kbDirX; const kbY = stillDefender.y + kbDirY; if (isCellInBounds(kbX, kbY) && !getUnitAt(kbX, kbY) && gridState[kbY]?.[kbX] === null) { console.log(`Unit ${stillDefender.id} knocked back to (${kbX}, ${kbY}).`); stillDefender.x = kbX; stillDefender.y = kbY; updateUnitPosition(stillDefender, true); wasKnockedBack = true; if (stillDefender.team === 'player') { checkForGoldPickup(stillDefender, stillDefender.x, stillDefender.y); } } else { console.log(`Knockback blocked.`); } } if (stillDefender.hp <= 0) { removeUnit(stillDefender, originalDefenderData.x, originalDefenderData.y); } } else if (defenderDiedVisually) { removeUnit(defender, originalDefenderData.x, originalDefenderData.y); } else { console.log(`Attack effects skipped.`); } if (stillAttacker && isUnitAliveAndValid(stillAttacker) && !stillAttacker.acted) { finishAction(stillAttacker); } else { console.warn(`Attacker ${attacker?.id} could not finish action.`); } if (currentTurn === 'player') { isProcessing = false; updateTurnDisplay(); console.log("Player attack finished."); } }, effectDelay); }, impactDelay); }
+
+        // --- Spell Casting (MODIFIED Fireball & Flame Wave) ---
+        function castFireball(targetUnit) {
+            if (levelClearedAwaitingInput || !isUnitAliveAndValid(targetUnit)) { /* ... validation ... */ return; } // Simplified validation display
+
+            const normallyUnlocked = currentLevel >= FIREBALL_UNLOCK_LEVEL;
+            const isEffectivelyUnlocked = normallyUnlocked || unlimitedSpellsCheat;
+            const isAvailable = spellUses.fireball || unlimitedSpellsCheat;
+
+            if (!isAvailable || !isEffectivelyUnlocked || targetUnit.team !== 'enemy' || isProcessing) { /* ... validation ... */ return; } // Simplified validation display
+
+            isProcessing = true; // Block input initially
+            updateTurnDisplay();
+            setActiveSpell(null);
+            if (!unlimitedSpellsCheat) spellUses.fireball = false;
+            updateSpellUI();
+            console.log(`Casting Fireball on ${targetUnit.type} ${targetUnit.id}`);
+
+            const targetUnitId = targetUnit.id;
+            const originalCoords = { x: targetUnit.x, y: targetUnit.y };
+
+            // --- Projectile ---
+            const projectileEl = document.createElement('div');
+            projectileEl.classList.add('projectile', 'fireball-projectile');
+            const projectileWidth = 72;
+            const projectileHeight = 72;
+
+            const spellIconRect = fireballElement.getBoundingClientRect();
+            const boardRect = gameBoard.getBoundingClientRect();
+            const startX = spellIconRect.left - boardRect.left + spellIconRect.width / 2;
+            const startY = spellIconRect.top - boardRect.top + spellIconRect.height / 2;
+
+            const targetCell = getCellElement(originalCoords.x, originalCoords.y);
+            let endX, endY;
+            if (targetCell) {
+                const targetCellRect = targetCell.getBoundingClientRect();
+                endX = targetCellRect.left - boardRect.left + targetCellRect.width / 2;
+                endY = targetCellRect.top - boardRect.top + targetCellRect.height / 2;
+            } else {
+                endX = (originalCoords.x + 0.5) * currentCellSize;
+                endY = (originalCoords.y + 0.5) * currentCellSize;
+            }
+
+            // Calculate rotation
+            const angleRad = Math.atan2(endY - startY, endX - startX);
+            const angleDeg = angleRad * (180 / Math.PI);
+            projectileEl.style.transform = `rotate(${angleDeg}deg)`; // Apply rotation
+
+            projectileEl.style.left = `${startX - projectileWidth / 2}px`;
+            projectileEl.style.top = `${startY - projectileHeight / 2}px`;
+            gameBoard.appendChild(projectileEl);
+
+            playSfx(sfx.fireballShoot); // Play shoot sound AS it starts moving
+
+            // Trigger layout, then set target position for transition
+            void projectileEl.offsetWidth;
+            projectileEl.style.left = `${endX - projectileWidth / 2}px`;
+            projectileEl.style.top = `${endY - projectileHeight / 2}px`;
+
+            // --- Impact and Effects ---
+            setTimeout(() => {
+                projectileEl.remove();
+                playSfx(sfx.fireballHit);
+
+                const stillTarget = units.find(u => u.id === targetUnitId);
+                let targetDied = false;
+
+                if (isUnitAliveAndValid(stillTarget) && stillTarget.x === originalCoords.x && stillTarget.y === originalCoords.y) {
+                    stillTarget.hp -= FIREBALL_DAMAGE;
+                    if (stillTarget.hp < 0) stillTarget.hp = 0;
+                    showDamagePopup(stillTarget.x, stillTarget.y, FIREBALL_DAMAGE);
+                    if(stillTarget.element) { /* ... hit flash ... */ }
+                    if (clickedUnitObject?.id === stillTarget.id) updateUnitInfo(stillTarget);
+                    showTooltip(stillTarget);
+
+                    if (stillTarget.hp <= 0) {
+                        removeUnit(stillTarget, originalCoords.x, originalCoords.y); // Remove immediately
+                        targetDied = true;
+                    }
+                }
+
+                // --- Start Explosion (Visual Only) ---
+                const explosionEl = document.createElement('div');
+                explosionEl.classList.add('fireball-explosion');
+                const explosionBaseWidth = 120;
+                const explosionBaseHeight = 120;
+                explosionEl.style.left = `${endX - explosionBaseWidth / 2}px`;
+                explosionEl.style.top = `${endY - explosionBaseHeight / 2}px`;
+                gameBoard.appendChild(explosionEl);
+                setTimeout(() => explosionEl.remove(), FIREBALL_EXPLOSION_DURATION_MS); // Self-remove after animation
+
+                // --- Unblock Input ---
+                // Set isProcessing false *immediately* after impact logic is done
+                isProcessing = false;
+                checkWinLossConditions(); // Check win/loss now
+                updateTurnDisplay(); // Update UI now
+
+            }, FIREBALL_PROJECTILE_DURATION_MS);
+        }
+
+        function castFlameWave(targetRow) {
+             if (levelClearedAwaitingInput) { /* ... validation ... */ return; }
+             const normallyUnlocked = currentLevel >= FLAME_WAVE_UNLOCK_LEVEL;
+             const isEffectivelyUnlocked = normallyUnlocked || unlimitedSpellsCheat;
+             const isAvailable = spellUses.flameWave || unlimitedSpellsCheat;
+             if (!isAvailable || !isEffectivelyUnlocked || isProcessing || targetRow < 0 || targetRow >= GRID_ROWS) { /* ... validation ... */ return; }
+
+             isProcessing = true; // Block input initially
+             updateTurnDisplay();
+             setActiveSpell(null);
+             if (!unlimitedSpellsCheat) spellUses.flameWave = false;
+             updateSpellUI();
+             console.log(`Casting Flame Wave on row ${targetRow}`);
+
+             let processedUnitsInRow = new Set(); // Track units hit in this cast
+
+             // Read stagger delay from CSS variable or use default
+             let staggerDelay = FLAME_WAVE_STAGGER_DELAY_MS;
+             try {
+                 const delayStr = getComputedStyle(document.documentElement).getPropertyValue('--flame-wave-stagger-delay').trim();
+                 if (delayStr.endsWith('ms')) staggerDelay = parseFloat(delayStr);
+                 else if (delayStr.endsWith('s')) staggerDelay = parseFloat(delayStr) * 1000;
+             } catch(e) { console.warn("Could not read --flame-wave-stagger-delay"); }
+
+             // Loop through columns to schedule explosions
+             for (let x = 0; x < GRID_COLS; x++) {
+                 const currentDelay = x * staggerDelay;
+
+                 setTimeout(() => {
+                     // Get cell center for explosion positioning
+                     const cell = getCellElement(x, targetRow);
+                     if (!cell || cell.classList.contains('has-obstacle')) return; // Skip obstacles
+
+                     const boardRect = gameBoard.getBoundingClientRect();
+                     const cellRect = cell.getBoundingClientRect();
+                     const cellCenterX = cellRect.left - boardRect.left + cellRect.width / 2;
+                     const cellCenterY = cellRect.top - boardRect.top + cellRect.height / 2;
+
+                     // --- Create and Position Explosion ---
+                     const explosionEl = document.createElement('div');
+                     explosionEl.classList.add('fireball-explosion');
+                     const explosionBaseWidth = 120;
+                     const explosionBaseHeight = 120;
+                     explosionEl.style.left = `${cellCenterX - explosionBaseWidth / 2}px`;
+                     explosionEl.style.top = `${cellCenterY - explosionBaseHeight / 2}px`;
+                     gameBoard.appendChild(explosionEl);
+                     setTimeout(() => explosionEl.remove(), FIREBALL_EXPLOSION_DURATION_MS); // Self-remove
+
+                     playSfx(sfx.fireballHit); // Play sound for each explosion
+
+                     // --- Apply Damage ---
+                     const unit = getUnitAt(x, targetRow);
+                     if (unit && isUnitAliveAndValid(unit) && !processedUnitsInRow.has(unit.id)) {
+                         processedUnitsInRow.add(unit.id); // Mark as processed for this wave
+                         console.log(`Flame Wave hitting ${unit.type} ${unit.id} at (${x}, ${targetRow})`);
+                         unit.hp -= FLAME_WAVE_DAMAGE;
+                         if (unit.hp < 0) unit.hp = 0;
+                         showDamagePopup(unit.x, unit.y, FLAME_WAVE_DAMAGE);
+
+                         if (unit.element) { /* ... hit flash ... */ }
+                         if (clickedUnitObject?.id === unit.id) updateUnitInfo(unit);
+                         showTooltip(unit);
+
+                         if (unit.hp <= 0) {
+                             removeUnit(unit, x, targetRow); // Remove if dead
+                         }
+                     }
+
+                     // If this is the last explosion starting, unblock processing
+                     if (x === GRID_COLS - 1) {
+                         console.log("Last Flame Wave explosion started, unblocking.");
+                         isProcessing = false;
+                         checkWinLossConditions(); // Check win state after last damage applied
+                         updateTurnDisplay();
+                     }
+
+                 }, currentDelay);
+             }
+         }
+
+        function castFrostNova(centerX, centerY) { if (levelClearedAwaitingInput) { showFeedback("Level cleared, cannot cast spells.", "feedback-error"); playSfx(sfx.error); setActiveSpell(null); return; } const normallyUnlocked = currentLevel >= FROST_NOVA_UNLOCK_LEVEL; const isEffectivelyUnlocked = normallyUnlocked || unlimitedSpellsCheat; const isAvailable = spellUses.frostNova || unlimitedSpellsCheat; if (!isAvailable || !isEffectivelyUnlocked || isProcessing || !isCellInBounds(centerX, centerY) || (gridState[centerY]?.[centerX] !== null)) { if (!isEffectivelyUnlocked) showFeedback(`Unlock at Level ${FROST_NOVA_UNLOCK_LEVEL}!`, "feedback-error"); else if (!isAvailable) showFeedback("Frost Nova already used.", "feedback-error"); else if (gridState[centerY]?.[centerX] !== null) showFeedback("Cannot cast on obstacle.", "feedback-error"); else showFeedback("Invalid Frost Nova target/state.", "feedback-error"); playSfx(sfx.error); setActiveSpell(null); return; } isProcessing = true; updateTurnDisplay(); setActiveSpell(null); if (!unlimitedSpellsCheat) spellUses.frostNova = false; updateSpellUI(); playSfx(sfx.frostNovaCast); console.log(`Casting Frost Nova at (${centerX}, ${centerY})`); setTimeout(() => { let unitsFrozenCount = 0; let newlyFrozen = false; for (let dx = -1; dx <= 1; dx++) { for (let dy = -1; dy <= 1; dy++) { const targetX = centerX + dx; const targetY = centerY + dy; if (isCellInBounds(targetX, targetY) && gridState[targetY]?.[targetX] === null) { const unit = getUnitAt(targetX, targetY); if (unit && unit.team === 'enemy' && isUnitAliveAndValid(unit)) { if (!unit.isFrozen) newlyFrozen = true; unit.isFrozen = true; unit.frozenTurnsLeft = FROST_NOVA_DURATION; console.log(`Froze unit ${unit.id} (was frozen: ${!newlyFrozen})`); showFreezePopup(unit.x, unit.y); updateUnitPosition(unit); if (clickedUnitObject?.id === unit.id) { updateUnitInfo(unit); } showTooltip(unit); unitsFrozenCount++; } } } } if (unitsFrozenCount > 0 && newlyFrozen) { playSfx(sfx.frostNovaHit); } else if (unitsFrozenCount === 0) { playSfx(sfx.error); showFeedback("No enemies hit.", "feedback-error"); } isProcessing = false; checkWinLossConditions(); updateTurnDisplay(); }, 200); }
+        function castHeal(targetUnit) { if (levelClearedAwaitingInput) { showFeedback("Level cleared, cannot cast spells.", "feedback-error"); playSfx(sfx.error); setActiveSpell(null); return; } const normallyUnlocked = currentLevel >= HEAL_UNLOCK_LEVEL; const isEffectivelyUnlocked = normallyUnlocked || unlimitedSpellsCheat; const isAvailable = spellUses.heal || unlimitedSpellsCheat; if (!isAvailable || !isEffectivelyUnlocked || !isUnitAliveAndValid(targetUnit) || targetUnit.team !== 'player' || isProcessing) { if (!isEffectivelyUnlocked) showFeedback(`Unlock at Level ${HEAL_UNLOCK_LEVEL}!`, "feedback-error"); else if (!isAvailable) showFeedback("Heal already used.", "feedback-error"); else showFeedback("Invalid Heal target/state.", "feedback-error"); playSfx(sfx.error); setActiveSpell(null); return; } if (targetUnit.hp >= targetUnit.maxHp) { showFeedback("Unit at full HP.", "feedback-error"); playSfx(sfx.error); setActiveSpell(null); return; } isProcessing = true; updateTurnDisplay(); setActiveSpell(null); if (!unlimitedSpellsCheat) spellUses.heal = false; updateSpellUI(); playSfx(sfx.heal); console.log(`Casting Heal on ${targetUnit.type} ${targetUnit.id} (Frozen: ${targetUnit.isFrozen})`); const healApplied = Math.min(HEAL_AMOUNT, targetUnit.maxHp - targetUnit.hp); targetUnit.hp += healApplied; showHealPopup(targetUnit.x, targetUnit.y, healApplied); if (targetUnit.element) { targetUnit.element.classList.add('unit-hit-flash'); setTimeout(() => { targetUnit.element?.classList.remove('unit-hit-flash'); }, 200); } if (clickedUnitObject?.id === targetUnit.id) { updateUnitInfo(targetUnit); } showTooltip(targetUnit); isProcessing = false; updateTurnDisplay(); checkWinLossConditions(); }
+
+        // --- Unit Removal & Gold Drop (Keep Original) ---
+        function removeUnit(unit, originalX = null, originalY = null) { if (!unit) return; const unitIndex = units.findIndex(u => u.id === unit.id); const unitElement = unit.element || gameBoard.querySelector(`.unit[data-id='${unit.id}']`); const deathX = originalX ?? unit.x; const deathY = originalY ?? unit.y; const unitTeam = unit.team; const unitType = unit.type; if (unitTeam === 'enemy' && Math.random() < GOLD_DROP_CHANCE) { let goldAmountToDrop = BASE_GOLD_DROP_AMOUNT; if (ADVANCED_GOBLIN_TYPES.includes(unitType) && Math.random() < ADVANCED_GOBLIN_EXTRA_GOLD_CHANCE) { goldAmountToDrop += ADVANCED_GOBLIN_EXTRA_GOLD_AMOUNT; } if (isCellInBounds(deathX, deathY) && gridState[deathY]?.[deathX] === null) { playSfx(sfx.goldDrop); const currentStackSize = droppedGold.filter(g => g.x === deathX && g.y === deathY).length; console.log(`Dropping ${goldAmountToDrop} gold at (${deathX}, ${deathY}). Current stack: ${currentStackSize}`); for (let i = 0; i < goldAmountToDrop; i++) { const stackIndex = currentStackSize + i; const goldEl = document.createElement('div'); goldEl.classList.add('item', 'gold-coin'); goldEl.style.backgroundImage = `url('./sprites/gold.png')`; goldEl.dataset.x = deathX; goldEl.dataset.y = deathY; updateItemPosition(goldEl, deathX, deathY, stackIndex); gameBoard.appendChild(goldEl); droppedGold.push({ x: deathX, y: deathY, element: goldEl, stackIndex: stackIndex }); } } else { console.log(`Gold drop skipped for ${unitType} ${unit.id} at (${deathX}, ${deathY}) - cell blocked.`); } } unit.hp = 0; // Ensure HP is 0 if called directly
+        if (unitIndex !== -1) { units.splice(unitIndex, 1); } if (unitElement && unitElement.parentNode) { unitElement.removeEventListener('mouseenter', handleUnitMouseEnter); unitElement.removeEventListener('mouseleave', handleUnitMouseLeave); if (!unitElement.classList.contains('dead')) { const deathSpriteUrl = UNIT_DATA[unitType]?.deadSpriteUrl; if (deathSpriteUrl) { unitElement.style.backgroundImage = `url('${deathSpriteUrl}')`; } unitElement.classList.add('dead'); unitElement.classList.remove('selected', 'acted', 'unit-hit-flash', 'player', 'enemy', 'valid-attack', 'valid-move', 'frozen', 'is-moving'); unitElement.style.filter = 'none'; unitElement.style.boxShadow = 'none'; unitElement.style.opacity = '1'; unitElement.style.transform = 'none'; unitElement.style.pointerEvents = 'none'; } const deathDisplayTime = 1500; const fadeDurationString = getComputedStyle(document.documentElement).getPropertyValue('--death-fade-time').trim().toLowerCase(); let fadeDuration = 1000; if (fadeDurationString.endsWith('ms')) fadeDuration = parseFloat(fadeDurationString); else if (fadeDurationString.endsWith('s')) fadeDuration = parseFloat(fadeDurationString) * 1000; fadeDuration = Math.max(fadeDuration, 100); setTimeout(() => { if (unitElement?.parentNode && unitElement.classList.contains('dead') && !unitElement.classList.contains('fading-out')) { unitElement.classList.add('fading-out'); setTimeout(() => { unitElement?.remove(); }, fadeDuration); } }, deathDisplayTime); } else { console.log(`Unit ${unit.id} element not found for removal visual.`); } if (selectedUnit?.id === unit.id) { deselectUnit(); } else if (clickedUnitObject?.id === unit.id) { updateUnitInfo(null); } hideTooltip(); /* checkWinLossConditions(); // Moved out, called explicitly after spell/attack resolves */ }
+
+        // --- Utilities (Keep Original) ---
+        function getUnitAt(x, y) { return units.find(unit => unit.x === x && unit.y === y && isUnitAliveAndValid(unit)); }
+        function getCellElement(x, y) { if (!isCellInBounds(x,y)) return null; return gameBoard.querySelector(`.grid-cell[data-x='${x}'][data-y='${y}']`); }
+        function getDistance(unitA, unitB) { if (!unitA || !unitB) return Infinity; return Math.abs(unitA.x - unitB.x) + Math.abs(unitA.y - unitB.y); }
+        function getValidMoves(unit) { if (!unit || (!levelClearedAwaitingInput && unit.acted) || unit.isFrozen || !isUnitAliveAndValid(unit)) return []; const moves = []; const queue = [{ x: unit.x, y: unit.y, distance: 0 }]; const visited = new Set([`${unit.x},${unit.y}`]); while (queue.length > 0) { const current = queue.shift(); const neighbors = [ { x: current.x, y: current.y - 1 }, { x: current.x, y: current.y + 1 }, { x: current.x - 1, y: current.y }, { x: current.x + 1, y: current.y } ]; for (const neighbor of neighbors) { const key = `${neighbor.x},${neighbor.y}`; if (!isCellInBounds(neighbor.x, neighbor.y) || visited.has(key)) continue; const newDistance = current.distance + 1; if (newDistance > unit.mov) continue; const unitAtNeighbor = getUnitAt(neighbor.x, neighbor.y); const obstacleAtNeighbor = gridState[neighbor.y]?.[neighbor.x]; if (unitAtNeighbor || obstacleAtNeighbor !== null) continue; moves.push({ x: neighbor.x, y: neighbor.y }); visited.add(key); queue.push({ x: neighbor.x, y: neighbor.y, distance: newDistance }); } } return moves; }
+        function hasLineOfSight(startX, startY, endX, endY) { let x = startX; let y = startY; const dx = Math.abs(endX - startX); const dy = Math.abs(endY - startY); const sx = startX < endX ? 1 : -1; const sy = startY < endY ? 1 : -1; let err = dx - dy; const maxSteps = dx + dy + 2; let steps = 0; while (steps++ < maxSteps) { let nextX = x, nextY = y; let e2 = 2 * err; let moved = false; if (e2 > -dy) { if (x === endX) break; err -= dy; nextX += sx; moved = true; } if (e2 < dx) { if (y === endY) break; let checkY = y + sy; let checkX = (moved ? nextX : x); if (moved && Math.abs(nextX - startX) + Math.abs(checkY - startY) < Math.abs(endX - startX) + Math.abs(endY - startY)) { const diagUnit = getUnitAt(checkX, checkY); const diagObstacleType = gridState[checkY]?.[checkX]; const diagObstacleData = diagObstacleType ? OBSTACLE_TYPES[diagObstacleType] : null; if (diagUnit || (diagObstacleData && diagObstacleData.blocksLOS)) return false; } err += dx; nextY += sy; moved = true; } x = nextX; y = nextY; if (x === endX && y === endY) break; const unitInCell = getUnitAt(x, y); const obstacleType = gridState[y]?.[x]; const obstacleData = obstacleType ? OBSTACLE_TYPES[obstacleType] : null; if (unitInCell || (obstacleData && obstacleData.blocksLOS)) return false; if (!moved) break; } return true; }
+        function getValidAttacks(unit) { const attacks = []; if (!unit || (!levelClearedAwaitingInput && unit.acted) || unit.isFrozen || !isUnitAliveAndValid(unit) || levelClearedAwaitingInput) return attacks; const unitRange = unit.range || 1; units.forEach(target => { if (target.team !== unit.team && isUnitAliveAndValid(target)) { const distance = getDistance(unit, target); if (distance <= unitRange) { if (unitRange === 1 || hasLineOfSight(unit.x, unit.y, target.x, target.y)) { attacks.push(target.id); } } } }); return attacks; }
+
+        // --- Turn Management & AI (Keep Original) ---
+        function processFreezeTicks(team) { let thawedCount = 0; units.filter(u => u.team === team && u.isFrozen && isUnitAliveAndValid(u)).forEach(unit => { unit.frozenTurnsLeft--; if (unit.frozenTurnsLeft <= 0) { unit.isFrozen = false; thawedCount++; console.log(`Unit ${unit.id} thawed.`); updateUnitPosition(unit); } if (clickedUnitObject?.id === unit.id) { updateUnitInfo(unit); } showTooltip(unit); }); return thawedCount; }
+        function endTurn() { if (levelClearedAwaitingInput) { console.log("Player proceeding to next level."); playSfx(sfx.success); startNextLevel(); return; } if (currentTurn !== 'player' || isProcessing || isGameOver()) { return; } if (!audioInitialized) initializeAudio(); playSfx(sfx.select); console.log("--- Player Ends Turn ---"); isProcessing = true; updateTurnDisplay(); deselectUnit(); setActiveSpell(null); updateUnitInfo(null); showFeedback(''); hideTooltip(); currentTurn = 'enemy'; console.log("Processing enemy freeze ticks..."); processFreezeTicks('enemy'); units.filter(u => u.team === 'enemy' && isUnitAliveAndValid(u)).forEach(u => { u.acted = false; updateUnitPosition(u); }); updateTurnDisplay(); setTimeout(runAITurn, 400); }
+        // Event listener added in DOMContentLoaded
+        function runAITurn() { console.log("--- AI Turn Start ---"); const unitsToAct = units.filter(u => u.team === 'enemy' && isUnitAliveAndValid(u) && !u.acted && !u.isFrozen); let currentAIUnitIndex = 0; const totalActions = unitsToAct.length; const actionInterval = 150; const minActionDuration = Math.max(MOVE_ANIMATION_DURATION_MS, ARROW_FLY_DURATION_MS) + 150; console.log(`AI processing ${totalActions} units`); async function processNextAIUnit() { if (isGameOver()) { console.log("AI turn interrupted: Game Over."); endAITurnSequence(true); return; } if (currentAIUnitIndex >= totalActions) { endAITurnSequence(false); return; } const unitToProcess = unitsToAct[currentAIUnitIndex]; currentAIUnitIndex++; const stillValidUnit = units.find(u => u.id === unitToProcess.id && isUnitAliveAndValid(u) && !u.acted && !u.isFrozen); if (stillValidUnit) { const actionStartTime = Date.now(); try { updateTurnDisplay(); await performAIAction(stillValidUnit); } catch(e) { console.error(`AI Error unit ${stillValidUnit?.id}:`, e); if (stillValidUnit && isUnitAliveAndValid(stillValidUnit) && !stillValidUnit.acted) { finishAction(stillValidUnit); } } finally { const actionEndTime = Date.now(); const duration = actionEndTime - actionStartTime; const delayNeeded = Math.max(actionInterval, minActionDuration - duration); setTimeout(processNextAIUnit, delayNeeded); } } else { setTimeout(processNextAIUnit, 50); } } function endAITurnSequence(interrupted) { console.log(`--- AI Turn End --- (Int: ${interrupted})`); if (!isGameOver()) { currentTurn='player'; console.log("Processing player freeze ticks..."); processFreezeTicks('player'); units.forEach(u => { if (u.team === 'player' && isUnitAliveAndValid(u)) { u.acted = false; updateUnitPosition(u); } }); showFeedback("Player Turn!"); isProcessing = false; updateTurnDisplay(); console.log("Player turn started."); } else { console.log("AI turn ended, game over."); if(endTurnButton) {endTurnButton.disabled = true; endTurnButton.classList.add('disabled');} isProcessing = true; updateTurnDisplay(); } } if (totalActions === 0) { console.log("AI: No units to act."); endAITurnSequence(false); } else { setTimeout(processNextAIUnit, 100); } }
+        async function performAIAction(unit) { if (unit.isFrozen) { if (!unit.acted) finishAction(unit); return; } const livingPlayers = units.filter(u => u.team === 'player' && isUnitAliveAndValid(u)); if (livingPlayers.length === 0) { if (!unit.acted) finishAction(unit); return; } const unitRange = unit.range || 1; const possibleAttacks = getValidAttacks(unit); if (possibleAttacks.length > 0) { let targetToAttack = null; let isRangedTargetSelected = false; let lowestHp = Infinity; possibleAttacks.forEach(id => { const target = units.find(u => u.id === id); if (isUnitAliveAndValid(target)) { const distance = getDistance(unit, target); const currentTargetIsRanged = (distance > 1); if (unitRange > 1) { if (currentTargetIsRanged && !isRangedTargetSelected) { targetToAttack = target; lowestHp = target.hp; isRangedTargetSelected = true; } else if (currentTargetIsRanged && isRangedTargetSelected && target.hp < lowestHp) { targetToAttack = target; lowestHp = target.hp; } else if (!isRangedTargetSelected && target.hp < lowestHp) { targetToAttack = target; lowestHp = target.hp; } else if (!targetToAttack) { targetToAttack = target; lowestHp = target.hp; } } else { if (target.hp < lowestHp) { targetToAttack = target; lowestHp = target.hp; } else if (!targetToAttack) { targetToAttack = target; lowestHp = target.hp; } } } }); if (targetToAttack) { console.log(`AI ${unit.type} ${unit.id} attacking ${targetToAttack.type} ${targetToAttack.id} (Frozen: ${targetToAttack.isFrozen})`); attackUnit(unit, targetToAttack); return; } } let nearestPlayer = null; let minDistance = Infinity; livingPlayers.forEach(p => { if(isUnitAliveAndValid(p)) { const d = getDistance(unit, p); if (d < minDistance) { minDistance = d; nearestPlayer = p; } } }); if (nearestPlayer) { const possibleMoves = getValidMoves(unit); if (possibleMoves.length > 0) { let bestMove = null; let shortestDistToTarget = minDistance; let bestDistForRanged = minDistance; possibleMoves.forEach(moveOption => { const distAfterMove = Math.abs(moveOption.x - nearestPlayer.x) + Math.abs(moveOption.y - nearestPlayer.y); if (unitRange > 1) { const currentBestIsAdjacent = bestMove ? (Math.abs(bestMove.x - nearestPlayer.x) + Math.abs(bestMove.y - nearestPlayer.y) <= 1) : true; const newMoveIsAdjacent = distAfterMove <= 1; if (!newMoveIsAdjacent && (currentBestIsAdjacent || distAfterMove < bestDistForRanged)) { bestDistForRanged = distAfterMove; bestMove = moveOption; } else if (newMoveIsAdjacent && currentBestIsAdjacent && distAfterMove < bestDistForRanged) { bestDistForRanged = distAfterMove; bestMove = moveOption; } else if (!bestMove) { bestMove = moveOption; bestDistForRanged = distAfterMove; } } else { if (distAfterMove < shortestDistToTarget) { shortestDistToTarget = distAfterMove; bestMove = moveOption; } else if (!bestMove) { bestMove = moveOption; shortestDistToTarget = distAfterMove; } } }); if (bestMove) { console.log(`AI ${unit.type} ${unit.id} moving to (${bestMove.x}, ${bestMove.y}) towards ${nearestPlayer.type} ${nearestPlayer.id}`); await moveUnit(unit, bestMove.x, bestMove.y); finishAction(unit); return; } } } console.log(`AI ${unit.type} ${unit.id} cannot attack or move closer.`); const unitAfterPotentialMove = units.find(u => u.id === unit.id); if (unitAfterPotentialMove && !unitAfterPotentialMove.acted) { finishAction(unitAfterPotentialMove); } }
+
+        // --- Win/Loss & Level Progression (Keep Original) ---
+        function checkWinLossConditions() { if (winCheckTimeout) clearTimeout(winCheckTimeout); winCheckTimeout = setTimeout(() => { if (isGameOver() || levelClearedAwaitingInput) { winCheckTimeout = null; return; } const playersLeft = units.some(u => u.team === 'player' && isUnitAliveAndValid(u)); const enemiesLeft = units.some(u => u.team === 'enemy' && isUnitAliveAndValid(u)); if (!enemiesLeft && playersLeft) { console.log(`Lvl ${currentLevel} Cleared! Gold count: ${droppedGold.length}`); playSfx(sfx.success); deselectUnit(); setActiveSpell(null); hideTooltip(); if (droppedGold.length > 0) { levelClearedAwaitingInput = true; isProcessing = false; showFeedback(`Level Cleared!`, 'feedback-levelup'); updateTurnDisplay(); console.log("Level Cleared - Waiting for input."); } else { isProcessing = true; showFeedback(`Level ${currentLevel} Cleared!`, 'feedback-levelup'); updateTurnDisplay(); console.log("Level Cleared - No gold, proceeding."); setTimeout(startNextLevel, 1800); } } else if (!playersLeft) { console.log("Loss Condition Met."); gameOver(false); } winCheckTimeout = null; }, 100); }
+        function startNextLevel() { if (isGameOver()) return; currentLevel++; console.log(`--- Start Lvl ${currentLevel} ---`); isProcessing = true; stopMusic(); selectAndLoadMusic(); resetLevelState(); resetSpellStateForNewLevel(); initializeGridState(); updateLevelDisplay(); updateGoldDisplay(); updateUnitInfo(null); if(endTurnButton) {endTurnButton.disabled = false; endTurnButton.classList.remove('disabled');} showFeedback(`Level ${currentLevel} Start!`, 'feedback-levelup'); setTimeout(() => { if (!isGameOver() && feedbackArea && feedbackArea.textContent === `Level ${currentLevel} Start!`) showFeedback(''); }, 2000); requestAnimationFrame(() => { console.log("StartNextLevel rAF."); try { calculateCellSize(); spawnObstacles(); spawnInitialUnits(); units.forEach(u => { if (u.team === 'player') u.acted = false; u.isFrozen = false; u.frozenTurnsLeft = 0; }); renderAllUnits(); applyLayout(); updateTurnDisplay(); startMusicIfNotPlaying(); } catch (e) { console.error("Error startNextLevel rAF:", e); } finally { isProcessing = false; updateTurnDisplay(); console.log(`Lvl ${currentLevel} ready.`); } }); }
+        function isGameOver() { return gameOverScreen && gameOverScreen.style.display !== 'none'; }
+        function gameOver(playerWon) { if (isGameOver()) return; console.log(`--- Game Over --- Won: ${playerWon}, Lvl: ${currentLevel}, Gold: ${playerGold}`); levelClearedAwaitingInput = false; isProcessing = true; stopMusic(); hideTooltip(); document.removeEventListener('mousemove', trackMousePosition); if (!playerWon) { playSfx(sfx.gameOver); levelToRestartOnLoss = currentLevel; if(restartButton) restartButton.textContent = "Restart Level"; } else { playSfx(sfx.success); levelToRestartOnLoss = 1; if(restartButton) restartButton.textContent = "Play Again?"; } deselectUnit(); updateUnitInfo(null); setActiveSpell(null); if(endTurnButton) {endTurnButton.disabled = true; endTurnButton.classList.add('disabled');} if(gameOverTitle) gameOverTitle.textContent = playerWon ? "Victory!" : "Defeat!"; if(gameOverMessage) gameOverMessage.textContent = playerWon ? `You are victorious! Final Gold: ${playerGold}` : `You have fallen on Level ${currentLevel}! Final Gold: ${playerGold}`; if(gameOverScreen) gameOverScreen.style.display = 'flex'; window.removeEventListener('resize', handleResize); document.removeEventListener('fullscreenchange', updateFullscreenButton); document.removeEventListener('webkitfullscreenchange', updateFullscreenButton); document.removeEventListener('mozfullscreenchange', updateFullscreenButton); document.removeEventListener('MSFullscreenChange', updateFullscreenButton); if (winCheckTimeout) clearTimeout(winCheckTimeout); winCheckTimeout = null; if (resizeTimeout) clearTimeout(resizeTimeout); resizeTimeout = null; updateTurnDisplay(); }
+
+        // --- Mute Function (Keep Original) ---
+        function toggleMute() { if (!audioInitialized) initializeAudio(); isMuted = !isMuted; bgMusic.muted = isMuted; Object.values(sfx).forEach(s => s.muted = isMuted); updateMuteButtonVisual(); if (!isMuted && audioInitialized && !isGameOver() && startScreen && startScreen.style.display === 'none') { startMusicIfNotPlaying(); } else if (isMuted) { stopMusic(); } console.log("Muted:", isMuted); }
+        function updateMuteButtonVisual() { if (muteButton) { muteButton.innerHTML = isMuted ? '🔇' : '🔊'; muteButton.title = isMuted ? 'Unmute (M)' : 'Mute Sound (M)'; } }
+
+        // --- Global Listeners (Assign elements inside, read CSS vars) ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Assign DOM elements
+            gameContainer = document.getElementById('game-container');
+            gameBoard = document.getElementById('game-board');
+            uiPanel = document.getElementById('ui-panel');
+            levelDisplayElement = document.getElementById('level-display');
+            goldDisplayElement = document.getElementById('gold-display');
+            spellAreaElement = document.getElementById('spell-area');
+            fireballElement = document.getElementById('fireball-spell');
+            flameWaveElement = document.getElementById('flame-wave-spell');
+            frostNovaElement = document.getElementById('frost-nova-spell');
+            healElement = document.getElementById('heal-spell');
+            turnInfo = document.getElementById('turn-info');
+            unitInfo = document.getElementById('unit-info');
+            unitPortraitElement = document.getElementById('unit-portrait');
+            currentTurnDisplay = document.getElementById('current-turn');
+            actionsLeftDisplay = document.getElementById('actions-left');
+            unitNameDisplay = document.getElementById('unit-name');
+            unitHpDisplay = document.getElementById('unit-hp');
+            unitAtkDisplay = document.getElementById('unit-atk');
+            unitMovDisplay = document.getElementById('unit-mov');
+            unitRngDisplay = document.getElementById('unit-rng'); // Assign range element
+            unitStatusDisplay = document.getElementById('unit-status');
+            feedbackArea = document.getElementById('feedback-area');
+            endTurnButton = document.getElementById('end-turn-button');
+            startScreen = document.getElementById('start-screen');
+            gameOverScreen = document.getElementById('game-over-screen');
+            startButton = document.getElementById('start-button');
+            restartButton = document.getElementById('restart-button');
+            gameOverTitle = document.getElementById('game-over-title');
+            gameOverMessage = document.getElementById('game-over-message');
+            fullscreenButton = document.getElementById('fullscreen-button');
+            muteButton = document.getElementById('mute-button');
+            tooltipElement = document.getElementById('unit-tooltip');
+
+            console.log("DOMContentLoaded.");
+            try {
+                // Read animation times from CSS Variables
+                 const moveDurationStr = getComputedStyle(document.documentElement).getPropertyValue('--move-anim-time').trim();
+                 if (moveDurationStr.endsWith('ms')) MOVE_ANIMATION_DURATION_MS = parseFloat(moveDurationStr);
+                 else if (moveDurationStr.endsWith('s')) MOVE_ANIMATION_DURATION_MS = parseFloat(moveDurationStr) * 1000;
+
+                 const arrowDurationStr = getComputedStyle(document.documentElement).getPropertyValue('--arrow-fly-time').trim();
+                 let cssArrowDuration = 300;
+                 if (arrowDurationStr.endsWith('ms')) cssArrowDuration = parseFloat(arrowDurationStr);
+                 else if (arrowDurationStr.endsWith('s')) cssArrowDuration = parseFloat(arrowDurationStr) * 1000;
+
+                 const fbFlyDurationStr = getComputedStyle(document.documentElement).getPropertyValue('--fireball-fly-time').trim();
+                 let cssFbFlyDuration = 400;
+                 if (fbFlyDurationStr.endsWith('ms')) cssFbFlyDuration = parseFloat(fbFlyDurationStr);
+                 else if (fbFlyDurationStr.endsWith('s')) cssFbFlyDuration = parseFloat(fbFlyDurationStr) * 1000;
+                 if (cssFbFlyDuration !== FIREBALL_PROJECTILE_DURATION_MS) console.warn(`Mismatch JS/CSS fireball fly time (${FIREBALL_PROJECTILE_DURATION_MS}ms / ${cssFbFlyDuration}ms)`);
+
+                 const fbExpDurationStr = getComputedStyle(document.documentElement).getPropertyValue('--fireball-explode-time').trim();
+                 let cssFbExpDuration = 800;
+                 if (fbExpDurationStr.endsWith('ms')) cssFbExpDuration = parseFloat(fbExpDurationStr);
+                 else if (fbExpDurationStr.endsWith('s')) cssFbExpDuration = parseFloat(fbExpDurationStr) * 1000;
+                 if (cssFbExpDuration !== FIREBALL_EXPLOSION_DURATION_MS) console.warn(`Mismatch JS/CSS fireball explode time (${FIREBALL_EXPLOSION_DURATION_MS}ms / ${cssFbExpDuration}ms)`);
+
+                 // Read flame wave stagger delay (optional, defaults if not found)
+                 const fwStaggerStr = getComputedStyle(document.documentElement).getPropertyValue('--flame-wave-stagger-delay').trim();
+                 let cssFwStagger = FLAME_WAVE_STAGGER_DELAY_MS; // Use JS default
+                 if (fwStaggerStr) {
+                     if (fwStaggerStr.endsWith('ms')) cssFwStagger = parseFloat(fwStaggerStr);
+                     else if (fwStaggerStr.endsWith('s')) cssFwStagger = parseFloat(fwStaggerStr) * 1000;
+                     // Update the JS constant if successfully read from CSS
+                     if (!isNaN(cssFwStagger) && cssFwStagger > 0) {
+                        // FLAME_WAVE_STAGGER_DELAY_MS = cssFwStagger; // Cannot reassign const, read in function instead
+                     } else {
+                         console.warn("Invalid --flame-wave-stagger-delay value read from CSS.");
+                     }
+                 }
+
+
+                 console.log(`Move anim: ${MOVE_ANIMATION_DURATION_MS}ms`);
+                 console.log(`Arrow anim(JS): ${ARROW_FLY_DURATION_MS}ms`);
+                 console.log(`Fireball Fly anim(JS): ${FIREBALL_PROJECTILE_DURATION_MS}ms`);
+                 console.log(`Fireball Explode anim(JS): ${FIREBALL_EXPLOSION_DURATION_MS}ms`);
+                 console.log(`Flame Wave Stagger Delay(JS default): ${FLAME_WAVE_STAGGER_DELAY_MS}ms`);
+             } catch (e) {
+                 console.warn("Could not read anim times from CSS.", e);
+                 MOVE_ANIMATION_DURATION_MS = 250;
+             }
+
+            if (muteButton) muteButton.addEventListener('click', toggleMute);
+            if (fireballElement) fireballElement.addEventListener('click', () => setActiveSpell('fireball'));
+            if (flameWaveElement) flameWaveElement.addEventListener('click', () => setActiveSpell('flameWave'));
+            if (frostNovaElement) frostNovaElement.addEventListener('click', () => setActiveSpell('frostNova'));
+            if (healElement) healElement.addEventListener('click', () => setActiveSpell('heal'));
+            if (fullscreenButton) fullscreenButton.addEventListener('click', toggleFullscreen);
+            if (startButton) startButton.addEventListener('click', () => { console.log("Start clicked."); if (!audioInitialized) initializeAudio(); if (startScreen.style.display !== 'none' && !isProcessing) { initGame(1); } else { console.warn("Start clicked but busy/started."); } });
+            if (restartButton) restartButton.addEventListener('click', () => { if (!audioInitialized) initializeAudio(); initGame(levelToRestartOnLoss); });
+            if (endTurnButton) endTurnButton.addEventListener('click', () => { if (currentTurn === 'player' && !isProcessing && !isGameOver()) endTurn(); }); // Correct listener placement
+
+            startScreen.style.display = 'flex';
+            gameOverScreen.style.display = 'none';
+            if(endTurnButton){ endTurnButton.classList.add('disabled'); endTurnButton.disabled = true; }
+            updateUnitInfo(null); // Initial clear
+            updateLevelDisplay();
+            updateGoldDisplay();
+            setupBoard();
+            resetLevelState();
+            updateTurnDisplay();
+            isProcessing = false;
+            updateMuteButtonVisual(); // Now safe to call
+            requestAnimationFrame(() => { try { calculateCellSize(); updateFullscreenButton(); } catch(e) { console.error("Initial rAF error:", e)} });
+            window.addEventListener('keydown', handleKeyDown);
+            console.log("Initial setup complete.");
+        });
+
+        // --- Hotkey Handler (Keep Original) ---
+        function handleKeyDown(event) { const gameActive = startScreen && startScreen.style.display === 'none' && gameOverScreen && gameOverScreen.style.display === 'none'; if (event.shiftKey && event.key.toLowerCase() === 'g') { event.preventDefault(); unlimitedSpellsCheat = !unlimitedSpellsCheat; const feedbackMsg = unlimitedSpellsCheat ? "CHEAT: Unlimited/Unlocked Spells ON!" : "CHEAT: Unlimited/Unlocked Spells OFF."; showFeedback(feedbackMsg, "feedback-cheat"); playSfx(sfx.cheat); if (unlimitedSpellsCheat) { spellUses = { fireball: true, flameWave: true, frostNova: true, heal: true }; } else { resetSpellStateForNewLevel(); } updateSpellUI(); console.log("Unlimited/Unlocked Spells Cheat:", unlimitedSpellsCheat); return; } if (isProcessing && !['m', 'f'].includes(event.key.toLowerCase())) return; if ((event.metaKey || event.ctrlKey || event.altKey) && !(event.shiftKey && (event.key.toLowerCase() === 't' || event.key.toLowerCase() === 'g'))) return; switch(event.key.toLowerCase()) { case '1': if (gameActive && currentTurn === 'player' && !isProcessing && !levelClearedAwaitingInput) { setActiveSpell('fireball'); event.preventDefault(); } break; case '2': if (gameActive && currentTurn === 'player' && !isProcessing && !levelClearedAwaitingInput) { setActiveSpell('flameWave'); event.preventDefault(); } break; case '3': if (gameActive && currentTurn === 'player' && !isProcessing && !levelClearedAwaitingInput) { setActiveSpell('frostNova'); event.preventDefault(); } break; case '4': if (gameActive && currentTurn === 'player' && !isProcessing && !levelClearedAwaitingInput) { setActiveSpell('heal'); event.preventDefault(); } break; case 'e': if (gameActive && currentTurn === 'player' && !isProcessing) { endTurn(); event.preventDefault(); } break; case 'm': toggleMute(); event.preventDefault(); break; case 'f': toggleFullscreen(); event.preventDefault(); break; case 't': if (event.shiftKey && gameActive && currentTurn === 'player' && !isProcessing) { console.warn("CHEAT: Skip Level!"); isProcessing = true; updateTurnDisplay(); deselectUnit(); setActiveSpell(null); hideTooltip(); showFeedback("Cheating...", "feedback-levelup"); playSfx(sfx.success); setTimeout(startNextLevel, 100); event.preventDefault(); } break; case 'escape': if (gameActive && currentTurn === 'player' && !isProcessing) { if (currentSpell) { setActiveSpell(null); playSfx(sfx.select); event.preventDefault(); } else if (selectedUnit) { deselectUnit(); playSfx(sfx.select); event.preventDefault(); } } break; } }
+
+    </script>
+</body>
+</html>
