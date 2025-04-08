@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Grid Combat TCG (Skills)</title>
+    <style>
+        /* --- Basic Reset & Body Styling --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background-color: #282828; font-family: sans-serif; color: #eee; }
+
+        /* --- Game Container & Area --- */
+        #game-container { width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; position: relative; background-color: #1e1e1e; }
+        #game-area {
+            width: 95%; height: 95%; max-width: 1600px;
+            background-color: #4a5a4a; border: 2px solid #111; box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            position: relative; overflow: hidden; aspect-ratio: 16 / 9; display: flex; flex-direction: column;
+        }
+        #game-container:fullscreen #game-area { width: 100%; height: 100%; max-width: none; max-height: none; border: none; }
+        @supports not (aspect-ratio: 16 / 9) { #game-area { height: 56.25vw; max-height: 95vh; width: 168.88vh; max-width: 95vw; } }
+
+        /* --- Player/Opponent Info --- */
+        .info-area {
+            height: 8%; display: flex; justify-content: space-between; align-items: center;
+            padding: 0 20px; background-color: rgba(0,0,0,0.3); font-size: clamp(10px, 1.5vh, 14px);
+        }
+        .info-area .mana-display { font-size: clamp(12px, 1.8vh, 16px); font-weight: bold; color: #87CEEB; }
+        .info-area .deck-info { display: flex; align-items: center; gap: 15px; }
+
+        /* --- Battlefield Grid --- */
+        .battlefield-container {
+            flex-grow: 1; display: flex; flex-direction: column; padding: 5px; gap: 2px;
+        }
+        .battlefield-row {
+            flex-grow: 1; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 2px; border-radius: 3px;
+        }
+        #opponent-back-row { background-color: rgba(0,0,0,0.15); }
+        #opponent-front-row { background-color: rgba(0,0,0,0.2); }
+        #player-front-row { background-color: rgba(0,0,0,0.2); }
+        #player-back-row { background-color: rgba(0,0,0,0.15); }
+
+        /* --- Player Hand --- */
+        .player-hand-area {
+            height: 20%; background-color: rgba(0,0,0,0.3); border-top: 1px solid rgba(255,255,255,0.3);
+            display: flex; align-items: center; justify-content: center; gap: 8px; padding: 4px; overflow-x: auto; overflow-y: hidden;
+        }
+
+        /* --- Card Styling --- */
+        .card {
+            width: clamp(55px, 5.5vw, 70px); height: clamp(77px, 7.7vw, 98px);
+            border: 2px solid black; border-radius: 4px; background-color: #eee; display: flex; flex-direction: column;
+            justify-content: flex-start; align-items: center; padding: 2px;
+            font-size: clamp(6px, 0.7vw, 8px);
+            text-align: center; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            flex-shrink: 0; position: relative; background-size: cover; background-position: center; color: #fff;
+            text-shadow: 1px 1px 1px black, -1px -1px 1px black, 1px -1px 1px black, -1px 1px 1px black;
+            overflow: hidden;
+        }
+        .card:hover:not(.acted-this-turn):not(.game-over) { transform: scale(1.05); box-shadow: 0 0 10px gold; z-index: 10; }
+        .card.playable:not(.game-over) { box-shadow: 0 0 15px limegreen; border-color: limegreen; }
+        .card.acted-this-turn { filter: grayscale(60%) opacity(75%); cursor: default !important; }
+        .card.selected-action {
+            border-color: yellow; box-shadow: 0 0 15px yellow; transform: scale(1.05); z-index: 11;
+        }
+        .card.valid-target:not(.game-over) {
+             border-color: #ff4747; box-shadow: 0 0 15px #ff4747; cursor: crosshair !important; transform: scale(1.05);
+        }
+
+        /* Card Content Layout */
+        .card .cost {
+            position: absolute; top: 1px; left: 2px; font-size: clamp(7px, 0.9vw, 9px); background: rgba(0,0,0,0.7); border-radius: 50%;
+            width: clamp(12px, 1.6vw, 16px); height: clamp(12px, 1.6vw, 16px); display: flex; justify-content: center; align-items: center; border: 1px solid #aaa; font-weight: bold; z-index: 2;
+        }
+        .card .name {
+            font-weight: bold; font-size: clamp(7px, 0.9vw, 10px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;
+            line-height: 1.1; margin-bottom: 1px; margin-top: 1px;
+        }
+        .card .sprite-box {
+            width: 90%; border: 1px solid #444; background-color: #bbb; margin: 0 auto 1px auto;
+            overflow: hidden; position: relative; display: flex; justify-content: center; align-items: center;
+            border-radius: 2px; aspect-ratio: 362 / 298;
+        }
+        .card .sprite-placeholder {
+            width: 100%; height: 100%; background-size: contain; background-repeat: no-repeat; background-position: center;
+            background-color: transparent; color: #555; text-shadow: none; font-size: 7px;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .card .bottom-container { /* NEW Container for stats/type/skill */
+             display: flex;
+             justify-content: space-between; /* Distribute items */
+             align-items: center; /* Vertically align items */
+             width: 95%;
+             margin-top: 1px;
+        }
+        .card .stats {
+            font-size: clamp(8px, 1.0vw, 10px); font-weight: bold; background: rgba(0,0,0,0.5); padding: 0 2px; border-radius: 2px;
+            white-space: nowrap; /* Prevent stats wrapping */
+        }
+        .card .type-icon {
+            font-size: clamp(9px, 1.2vw, 12px); display: inline-block; line-height: 1;
+            margin: 0 3px; /* Give space around type icon */
+         }
+         /* NEW Skill Icon Style */
+         .card .skill-icon {
+             font-size: clamp(10px, 1.3vw, 13px); /* Adjust size */
+             cursor: help; /* Indicate info available */
+             line-height: 1;
+             margin-left: auto; /* Push skill icon to the right */
+         }
+         .card .skill-icon:hover {
+             transform: scale(1.1); /* Slight grow on hover */
+         }
+
+        /* Race/Slot Styling */
+        .card.bandit { border-color: #a0522d; }
+        .card.undead { border-color: #5a4a7b; }
+        .battlefield-slot {
+             width: clamp(55px, 5.5vw, 70px); height: clamp(77px, 7.7vw, 98px);
+             border: 1px dashed rgba(255, 255, 255, 0.15); border-radius: 4px; flex-shrink: 0; background-color: rgba(255, 255, 255, 0.02);
+             transition: border-color 0.2s ease, background-color 0.2s ease;
+             display: flex; justify-content: center; align-items: center;
+         }
+        .battlefield-slot.placement-valid:not(.game-over) { border-color: limegreen; background-color: rgba(0, 255, 0, 0.1); cursor: pointer;}
+        .battlefield-slot.placement-invalid:not(.game-over) { border-color: red; background-color: rgba(255, 0, 0, 0.1); cursor: not-allowed;}
+        .battlefield-slot.valid-move-target:not(.game-over) {
+            border-style: dashed; border-color: cyan; background-color: rgba(0, 255, 255, 0.15); cursor: grab;
+        }
+        .battlefield-slot.valid-move-target:hover:not(.game-over) { background-color: rgba(0, 255, 255, 0.3); }
+
+
+        /* Deck Styling */
+        .deck {
+             width: clamp(55px, 5.5vw, 70px); height: clamp(77px, 7.7vw, 98px);
+             background-color: #444; border: 2px solid black; border-radius: 4px; display: flex; flex-direction: column;
+             justify-content: center; align-items: center; color: white; font-size: clamp(9px, 1.1vh, 11px);
+             cursor: pointer; text-align: center; padding: 4px;
+         }
+         .deck:hover:not(.disabled):not(.game-over) { background-color: #555; }
+         .deck.disabled { cursor: not-allowed; background-color: #777; opacity: 0.7;}
+         .deck-count { font-size: clamp(11px, 1.6vh, 14px); font-weight: bold; margin-top: 4px; }
+
+        /* Utility & Fullscreen Buttons */
+        #utility-container { position: absolute; bottom: 10px; right: 10px; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; z-index: 100; }
+        #fullscreen-btn { width: 40px; height: 40px; background-color: rgba(0, 0, 0, 0.5); border: 1px solid white; border-radius: 5px; color: white; font-size: 24px; cursor: pointer; display: flex; justify-content: center; align-items: center; position: absolute; top: 10px; right: 10px; z-index: 100; }
+        #fullscreen-btn:hover { background-color: rgba(0, 0, 0, 0.8); }
+        .fullscreen-icon span { display: block; width: 8px; height: 8px; border: 2px solid white; position: absolute; }
+        .fullscreen-icon .top-left { top: 8px; left: 8px; border-right: none; border-bottom: none; }
+        .fullscreen-icon .top-right { top: 8px; right: 8px; border-left: none; border-bottom: none; }
+        .fullscreen-icon .bottom-left { bottom: 8px; left: 8px; border-right: none; border-top: none; }
+        .fullscreen-icon .bottom-right { bottom: 8px; right: 8px; border-left: none; border-top: none; }
+
+        #end-turn-btn { padding: 8px 16px; font-size: clamp(11px, 1.6vh, 15px); font-weight: bold; cursor: pointer; background-color: #c0392b; color: white; border: none; border-radius: 5px; box-shadow: 0 3px #a03020; transition: background-color 0.1s ease, box-shadow 0.1s ease, transform 0.1s ease; }
+        #end-turn-btn:hover:not(:disabled) { background-color: #e74c3c; }
+        #end-turn-btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px #a03020; }
+        #end-turn-btn:disabled { background-color: #7f8c8d; cursor: not-allowed; box-shadow: none; transform: none; opacity: 0.7; }
+
+        #turn-indicator { position: absolute; top: 5px; left: 50%; transform: translateX(-50%); font-size: clamp(14px, 2vh, 18px); font-weight: bold; padding: 5px 15px; background-color: rgba(0,0,0,0.6); border-radius: 10px; z-index: 50; transition: background-color 0.3s ease; }
+        #turn-indicator.player-turn { background-color: rgba(46, 204, 113, 0.7); }
+        #turn-indicator.opponent-turn { background-color: rgba(231, 76, 60, 0.7); }
+
+        /* Race Selection Overlay */
+        #race-selection-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 200; flex-direction: column; color: white; text-align: center; }
+        #race-selection-overlay h2 { margin-bottom: 20px; }
+        #race-selection-overlay button { padding: 15px 30px; font-size: 18px; margin: 10px; cursor: pointer; border: none; border-radius: 5px; transition: transform 0.1s ease; }
+        #race-selection-overlay button:hover { transform: scale(1.05); }
+        #race-selection-overlay button.bandit { background-color: #a0522d; color: white; }
+        #race-selection-overlay button.undead { background-color: #5a4a7b; color: white; }
+
+        /* Placement Overlay */
+        #placement-overlay {
+             position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); display: none;
+             justify-content: center; align-items: center; z-index: 150; color: white; font-size: 20px; text-align: center; pointer-events: none;
+         }
+         #placement-overlay.active { display: flex; }
+         .placement-indicator { padding: 10px; background: rgba(0,0,0,0.7); border-radius: 5px; pointer-events: auto; }
+
+         /* Game Over Overlay */
+        #game-over-overlay {
+             position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); display: none;
+             justify-content: center; align-items: center; z-index: 250; color: #ffdddd; font-size: 2.5em; text-align: center; font-weight: bold;
+             text-shadow: 2px 2px 4px black;
+         }
+         #game-over-overlay.active { display: flex; }
+
+    </style>
+</head>
+<body>
+
+    <!-- Race Selection -->
+    <div id="race-selection-overlay">
+        <h2>Choose Your Race</h2>
+        <div>
+            <button id="select-bandit" class="bandit">Bandits</button>
+            <button id="select-undead" class="undead">Undead</button>
+        </div>
+    </div>
+
+    <!-- Game Area -->
+    <div id="game-container" style="visibility: hidden;">
+        <div id="game-area">
+            <!-- Opponent Info -->
+            <div class="info-area opponent-info">
+                <span id="opponent-race">Opponent: Race</span>
+                <div class="deck-info">
+                    <span>Hand: <span id="opponent-hand-count">0</span></span>
+                    <div id="opponent-deck" class="deck disabled">
+                         <span>Deck</span>
+                         <span id="opponent-deck-count" class="deck-count">0</span>
+                    </div>
+                </div>
+                 <span class="mana-display">Mana: <span id="opponent-mana">0/0</span></span>
+            </div>
+
+            <!-- Battlefield Container -->
+            <div class="battlefield-container">
+                 <div class="battlefield-row" id="opponent-back-row"></div>
+                 <div class="battlefield-row" id="opponent-front-row"></div>
+                 <div class="battlefield-row" id="player-front-row"></div>
+                 <div class="battlefield-row" id="player-back-row"></div>
+            </div>
+
+             <!-- Player Info -->
+             <div class="info-area player-info">
+                 <span id="player-race">Player: Race</span>
+                 <div class="deck-info">
+                    <div id="player-deck" class="deck">
+                        <span>Deck</span>
+                        <span id="player-deck-count" class="deck-count">0</span>
+                    </div>
+                 </div>
+                 <span class="mana-display">Mana: <span id="player-mana">0/0</span></span>
+            </div>
+
+            <!-- Player's Hand -->
+            <div class="player-hand-area" id="player-hand"></div>
+
+            <!-- Game Over Overlay -->
+            <div id="game-over-overlay">
+                <span id="game-over-message">Game Over!</span>
+            </div>
+
+        </div>
+
+         <!-- Utility Area -->
+        <div id="utility-container">
+             <button id="end-turn-btn">End Turn</button>
+        </div>
+         <button id="fullscreen-btn" title="Toggle Fullscreen">
+             <div class="fullscreen-icon"><span class="top-left"></span><span class="top-right"></span><span class="bottom-left"></span><span class="bottom-right"></span></div>
+         </button>
+         <div id="turn-indicator">Waiting...</div>
+         <div id="placement-overlay">
+             <div class="placement-indicator">Place Card On Field</div>
+         </div>
+    </div>
+
+    <script>
+        // --- Constants ---
+        const MAX_HAND_SIZE = 5;
+        const FIELD_ROWS = 4;
+        const FIELD_COLS = 5;
+        const MAX_FIELD_SIZE = FIELD_ROWS * FIELD_COLS;
+
+        const OPPONENT_BACK_ROW = 0;
+        const OPPONENT_FRONT_ROW = 1;
+        const PLAYER_FRONT_ROW = 2;
+        const PLAYER_BACK_ROW = 3;
+
+        const STARTING_HAND_SIZE = 3;
+        const MAX_MANA = 10;
+
+        // --- Game State ---
+        let allCards = [];
+        let playerRace = null, opponentRace = null;
+        let playerDeck = [], playerHand = [], playerManaMax = 0, playerManaCurrent = 0;
+        let opponentDeck = [], opponentHand = [], opponentManaMax = 0, opponentManaCurrent = 0;
+        let battlefieldGrid = [];
+        let isPlayerTurn = true;
+        let selectedCardToPlay = null;
+        let selectedUnitForAction = null;
+        let isPlacingCard = false;
+        let isGameOver = false;
+
+        // --- DOM References ---
+        // ... (DOM references remain the same) ...
+        const gameContainer = document.getElementById('game-container');
+        const gameArea = document.getElementById('game-area');
+        const raceSelectionOverlay = document.getElementById('race-selection-overlay');
+        const playerHandElement = document.getElementById('player-hand');
+        const opponentBackRowElement = document.getElementById('opponent-back-row');
+        const opponentFrontRowElement = document.getElementById('opponent-front-row');
+        const playerFrontRowElement = document.getElementById('player-front-row');
+        const playerBackRowElement = document.getElementById('player-back-row');
+        const rowElements = [opponentBackRowElement, opponentFrontRowElement, playerFrontRowElement, playerBackRowElement];
+        const playerDeckElement = document.getElementById('player-deck');
+        const playerDeckCountElement = document.getElementById('player-deck-count');
+        const endTurnBtn = document.getElementById('end-turn-btn');
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const turnIndicator = document.getElementById('turn-indicator');
+        const playerManaElement = document.getElementById('player-mana');
+        const opponentManaElement = document.getElementById('opponent-mana');
+        const opponentHandCountElement = document.getElementById('opponent-hand-count');
+        const opponentDeckCountElement = document.getElementById('opponent-deck-count');
+        const playerRaceElement = document.getElementById('player-race');
+        const opponentRaceElement = document.getElementById('opponent-race');
+        const placementOverlay = document.getElementById('placement-overlay');
+        const gameOverOverlay = document.getElementById('game-over-overlay');
+        const gameOverMessage = document.getElementById('game-over-message');
+
+
+        // --- Card Definitions with Skills ---
+        function defineCards() {
+             allCards = [
+                 // --- Bandits ---
+                 { id: 'b_arc', name: 'Archer', race: 'Bandit', type: 'Ranged', attack: 2, defense: 1, cost: 2, sprite: 'sprites/bandit_archer.png' }, // No skill example
+                 { id: 'b_axe', name: 'Axeman', race: 'Bandit', type: 'Melee', attack: 3, defense: 2, cost: 3, sprite: 'sprites/bandit_axeman.png' },
+                 { id: 'b_ber', name: 'Berserker', race: 'Bandit', type: 'Melee', attack: 4, defense: 1, cost: 3, sprite: 'sprites/bandit_berserker.png',
+                     skill: { name: 'Frenzy', icon: '💥', description: 'Gains +1 Attack if Defense is 1.' } // Example skill
+                 },
+                 { id: 'b_bom', name: 'Bomber', race: 'Bandit', type: 'Ranged', attack: 1, defense: 1, cost: 2, sprite: 'sprites/bandit_bomber.png',
+                     skill: { name: 'Bomb Toss', icon: '💣', description: 'On Attack: Deals 1 damage to adjacent enemies.' } // Example active skill (info only)
+                 },
+                 { id: 'b_gen', name: 'General', race: 'Bandit', type: 'Melee', attack: 4, defense: 5, cost: 5, sprite: 'sprites/bandit_general.png',
+                      skill: { name: 'Inspire', icon: '⭐', description: 'Adjacent friendly Bandits gain +1 Attack.' } // Example aura
+                 },
+                 { id: 'b_mau', name: 'Mauler', race: 'Bandit', type: 'Melee', attack: 5, defense: 3, cost: 4, sprite: 'sprites/bandit_mauler.png' },
+                 { id: 'b_nin', name: 'Ninja', race: 'Bandit', type: 'Melee', attack: 3, defense: 1, cost: 2, sprite: 'sprites/bandit_ninja.png' },
+                 { id: 'b_sco', name: 'Scout', race: 'Bandit', type: 'Melee', attack: 1, defense: 1, cost: 1, sprite: 'sprites/bandit_scout.png' },
+                 { id: 'b_sor', name: 'Sorceror', race: 'Bandit', type: 'Ranged', attack: 1, defense: 3, cost: 3, sprite: 'sprites/bandit_sorceror.png',
+                     skill: { name: 'Fireball', icon: '🔥', description: 'Action: Deal 1 damage to target unit.' } // Example targeted ability (info only)
+                 },
+                 { id: 'b_spe', name: 'Spearman', race: 'Bandit', type: 'Melee', attack: 2, defense: 3, cost: 3, sprite: 'sprites/bandit_spearman.png',
+                      skill: { name: 'First Strike', icon: '⏩', description: 'Deals combat damage first when attacking.' }
+                 },
+                 { id: 'b_swo', name: 'Swordsman', race: 'Bandit', type: 'Melee', attack: 2, defense: 2, cost: 2, sprite: 'sprites/bandit_swordsman.png' },
+                 { id: 'b_war', name: 'Warlock', race: 'Bandit', type: 'Ranged', attack: 3, defense: 2, cost: 4, sprite: 'sprites/bandit_warlock.png',
+                     skill: { name: 'Curse', icon: '💀', description: 'Action: Target enemy gets -1/-1.' } // Example debuff (info only)
+                 },
+
+                 // --- Undead ---
+                 { id: 'u_arc', name: 'Skeletal Archer', race: 'Undead', type: 'Ranged', attack: 2, defense: 1, cost: 2, sprite: 'sprites/undead_archer.png' },
+                 { id: 'u_ske', name: 'Skeleton', race: 'Undead', type: 'Melee', attack: 1, defense: 1, cost: 1, sprite: 'sprites/undead_skeleton.png' },
+                 { id: 'u_war', name: 'Skeletal Warrior', race: 'Undead', type: 'Melee', attack: 2, defense: 2, cost: 2, sprite: 'sprites/undead_warrior.png' },
+                 { id: 'u_lor', name: 'Warlord', race: 'Undead', type: 'Melee', attack: 4, defense: 4, cost: 5, sprite: 'sprites/undead_warlord.png',
+                     skill: { name: 'Raise Dead', icon: '➕', description: 'Action: Summon a 1/1 Skeleton in an adjacent empty space.' } // Example summon (info only)
+                 },
+                 { id: 'u_zom', name: 'Zombie', race: 'Undead', type: 'Melee', attack: 2, defense: 1, cost: 2, sprite: 'sprites/undead_skeleton.png' },
+                 { id: 'u_gho', name: 'Ghoul', race: 'Undead', type: 'Melee', attack: 3, defense: 2, cost: 3, sprite: 'sprites/undead_warrior.png',
+                     skill: { name: 'Feast', icon: '🍽️', description: 'Heals 1 when it destroys a unit.' } // Example trigger
+                 },
+                 { id: 'u_wra', name: 'Wraith', race: 'Undead', type: 'Ranged', attack: 4, defense: 3, cost: 4, sprite: 'sprites/undead_archer.png',
+                     skill: { name: 'Incorporeal', icon: '👻', description: 'Cannot be targeted by Melee attacks unless adjacent.' } // Example passive defense
+                 },
+                 { id: 'u_lic', name: 'Lich', race: 'Undead', type: 'Ranged', attack: 3, defense: 5, cost: 6, sprite: 'sprites/undead_warlord.png',
+                     skill: { name: 'Life Drain', icon: '🩸', description: 'Action: Deal 2 damage to target unit, heal self 1.' } // Example complex ability (info only)
+                 },
+            ];
+            allCards = allCards.map((card, index) => ({ ...card, baseId: card.id, instanceId: `${card.id}_${index}` }));
+        }
+
+        // --- Utility Functions ---
+        // ... (shuffleDeck, getTypeIcon, count functions remain the same) ...
+        function shuffleDeck(deck) { for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; } }
+        function getTypeIcon(type) { if (type === 'Melee') return '⚔️'; if (type === 'Ranged') return '🏹'; return '?'; }
+        function countCardsOnField() { return battlefieldGrid.flat().filter(slot => slot !== null).length; }
+        function countPlayerCardsOnField() { return battlefieldGrid.flat().filter(slot => slot !== null && slot.allegiance === 'player').length; }
+        function countOpponentCardsOnField() { return battlefieldGrid.flat().filter(slot => slot !== null && slot.allegiance === 'opponent').length; }
+
+
+        // --- Game Over Logic ---
+        // ... (checkOverrunCondition, endGame remain the same) ...
+        function checkOverrunCondition() {
+            for (let r = PLAYER_FRONT_ROW; r <= PLAYER_BACK_ROW; r++) {
+                for (let c = 0; c < FIELD_COLS; c++) {
+                    const slot = battlefieldGrid[r][c];
+                    if (slot === null || slot.allegiance === 'player') {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function endGame(message) {
+            if (isGameOver) return;
+            console.log("Game Over:", message);
+            isGameOver = true;
+            gameOverMessage.textContent = message;
+            gameOverOverlay.classList.add('active');
+            endTurnBtn.disabled = true;
+            playerDeckElement.classList.add('disabled');
+            gameArea.classList.add('game-over');
+        }
+
+
+        // --- Card Element Creation (Handles Skills) ---
+        function createCardElement(cardInfo, sourceContext) {
+            const cardData = cardInfo.cardData || cardInfo;
+            const allegiance = cardInfo.allegiance || null;
+            const position = cardInfo.position || null;
+
+            const cardDiv = document.createElement('div');
+            cardDiv.classList.add('card', cardData.race.toLowerCase());
+            if (isGameOver) cardDiv.classList.add('game-over');
+            cardDiv.dataset.cardId = cardData.baseId;
+            cardDiv.dataset.instanceId = cardData.instanceId;
+
+            // --- Updated HTML Structure with bottom-container ---
+            cardDiv.innerHTML = `
+                <div class="cost">${cardData.cost}</div>
+                <div class="name">${cardData.name}</div>
+                <div class="sprite-box">
+                    <div class="sprite-placeholder"></div>
+                </div>
+                <div class="bottom-container">
+                     <div class="stats">${cardData.attack} / ${cardData.defense}</div>
+                     <div class="type-icon" title="${cardData.type}">${getTypeIcon(cardData.type)}</div>
+                     <!-- Skill icon will be added here dynamically if present -->
+                </div>
+            `;
+
+            const spritePlaceholder = cardDiv.querySelector('.sprite-placeholder');
+            if (cardData.sprite) {
+                spritePlaceholder.style.backgroundImage = `url('${cardData.sprite}')`;
+            } else {
+                 spritePlaceholder.textContent = `${cardData.race[0]}`;
+            }
+
+            // --- Add Skill Icon and Tooltip ---
+            if (cardData.skill) {
+                const skillIconElement = document.createElement('span');
+                skillIconElement.classList.add('skill-icon');
+                skillIconElement.textContent = cardData.skill.icon;
+                // Set the title attribute for the default browser tooltip
+                skillIconElement.title = `${cardData.skill.name}: ${cardData.skill.description}`;
+
+                // Append the skill icon to the bottom container
+                const bottomContainer = cardDiv.querySelector('.bottom-container');
+                if (bottomContainer) {
+                    bottomContainer.appendChild(skillIconElement);
+                }
+            }
+
+            cardDiv.style.cursor = 'default';
+
+            // --- Add Listeners (conditional on !isGameOver) ---
+            if (!isGameOver) {
+                if (sourceContext === 'hand') {
+                    const currentFieldCount = countPlayerCardsOnField();
+                    if (isPlayerTurn && playerManaCurrent >= cardData.cost) {
+                        cardDiv.classList.add('playable');
+                        cardDiv.style.cursor = 'pointer';
+                        cardDiv.title = `Play ${cardData.name} (Cost: ${cardData.cost})`; // Keep basic play title on card
+                        cardDiv.addEventListener('click', () => initiatePlayCard(cardData));
+                    } else if (playerManaCurrent < cardData.cost) {
+                        // cardDiv.title remains default or skill title
+                        cardDiv.style.cursor = 'not-allowed';
+                    }
+                } else if (sourceContext === 'field' && allegiance === 'player') {
+                     if (isPlayerTurn && !isPlacingCard && cardInfo.canAttack) {
+                          cardDiv.style.cursor = 'grab';
+                          cardDiv.title = `${cardData.name} - Ready for Action`; // Keep basic action title
+                          cardDiv.addEventListener('click', () => selectCardForAction({ cardInfo, position }));
+                     } else if (!cardInfo.canAttack) {
+                          cardDiv.classList.add('acted-this-turn');
+                          // cardDiv.title remains default or skill title
+                     }
+                } else if (sourceContext === 'field' && allegiance === 'opponent') {
+                    if (isPlayerTurn && selectedUnitForAction) {
+                        const target = { cardInfo: cardInfo, position: position, allegiance: 'opponent' };
+                         if (isValidAttackTarget(selectedUnitForAction, target)) {
+                             cardDiv.classList.add('valid-target');
+                             cardDiv.title = `Attack ${cardData.name}`; // Attack title overrides skill title here
+                             cardDiv.addEventListener('click', () => executeAttack(selectedUnitForAction, target));
+                        }
+                    }
+                }
+            } else {
+                 cardDiv.style.cursor = 'default';
+                 cardDiv.classList.add('acted-this-turn');
+            }
+            // --- End Listener Logic ---
+
+            return cardDiv;
+        }
+
+        // --- Rendering ---
+        // ... (renderHand, renderBattlefield, renderRow remain the same structurally) ...
+        function renderHand() {
+            playerHandElement.innerHTML = '';
+            playerHand.forEach(card => {
+                playerHandElement.appendChild(createCardElement(card, 'hand'));
+            });
+        }
+
+        function renderBattlefield() {
+             rowElements.forEach(el => el.innerHTML = '');
+             for (let conceptualRow = 0; conceptualRow < FIELD_ROWS; conceptualRow++) {
+                 renderRow(rowElements[conceptualRow], battlefieldGrid[conceptualRow], conceptualRow);
+             }
+        }
+
+        function renderRow(rowElement, rowData, conceptualRowIndex) {
+            rowData.forEach((cardInfo, colIndex) => {
+                 const slot = document.createElement('div');
+                 slot.classList.add('battlefield-slot');
+                 if (isGameOver) slot.classList.add('game-over');
+                 const currentPosition = { row: conceptualRowIndex, col: colIndex };
+
+                 if (cardInfo) { // Slot occupied
+                     cardInfo.position = currentPosition;
+                     const cardElement = createCardElement(cardInfo, 'field');
+                     cardInfo.element = cardElement;
+
+                     if (!isGameOver && selectedUnitForAction) {
+                         const selectedPos = selectedUnitForAction.position;
+                         const isSelectedCard = cardInfo.allegiance === 'player' && selectedPos.row === conceptualRowIndex && selectedPos.col === colIndex;
+                         if (isSelectedCard) {
+                              cardElement.classList.add('selected-action');
+                         }
+                     }
+                     slot.appendChild(cardElement);
+                 } else { // Empty slot
+                      if (!isGameOver) {
+                          if (isPlayerTurn && isPlacingCard && (conceptualRowIndex === PLAYER_FRONT_ROW || conceptualRowIndex === PLAYER_BACK_ROW)) {
+                               const placementValid = checkPlacementValidity(selectedCardToPlay, conceptualRowIndex);
+                               slot.title = `Place ${selectedCardToPlay.name} here?`;
+                               if (placementValid) {
+                                   slot.classList.add('placement-valid');
+                                   slot.addEventListener('click', () => placeCardOnField(conceptualRowIndex, colIndex));
+                               } else {
+                                   slot.classList.add('placement-invalid');
+                                   slot.title = `Cannot place ${selectedCardToPlay.type} card in this row`;
+                               }
+                          }
+                          else if (isPlayerTurn && selectedUnitForAction) {
+                              if (isValidMoveTarget(selectedUnitForAction.position, currentPosition)) {
+                                  slot.classList.add('valid-move-target');
+                                  slot.title = `Move ${selectedUnitForAction.cardInfo.cardData.name} here`;
+                                  slot.addEventListener('click', () => executeMove(selectedUnitForAction, currentPosition));
+                              }
+                          }
+                      } else { slot.style.cursor = 'default'; }
+                 }
+                 rowElement.appendChild(slot);
+             });
+
+             for (let i = rowData.length; i < FIELD_COLS; i++) {
+                 const slot = document.createElement('div');
+                 slot.classList.add('battlefield-slot');
+                 if (isGameOver) slot.classList.add('game-over');
+                 const currentPosition = { row: conceptualRowIndex, col: i };
+                  if (!isGameOver) {
+                      if (isPlayerTurn && isPlacingCard && (conceptualRowIndex === PLAYER_FRONT_ROW || conceptualRowIndex === PLAYER_BACK_ROW)) {
+                           const placementValid = checkPlacementValidity(selectedCardToPlay, conceptualRowIndex);
+                           slot.title = `Place ${selectedCardToPlay.name} here?`;
+                           if (placementValid) {
+                               slot.classList.add('placement-valid');
+                               slot.addEventListener('click', () => placeCardOnField(conceptualRowIndex, i));
+                           } else {
+                               slot.classList.add('placement-invalid');
+                               slot.title = `Cannot place ${selectedCardToPlay.type} card in this row`;
+                           }
+                      }
+                      else if (isPlayerTurn && selectedUnitForAction) {
+                         if (isValidMoveTarget(selectedUnitForAction.position, currentPosition)) {
+                             slot.classList.add('valid-move-target');
+                             slot.title = `Move ${selectedUnitForAction.cardInfo.cardData.name} here`;
+                             slot.addEventListener('click', () => executeMove(selectedUnitForAction, currentPosition));
+                         }
+                     }
+                  } else { slot.style.cursor = 'default'; }
+                 rowElement.appendChild(slot);
+             }
+        }
+
+        // --- Mana and Count Updates ---
+        // ... (updateManaDisplay, updateCounts remain the same) ...
+        function updateManaDisplay() { playerManaElement.textContent = `${playerManaCurrent}/${playerManaMax}`; opponentManaElement.textContent = `${opponentManaCurrent}/${opponentManaMax}`; }
+        function updateCounts() { playerDeckCountElement.textContent = playerDeck.length; opponentDeckCountElement.textContent = opponentDeck.length; opponentHandCountElement.textContent = opponentHand.length; }
+
+
+        // --- Drawing Cards ---
+        // ... (drawCard remains the same) ...
+        function drawCard(deck, hand, owner) {
+            if (isGameOver) return;
+            let handLimit = MAX_HAND_SIZE;
+            let currentHand = (owner === 'player') ? playerHand : opponentHand;
+            let deckArray = (owner === 'player') ? playerDeck : opponentDeck;
+            if (currentHand.length >= handLimit) { console.log(`${owner} hand is full!`); return; }
+            if (deckArray.length > 0) {
+                const drawnCardData = deckArray.pop();
+                 drawnCardData.instanceId = `${drawnCardData.baseId}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+                 const baseCard = allCards.find(c => c.baseId === drawnCardData.baseId);
+                 drawnCardData.defense = baseCard ? baseCard.defense : drawnCardData.defense;
+                 currentHand.push(drawnCardData);
+            } else { console.log(`${owner} deck empty!`); }
+            if(owner === 'player') renderHand();
+            updateCounts();
+        }
+
+
+         // --- Card Placement ---
+         // ... (initiatePlayCard, checkPlacementValidity, placeCardOnField, cancelPlacement remain the same) ...
+        function initiatePlayCard(cardData) {
+            if (!isPlayerTurn || isPlacingCard || selectedUnitForAction || isGameOver) return;
+            console.log(`Initiating placement for: ${cardData.name}`);
+            selectedCardToPlay = cardData;
+            isPlacingCard = true;
+            placementOverlay.classList.add('active');
+            placementOverlay.querySelector('.placement-indicator').textContent = `Place ${cardData.type} ${cardData.name} on your side`;
+            renderBattlefield();
+        }
+
+        function checkPlacementValidity(cardData, conceptualTargetRowIndex) {
+            if (!cardData) return false;
+            if (cardData.type === 'Melee' && conceptualTargetRowIndex === PLAYER_FRONT_ROW) return true;
+            if (cardData.type === 'Ranged' && conceptualTargetRowIndex === PLAYER_BACK_ROW) return true;
+            return false;
+        }
+
+        function placeCardOnField(conceptualRowIndex, colIndex) {
+            if (!isPlayerTurn || !isPlacingCard || !selectedCardToPlay || isGameOver) return;
+            if (!checkPlacementValidity(selectedCardToPlay, conceptualRowIndex)) { console.error("Invalid placement row clicked!"); return; }
+            if (battlefieldGrid[conceptualRowIndex][colIndex] !== null) { console.error("Target slot is not empty!"); return; }
+            if (playerManaCurrent < selectedCardToPlay.cost) { console.log("Not enough mana!"); cancelPlacement(); return; }
+
+            playerManaCurrent -= selectedCardToPlay.cost;
+            const cardIndexInHand = playerHand.findIndex(card => card.instanceId === selectedCardToPlay.instanceId);
+
+            if (cardIndexInHand > -1) {
+                const [playedCardData] = playerHand.splice(cardIndexInHand, 1);
+                 const fieldCardInfo = { cardData: { ...playedCardData }, element: null, canAttack: false, allegiance: 'player', position: { row: conceptualRowIndex, col: colIndex } };
+                 battlefieldGrid[conceptualRowIndex][colIndex] = fieldCardInfo;
+            } else { console.error("Card to play not found in hand!"); playerManaCurrent += selectedCardToPlay.cost; cancelPlacement(); return; }
+
+            selectedCardToPlay = null; isPlacingCard = false; placementOverlay.classList.remove('active');
+            updateManaDisplay(); renderHand(); renderBattlefield(); updateCounts();
+        }
+
+        function cancelPlacement() {
+            if (!isPlacingCard || isGameOver) return;
+            console.log("Placement cancelled.");
+            selectedCardToPlay = null; isPlacingCard = false; placementOverlay.classList.remove('active');
+            renderBattlefield();
+        }
+
+
+         // --- Turn Management ---
+         // ... (startPlayerTurn, endPlayerTurn, opponentTurnLogic remain the same) ...
+         function startPlayerTurn() {
+             if (isGameOver) return;
+             console.log("--- Player Turn Start ---");
+             if (checkOverrunCondition()) { endGame("Overrun! You Lose!"); return; }
+
+             isPlayerTurn = true;
+             battlefieldGrid.flat().forEach(cardInfo => { if (cardInfo && cardInfo.allegiance === 'player') { cardInfo.canAttack = true; } });
+             selectedUnitForAction = null; cancelPlacement();
+
+             if (playerManaMax < MAX_MANA) playerManaMax++;
+             playerManaCurrent = playerManaMax;
+             drawCard(playerDeck, playerHand, 'player');
+
+             if (isGameOver) return;
+
+             turnIndicator.textContent = "Your Turn"; turnIndicator.className = 'player-turn';
+             endTurnBtn.disabled = false; playerDeckElement.classList.remove('disabled');
+             updateManaDisplay(); renderHand(); renderBattlefield();
+         }
+
+         function endPlayerTurn() {
+             if (!isPlayerTurn || isPlacingCard || isGameOver) return;
+             console.log("--- Player Turn End ---");
+             isPlayerTurn = false; selectedUnitForAction = null;
+             turnIndicator.textContent = "Opponent's Turn"; turnIndicator.className = 'opponent-turn';
+             endTurnBtn.disabled = true; playerDeckElement.classList.add('disabled');
+             renderHand(); renderBattlefield();
+             if (!isGameOver) { setTimeout(opponentTurnLogic, 1200); }
+         }
+
+        function opponentTurnLogic() {
+             if (isGameOver) return;
+             console.log("--- Opponent Turn Start ---");
+             battlefieldGrid.flat().forEach(cardInfo => { if (cardInfo && cardInfo.allegiance === 'opponent') { cardInfo.canAttack = true; } });
+             if (opponentManaMax < MAX_MANA) opponentManaMax++; opponentManaCurrent = opponentManaMax;
+             drawCard(opponentDeck, opponentHand, 'opponent');
+             updateManaDisplay(); updateCounts();
+
+             // 1. Play Card
+             let cardPlayedThisTurn = false;
+             for (let i = 0; i < opponentHand.length; i++) {
+                 const cardToPlay = opponentHand[i];
+                 if (opponentManaCurrent >= cardToPlay.cost) {
+                     const targetRowIdx = (cardToPlay.type === 'Melee') ? OPPONENT_FRONT_ROW : OPPONENT_BACK_ROW;
+                     let targetColIdx = -1;
+                     for(let c = 0; c < FIELD_COLS; c++) { if(battlefieldGrid[targetRowIdx][c] === null) { targetColIdx = c; break; } }
+                     if (targetColIdx !== -1) {
+                         opponentManaCurrent -= cardToPlay.cost;
+                         const [playedCardData] = opponentHand.splice(i, 1);
+                         const fieldCardInfo = { cardData: { ...playedCardData }, element: null, canAttack: false, allegiance: 'opponent', position: { row: targetRowIdx, col: targetColIdx } };
+                         battlefieldGrid[targetRowIdx][targetColIdx] = fieldCardInfo;
+                         console.log(`Opponent plays ${playedCardData.name} to [${targetRowIdx}, ${targetColIdx}]`);
+                         cardPlayedThisTurn = true; updateCounts(); updateManaDisplay(); renderBattlefield(); break;
+                     } } }
+
+             // 2. Attack
+             let attackMadeThisTurn = false;
+             for (let r = 0; r < FIELD_ROWS; r++) { if (attackMadeThisTurn) break;
+                 for (let c = 0; c < FIELD_COLS; c++) {
+                     const cardInfo = battlefieldGrid[r][c];
+                     if (cardInfo && cardInfo.allegiance === 'opponent' && cardInfo.canAttack) {
+                         const attacker = { cardInfo, position: { row: r, col: c }, allegiance: 'opponent' };
+                         let targetFound = null;
+                         for (let tr = 0; tr < FIELD_ROWS; tr++) { if (targetFound) break;
+                              for (let tc = 0; tc < FIELD_COLS; tc++) {
+                                   const potentialTargetInfo = battlefieldGrid[tr][tc];
+                                   if (potentialTargetInfo && potentialTargetInfo.allegiance === 'player') {
+                                       const potentialTarget = { cardInfo: potentialTargetInfo, position: { row: tr, col: tc }, allegiance: 'player' };
+                                        if (isValidAttackTarget(attacker, potentialTarget)) { targetFound = potentialTarget; break; }
+                                   } } }
+                         if (targetFound) {
+                             console.log(`Opponent attacks with ${attacker.cardInfo.cardData.name} targeting ${targetFound.cardInfo.cardData.name}`);
+                             combatResolution(attacker, targetFound);
+                             if (battlefieldGrid[r][c] && battlefieldGrid[r][c].instanceId === attacker.cardInfo.instanceId) { attacker.cardInfo.canAttack = false; }
+                             attackMadeThisTurn = true; renderBattlefield(); break;
+                         } } } }
+
+             console.log("--- Opponent Turn End ---");
+             if (!isGameOver) { setTimeout(startPlayerTurn, 800); }
+         }
+
+
+         // --- Field Actions: Select, Move, Attack ---
+         // ... (selectCardForAction, isValidMoveTarget, executeMove remain the same) ...
+        function selectCardForAction(unitSelection) {
+            if (!isPlayerTurn || !unitSelection.cardInfo.canAttack || isPlacingCard || unitSelection.cardInfo.allegiance !== 'player' || isGameOver) return;
+            const { cardInfo, position } = unitSelection;
+            if (selectedUnitForAction && selectedUnitForAction.cardInfo.instanceId === cardInfo.instanceId) {
+                selectedUnitForAction = null; console.log(`Deselected ${cardInfo.cardData.name}.`);
+            } else {
+                 const currentCardInfoInGrid = battlefieldGrid[position.row][position.col];
+                 if (currentCardInfoInGrid && currentCardInfoInGrid.instanceId === cardInfo.instanceId) {
+                      selectedUnitForAction = { cardInfo: currentCardInfoInGrid, position: position, allegiance: 'player' };
+                      console.log(`Selected ${cardInfo.cardData.name} at [${position.row}, ${position.col}] for action.`);
+                 } else { selectedUnitForAction = null; }
+            }
+            renderBattlefield();
+         }
+
+        function isValidMoveTarget(unitPosition, targetPosition) {
+            if (!unitPosition || !targetPosition || isGameOver) return false;
+            if (targetPosition.row < 0 || targetPosition.row >= FIELD_ROWS || targetPosition.col < 0 || targetPosition.col >= FIELD_COLS) return false;
+            if (battlefieldGrid[targetPosition.row][targetPosition.col] !== null) return false;
+            const rowDiff = Math.abs(unitPosition.row - targetPosition.row);
+            const colDiff = Math.abs(unitPosition.col - targetPosition.col);
+            return rowDiff + colDiff === 1;
+        }
+
+        function executeMove(selectedUnit, targetPosition) {
+            if (!isPlayerTurn || !selectedUnit || !selectedUnit.cardInfo.canAttack || isPlacingCard || selectedUnit.allegiance !== 'player' || isGameOver) return;
+            const currentPosition = selectedUnit.position;
+            if (!isValidMoveTarget(currentPosition, targetPosition)) { selectedUnitForAction = null; renderBattlefield(); return; }
+
+             console.log(`Moving ${selectedUnit.cardInfo.cardData.name} from [${currentPosition.row}, ${currentPosition.col}] to [${targetPosition.row}, ${targetPosition.col}]`);
+             const unitInfoToMove = battlefieldGrid[currentPosition.row][currentPosition.col];
+             if (!unitInfoToMove || unitInfoToMove.instanceId !== selectedUnit.cardInfo.instanceId) { selectedUnitForAction = null; renderBattlefield(); return; }
+
+             battlefieldGrid[targetPosition.row][targetPosition.col] = unitInfoToMove;
+             battlefieldGrid[currentPosition.row][currentPosition.col] = null;
+             unitInfoToMove.position = targetPosition;
+             unitInfoToMove.canAttack = false;
+             selectedUnitForAction = null;
+             renderBattlefield();
+         }
+
+
+        // --- Attack Logic ---
+        // ... (isValidAttackTarget, executeAttack, combatResolution remain the same) ...
+         function isValidAttackTarget(attacker, target) {
+            if (!attacker || !target || !attacker.cardInfo || !target.cardInfo || attacker.allegiance === target.allegiance || isGameOver) return false;
+            const attackerType = attacker.cardInfo.cardData.type;
+            const attackerPos = attacker.position;
+            const targetPos = target.position;
+            const rowDiff = Math.abs(attackerPos.row - targetPos.row);
+            const colDiff = Math.abs(attackerPos.col - targetPos.col);
+
+            if (attackerType === 'Melee') {
+                const isAdjacent = rowDiff <= 1 && colDiff <= 1 && (rowDiff + colDiff > 0);
+                return isAdjacent;
+            } else if (attackerType === 'Ranged') {
+                const targetFrontRowIndex = (target.allegiance === 'opponent') ? OPPONENT_FRONT_ROW : PLAYER_FRONT_ROW;
+                const targetFrontRowOccupied = battlefieldGrid[targetFrontRowIndex].some(slot => slot !== null && slot.allegiance === target.allegiance);
+                const targetBackRowIndex = (target.allegiance === 'opponent') ? OPPONENT_BACK_ROW : PLAYER_BACK_ROW;
+                if (targetPos.row === targetBackRowIndex) return true;
+                if (targetPos.row === targetFrontRowIndex && targetFrontRowOccupied) return true;
+                return false;
+            } return false;
+         }
+
+        function executeAttack(attacker, target) {
+            if (!isPlayerTurn || !attacker || !target || !attacker.cardInfo || !target.cardInfo || !attacker.cardInfo.canAttack || isPlacingCard || attacker.allegiance !== 'player' || isGameOver) return;
+            if (!isValidAttackTarget(attacker, target)) { selectedUnitForAction = null; renderBattlefield(); return; }
+
+            console.log(`${attacker.cardInfo.cardData.name} attacks ${target.cardInfo.cardData.name}`);
+            combatResolution(attacker, target);
+
+             const attackerCurrentInfo = battlefieldGrid[attacker.position.row]?.[attacker.position.col];
+             if (attackerCurrentInfo && attackerCurrentInfo.instanceId === attacker.cardInfo.instanceId) { attackerCurrentInfo.canAttack = false; }
+            selectedUnitForAction = null;
+            renderBattlefield();
+        }
+
+        function combatResolution(attacker, target) {
+            if (isGameOver) return;
+            const attackerInfo = battlefieldGrid[attacker.position.row]?.[attacker.position.col];
+            const targetInfo = battlefieldGrid[target.position.row]?.[target.position.col];
+            if (!attackerInfo || attackerInfo.instanceId !== attacker.cardInfo.instanceId || !targetInfo || targetInfo.instanceId !== target.cardInfo.instanceId) { return; }
+            const attackerData = attackerInfo.cardData; const targetData = targetInfo.cardData;
+            console.log(` > Attacker: ${attackerData.name} (${attackerData.attack}/${attackerData.defense})`); console.log(` > Target: ${targetData.name} (${targetData.attack}/${targetData.defense})`);
+            targetData.defense -= attackerData.attack; console.log(` > ${targetData.name} takes ${attackerData.attack} damage. HP: ${targetData.defense}`);
+            if (targetData.defense > 0) { attackerData.defense -= targetData.attack; console.log(` > ${attackerData.name} takes ${targetData.attack} damage. HP: ${attackerData.defense}`); } else { console.log(` > ${targetData.name} cannot retaliate.`); }
+            if (targetData.defense <= 0) { console.log(` > ${targetData.name} destroyed!`); battlefieldGrid[target.position.row][target.position.col] = null; }
+            if (attackerData.defense <= 0) { console.log(` > ${attackerData.name} destroyed!`); battlefieldGrid[attacker.position.row][attacker.position.col] = null; if (attacker.allegiance === 'player' && selectedUnitForAction && selectedUnitForAction.cardInfo.instanceId === attackerInfo.instanceId) { selectedUnitForAction = null; } }
+        }
+
+
+         // --- Fullscreen API Logic ---
+         function toggleFullscreen() { if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) { const e = gameContainer; if (e.requestFullscreen) e.requestFullscreen(); else if (e.webkitRequestFullscreen) e.webkitRequestFullscreen(); else if (e.mozRequestFullScreen) e.mozRequestFullScreen(); else if (e.msRequestFullscreen) e.msRequestFullscreen(); } else { if (document.exitFullscreen) document.exitFullscreen(); else if (document.webkitExitFullscreen) document.webkitExitFullscreen(); else if (document.mozCancelFullScreen) document.mozCancelFullScreen(); else if (document.msExitFullscreen) document.msExitFullscreen(); } }
+         function playSound(soundPath) { console.log(`Playing sound: ${soundPath}`); /* ... */ }
+
+        // --- Game Initialization ---
+        // ... (buildDeck, initializeGame remain the same, except init resets game over state) ...
+        function buildDeck(race) {
+            const raceCards = allCards.filter(card => card.race === race); let deck = [];
+            raceCards.forEach(cardDef => {
+                const copies = Math.max(1, 6 - cardDef.cost);
+                for (let i = 0; i < copies; i++) {
+                     const baseCard = allCards.find(c => c.baseId === cardDef.baseId); const defenseValue = baseCard ? baseCard.defense : cardDef.defense;
+                     deck.push({ ...cardDef, defense: defenseValue });
+                } }); shuffleDeck(deck); return deck;
+        }
+
+        function initializeGame() {
+            console.log(`Player: ${playerRace}, Opponent: ${opponentRace}`);
+            playerRaceElement.textContent = `Player: ${playerRace}`; opponentRaceElement.textContent = `Opponent: ${opponentRace}`;
+            defineCards(); playerDeck = buildDeck(playerRace); opponentDeck = buildDeck(opponentRace);
+
+            isGameOver = false; gameOverOverlay.classList.remove('active'); gameArea.classList.remove('game-over');
+            playerHand = []; opponentHand = []; battlefieldGrid = Array.from({ length: FIELD_ROWS }, () => Array(FIELD_COLS).fill(null));
+            playerManaMax = 0; playerManaCurrent = 0; opponentManaMax = 0; opponentManaCurrent = 0;
+            selectedUnitForAction = null; selectedCardToPlay = null; isPlacingCard = false;
+
+            for(let i = 0; i < STARTING_HAND_SIZE; i++) { drawCard(playerDeck, playerHand, 'player'); drawCard(opponentDeck, opponentHand, 'opponent'); }
+
+            updateCounts(); updateManaDisplay(); renderBattlefield(); placementOverlay.classList.remove('active');
+
+            if (!window.gameListenersAdded) {
+                 playerDeckElement.addEventListener('click', () => { if(!isGameOver && isPlayerTurn && !isPlacingCard && playerHand.length < MAX_HAND_SIZE) { drawCard(playerDeck, playerHand, 'player'); } else if (!isGameOver && playerHand.length >= MAX_HAND_SIZE) { console.log("Hand full, cannot draw."); } });
+                 fullscreenBtn.addEventListener('click', toggleFullscreen);
+                 endTurnBtn.addEventListener('click', endPlayerTurn);
+                 gameContainer.addEventListener('click', (event) => { if (isGameOver) return; if (event.target === gameContainer || event.target === gameArea) { if (isPlacingCard) { cancelPlacement(); } else if (selectedUnitForAction) { selectedUnitForAction = null; console.log("Action cancelled by clicking background."); renderBattlefield(); } } });
+                 window.addEventListener('keydown', (event) => { if (isGameOver) return; if (event.key === 'Escape') { if (isPlacingCard) { cancelPlacement(); event.preventDefault(); } else if (selectedUnitForAction) { selectedUnitForAction = null; console.log("Action cancelled by Escape key."); renderBattlefield(); event.preventDefault(); } } });
+                window.gameListenersAdded = true;
+             }
+
+             raceSelectionOverlay.style.display = 'none'; gameContainer.style.visibility = 'visible';
+             startPlayerTurn();
+         }
+
+        // --- Race Selection Listeners ---
+        document.getElementById('select-bandit').addEventListener('click', () => { playerRace = 'Bandit'; opponentRace = 'Undead'; initializeGame(); });
+        document.getElementById('select-undead').addEventListener('click', () => { playerRace = 'Undead'; opponentRace = 'Bandit'; initializeGame(); });
+
+    </script>
+
+</body>
+</html>
