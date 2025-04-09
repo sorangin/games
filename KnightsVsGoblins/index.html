@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Knights Vs Goblins (Optimized + Fixed)</title>
+    <title>Knights Vs Goblins</title>
     <style>
         :root {
             --grid-cols: 8;
@@ -32,12 +31,12 @@
             --gold-color: #FFD700;
             --stack-offset-x: 3px;
             --stack-offset-y: -3px;
-            --tooltip-bg: rgba(10, 10, 10, 0.88);
+            --tooltip-bg: rgba(10, 10, 10, 0.70);
             --tooltip-text: #eee;
             --tooltip-border: #555;
             --tooltip-shadow: 2px 2px 6px rgba(0, 0, 0, 0.6);
-            --attack-target-bg: rgba(255, 80, 80, 0.4);
-            --attack-target-border: rgba(255, 80, 80, 0.7);
+            --attack-target-bg: rgba(235, 0, 0, 0.1);
+            --attack-target-border: rgba(255, 80, 80, 0.8);
         }
 
         html,
@@ -126,6 +125,16 @@
             max-width: 500px;
             transition: opacity 0.5s ease-out;
             opacity: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        #board-feedback-area .feedback-gold-icon {
+             height: 1em;
+             width: auto;
+             vertical-align: middle;
+             image-rendering: pixelated;
         }
 
         #board-feedback-area.feedback-levelup {
@@ -187,8 +196,10 @@
         }
 
         .grid-cell {
-            border: 1px solid #7a8a7a;
-            background-color: #6a7a6a;
+            border: 1px solid rgba(60, 80, 60, 0.25);
+            background-image: url('./sprites/tile_grass.png');
+            background-size: cover;
+            background-position: center;
             position: relative;
             display: flex;
             justify-content: center;
@@ -205,7 +216,7 @@
         }
 
         .grid-cell.valid-move:not(.has-obstacle) {
-            background-color: #aaeaaa;
+            background-color: rgba(170, 234, 170, 0.3);
             opacity: 0.8;
             cursor: pointer;
         }
@@ -217,16 +228,17 @@
             z-index: 1;
         }
 
-
         .grid-cell.has-obstacle {
             cursor: not-allowed !important;
-            background-color: #5a6a5a;
+            background-color: rgba(255, 255, 255, 0.5);
+            background-image: none;
         }
 
         .obstacle {
             position: absolute;
-            left: calc((var(--obs-x) - 1) * var(--cell-size));
-            top: calc((var(--obs-y) - 1) * var(--cell-size));
+            left: calc((var(--obs-x) - 0.5) * var(--cell-size));
+            top: calc((var(--obs-y) - 0.5) * var(--cell-size));
+            transform: translate(-50%, -50%);
             width: var(--cell-size);
             height: var(--cell-size);
             background-size: contain;
@@ -236,26 +248,23 @@
             pointer-events: none;
             image-rendering: pixelated;
             box-sizing: border-box;
-            transition: width 0.1s, height 0.1s, left 0.1s, top 0.1s;
+            transition: width 0.1s, height 0.1s, left 0.1s, top 0.1s, transform 0.1s;
         }
 
         .obstacle.rock {
             background-image: url('./sprites/rock.png');
             width: calc(var(--cell-size) * 0.8);
             height: calc(var(--cell-size) * 0.8);
-            left: calc((var(--obs-x) - 1) * var(--cell-size) + var(--cell-size) * 0.1);
-            top: calc((var(--obs-y) - 1) * var(--cell-size) + var(--cell-size) * 0.1);
         }
 
         .obstacle.wall_rock {
             background-image: url('./sprites/wall_rock.png');
         }
 
-
         .item {
             position: absolute;
-            left: calc((var(--item-x) - 1) * var(--cell-size) + var(--cell-size) * 0.5);
-            top: calc((var(--item-y) - 1) * var(--cell-size) + var(--cell-size) * 0.5);
+            left: calc((var(--item-x) - 0.5) * var(--cell-size));
+            top: calc((var(--item-y) - 0.5) * var(--cell-size));
             transform: translate(calc(-50% + var(--stackIndex, 0) * var(--stack-offset-x)), calc(-50% + var(--stackIndex, 0) * var(--stack-offset-y)));
             width: calc(var(--cell-size) * 0.6);
             height: calc(var(--cell-size) * 0.6);
@@ -277,10 +286,9 @@
 
         .unit {
             position: absolute;
-            left: calc((var(--unit-x) - 1) * var(--cell-size));
-            top: calc((var(--unit-y) - 1) * var(--cell-size));
-            width: var(--cell-size);
-            height: var(--cell-size);
+            left: calc((var(--unit-x) - 0.5) * var(--cell-size));
+            top: calc((var(--unit-y) - 0.5) * var(--cell-size));
+            transform: translate(-50%, -50%);
             border-radius: 3px;
             display: flex;
             justify-content: center;
@@ -288,7 +296,6 @@
             font-weight: bold;
             z-index: 10;
             transition: filter 0.2s, box-shadow 0.2s, width 0.1s, height 0.1s, opacity var(--death-fade-time) ease-in-out, background-image 0.1s ease-in, transform var(--move-anim-time) ease-out, left var(--move-anim-time) ease-out, top var(--move-anim-time) ease-out;
-            transform: none;
             box-sizing: border-box;
             background-color: transparent;
             image-rendering: pixelated;
@@ -298,12 +305,9 @@
             pointer-events: none;
             width: calc(var(--cell-size) * 0.8);
             height: calc(var(--cell-size) * 0.8);
-            left: calc((var(--unit-x) - 1) * var(--cell-size) + var(--cell-size) * 0.1);
-            top: calc((var(--unit-y) - 1) * var(--cell-size) + var(--cell-size) * 0.1);
             opacity: 1;
             filter: none;
         }
-
 
         #game-board .unit {
             pointer-events: auto;
@@ -365,8 +369,8 @@
             filter: none !important;
             box-shadow: none !important;
             opacity: 1;
-            transition: opacity var(--death-fade-time) ease-in-out, left 0.1s, top 0.1s;
-            transform: none !important;
+            transition: opacity var(--death-fade-time) ease-in-out, left 0.1s, top 0.1s, transform 0.1s;
+            transform: translate(-50%, -50%) !important;
         }
 
 
@@ -410,7 +414,7 @@
             z-index: 25;
             pointer-events: none;
             image-rendering: pixelated;
-            transform: scale(0.75);
+            transform: scale(0.75) translate(-50%, -50%);
             transform-origin: center center;
             animation: fireball-explode-anim var(--fireball-explode-time) steps(8) forwards;
         }
@@ -450,13 +454,16 @@
 
         #level-gold-container {
             display: flex;
-            flex-direction: column;
-            gap: 0.3rem;
+            flex-direction: row;
+            align-items: center;
+            gap: 0.8rem;
             flex-grow: 1;
+            flex-wrap: wrap;
         }
 
         #level-display,
-        #gold-display-ui-panel { /* Renamed to avoid conflict with menu one */
+        #actions-left-display,
+        #gold-display-ui-panel {
             text-align: center;
             margin-bottom: 0;
             font-weight: bold;
@@ -466,17 +473,27 @@
             border-radius: 3px;
             font-size: 1.4rem;
             white-space: nowrap;
+            flex-shrink: 0;
         }
 
         #level-display {
             color: #ffd700;
         }
-
-        #gold-display-ui-panel { /* Hide original gold display in UI panel */
-             display: none;
+        #actions-left-display {
+             color: #eee;
         }
-        /* Style for gold display inside menu */
-         #menu-overlay #gold-display {
+
+        #gold-display-ui-panel {
+             display: none; /* Keep hidden in main UI unless desired */
+             color: var(--gold-color);
+             text-shadow: 1px 1px 1px #6b5700;
+        }
+
+        #menu-button {
+            margin-left: auto;
+        }
+
+        #menu-overlay #gold-display {
              color: var(--gold-color);
              text-shadow: 1px 1px 1px #6b5700;
              margin: 1rem 0;
@@ -487,13 +504,16 @@
              padding: 0.5rem 1rem;
              border: 1px solid #7a8a7a;
              border-radius: 3px;
+             display: inline-flex;
+             align-items: center;
+             justify-content: center;
          }
-
-
-        #control-buttons-container {
-            display: flex;
-            gap: 5px;
-            align-items: center;
+        .gold-icon-menu {
+            width: 1.2em;
+            height: 1.2em;
+            vertical-align: middle;
+            margin-right: 6px;
+            image-rendering: pixelated;
         }
 
         .ui-button {
@@ -582,29 +602,6 @@
             color: #aadeff;
             font-style: italic;
             min-height: 1.3em;
-        }
-
-        #turn-info {
-            background-color: #5a6a5a;
-            padding: 0.8rem;
-            margin-bottom: 1rem;
-            border: 1px solid #1e281e;
-            border-radius: 3px;
-            min-height: auto;
-            font-size: 1.3rem;
-        }
-
-        #turn-info h3 {
-            margin: 0 0 0.5rem 0;
-            border-bottom: 1px solid #7a8a7a;
-            padding-bottom: 0.3rem;
-            color: #eee;
-            font-size: 1.4rem;
-        }
-
-        #turn-info p {
-            margin: 0.3rem 0;
-            color: #ddd;
         }
 
         #spell-area {
@@ -743,11 +740,6 @@
             color: lime;
         }
 
-        #old-feedback-area {
-            margin-bottom: 1rem;
-            min-height: 2rem;
-        }
-
         #end-turn-button {
             padding: 1rem 1.5rem;
             background-color: #a0522d;
@@ -795,6 +787,7 @@
             animation: moveUpFadeOut 1s forwards;
             z-index: 50;
             pointer-events: none;
+            transform: translateX(-50%);
         }
 
         .damage-popup {
@@ -862,7 +855,8 @@
         }
 
         .overlay button,
-        #menu-overlay .overlay-button-like { /* Style buttons inside overlays */
+        #menu-overlay .overlay-button-like,
+        #level-select-screen button {
             padding: clamp(0.8rem, 3vmin, 1rem) clamp(1.5rem, 6vmin, 2rem);
             font-size: clamp(1.2rem, 4vmin, 1.6rem);
             cursor: pointer;
@@ -875,13 +869,13 @@
         }
 
         .overlay button:hover:not(:disabled),
-        #menu-overlay .overlay-button-like:hover:not(:disabled) {
+        #menu-overlay .overlay-button-like:hover:not(:disabled),
+        #level-select-screen button:hover:not(:disabled) {
             background-color: #8B4513;
         }
 
-         /* Specific Menu Overlay Styles */
         #menu-overlay {
-            background-color: rgba(0, 0, 0, 0.92); /* Darker for menu */
+            background-color: rgba(0, 0, 0, 0.92);
         }
         #menu-overlay h2 {
             margin-bottom: 1.5rem;
@@ -900,14 +894,14 @@
         }
          #menu-overlay #menu-buttons-container {
              display: flex;
-             flex-direction: column; /* Stack buttons vertically */
+             flex-direction: column;
              gap: 0.8rem;
              width: 100%;
              align-items: center;
          }
-         #menu-overlay .menu-ui-button { /* Use specific class or style directly */
-             padding: 8px 15px; /* Slightly larger padding for menu buttons */
-             font-size: 1.6rem; /* Consistent font size */
+         #menu-overlay .menu-ui-button {
+             padding: 8px 15px;
+             font-size: 1.6rem;
              background-color: rgba(30, 40, 30, 0.8);
              border: 1px solid #7a8a7a;
              color: #eee;
@@ -916,10 +910,12 @@
              min-width: 150px;
              text-align: center;
              transition: background-color 0.2s;
-             display: flex; /* Align icon and text */
+             display: flex;
              align-items: center;
              justify-content: center;
              gap: 8px;
+             width: 80%;
+             box-sizing: border-box;
          }
          #menu-overlay .menu-ui-button:hover:not(:disabled) {
              background-color: rgba(60, 80, 60, 0.9);
@@ -928,7 +924,7 @@
             opacity: 0.5;
             cursor: not-allowed;
          }
-         #menu-overlay #close-menu-button { /* Style close button like others */
+         #menu-overlay #close-menu-button {
             margin-top: 1.5rem;
          }
 
@@ -957,6 +953,26 @@
          #leaderboard-overlay li span:last-child {
             color: var(--gold-color);
          }
+
+        #level-select-screen {
+            background-color: rgba(0, 0, 0, 0.9);
+        }
+
+        #level-select-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 1.5rem;
+            max-width: 400px;
+        }
+
+        #level-select-container button {
+             min-width: 80px;
+             padding: 10px 15px;
+             font-size: 1.4rem;
+        }
+
 
         #unit-tooltip {
             position: fixed;
@@ -1022,32 +1038,28 @@
                 flex-wrap: nowrap;
             }
             #level-gold-container {
-                flex-direction: row;
-                flex-grow: 0;
-                gap: 0.8rem;
+                flex-grow: 1;
+                gap: 0.5rem;
+                flex-wrap: nowrap;
+                 overflow: hidden;
+                 justify-content: flex-start;
             }
-            #level-display {
+            #level-display, #actions-left-display, #gold-display-ui-panel {
                 margin-bottom: 0;
+                padding: 0.2rem 0.4rem;
+                font-size: 1.2rem;
             }
-            .ui-button {
-                font-size: 1.4rem;
-                padding: 2px 4px;
-                min-width: 22px;
-                min-height: 22px;
+            #menu-button {
+                 font-size: 1.4rem;
+                 padding: 2px 4px;
+                 min-width: 22px;
+                 min-height: 22px;
+                 margin-left: auto;
             }
-            #turn-and-unit-info-container {
-                display: flex;
-                gap: 8px;
-                margin-bottom: 1rem;
-                align-items: flex-start;
-            }
-            #turn-info {
-                flex: 1 1 auto;
-                margin-bottom: 0;
-            }
+
             #unit-info {
                 flex: 0 1 auto;
-                margin-bottom: 0;
+                margin-bottom: 0.5rem;
                 font-size: 1.1rem;
                 gap: 5px;
                 padding: 0.5rem;
@@ -1098,12 +1110,24 @@
              }
              #menu-overlay .menu-ui-button {
                  min-width: 80%;
+                 width: 90%;
+             }
+             #level-select-container {
+                 max-width: 90%;
+             }
+             #level-select-container button {
+                 min-width: 60px;
+                 font-size: 1.2rem;
              }
         }
     </style>
 </head>
 
 <body>
+    <!--
+        IMPORTANT: Make sure the 'sprites' and 'audio' folders are in the
+        same directory as this HTML file for the game to work correctly.
+    -->
     <div id="game-container">
         <div id="game-board"></div>
         <div id="board-feedback-area"></div>
@@ -1111,32 +1135,24 @@
             <div id="top-bar-ui">
                 <div id="level-gold-container">
                     <div id="level-display">Level: 1</div>
+                    <div id="actions-left-display">Actions Left: 0</div>
                     <div id="gold-display-ui-panel">Gold: 0</div>
-                </div>
-                <div id="control-buttons-container">
                      <button id="menu-button" class="ui-button" title="Menu">☰</button>
-                     <!-- Other buttons moved to menu -->
                 </div>
-            </div>
+                 </div>
 
-            <div id="turn-and-unit-info-container">
-                <div id="turn-info">
-                    <h3 id="current-turn">Turn: Player</h3>
-                    <p id="actions-left">Actions Left: 0</p>
-                </div>
+             <div id="unit-info">
+                 <img id="unit-portrait" src="" alt="">
+                 <div id="unit-details">
+                     <h3 id="unit-name">Unit Info</h3>
+                     <p id="unit-hp">HP: -/-</p>
+                     <p id="unit-atk">ATK: -</p>
+                     <p id="unit-mov">MOV: -</p>
+                     <p id="unit-rng">RNG: -</p>
+                     <p id="unit-status"></p>
+                 </div>
+             </div>
 
-                <div id="unit-info">
-                    <img id="unit-portrait" src="" alt="">
-                    <div id="unit-details">
-                        <h3 id="unit-name">Unit Info</h3>
-                        <p id="unit-hp">HP: -/-</p>
-                        <p id="unit-atk">ATK: -</p>
-                        <p id="unit-mov">MOV: -</p>
-                        <p id="unit-rng">RNG: -</p>
-                        <p id="unit-status"></p>
-                    </div>
-                </div>
-            </div>
 
             <div id="spell-area">
                 <div id="fireball-container" class="spell-container">
@@ -1148,13 +1164,13 @@
                 <div id="heal-container" class="spell-container">
                     <div id="heal-spell" class="spell-icon locked" title="Unlock at Level 16"><span class="hotkey-display">4</span></div><span class="spell-label">Heal</span></div>
             </div>
-            <div id="old-feedback-area"></div>
+
             <button id="end-turn-button" title="End Player Turn (E)"></button>
         </div>
 
         <div id="start-screen" class="overlay visible">
             <h2>Knights Vs Goblins</h2>
-            <p>Defeat all Goblins to advance levels. Use 1,2,3,4 for spells, E to end turn, M to mute, F for fullscreen. Hover units for info. Open Menu [☰] for options.</p>
+            <p>Defeat all Goblins to advance levels.</p>
             <button id="start-button">Begin Conquest!</button>
         </div>
         <div id="game-over-screen" class="overlay">
@@ -1162,26 +1178,41 @@
             <p id="game-over-message"></p>
             <button id="restart-button">Restart Level</button>
         </div>
+        <div id="level-select-screen" class="overlay">
+             <h2>Select Level</h2>
+             <div id="level-select-container">
+                 <button class="level-select-button" data-level="1">Level 1</button>
+                 <button class="level-select-button" data-level="2">Level 2</button>
+                 <button class="level-select-button" data-level="3">Level 3</button>
+                 <button class="level-select-button" data-level="4">Level 4</button>
+                 <button class="level-select-button" data-level="5">Level 5</button>
+                 </div>
+             <button id="back-to-start-button" class="overlay-button-like">Back to Title</button>
+         </div>
         <div id="leaderboard-overlay" class="overlay">
             <h2>Leaderboard</h2>
             <p>(Placeholder - requires server storage)</p>
             <ul id="leaderboard-list">
-                <li><span>Player 1</span> <span>150 Gold</span></li>
-                <li><span>HeroKnight</span> <span>125 Gold</span></li>
-                <li><span>GoblinSlayer</span> <span>100 Gold</span></li>
-                <li><span>Archmage</span> <span>90 Gold</span></li>
-                <li><span>Sir Reginald</span> <span>75 Gold</span></li>
+                <li><span>Sora Ngin</span> <span>Level 99 - Gold: 9001</span></li>
+                <li><span>HeroKnight</span> <span>Level 10 - Gold: 125</span></li>
+                <li><span>GoblinMan</span> <span>Level 8 - Gold: 100</span></li>
+                <li><span>Archmage</span> <span>Level 5 - Gold: 90</span></li>
+                <li><span>Sir Reginald</span> <span>Level 2 - Gold: 75</span></li>
             </ul>
             <button id="close-leaderboard-button" class="overlay-button-like">Close</button>
         </div>
         <div id="menu-overlay" class="overlay">
             <div id="menu-overlay-content">
                 <h2>Menu</h2>
-                <div id="gold-display">Gold: 0</div>
+                <div id="gold-display">
+                     <img src="./sprites/gold.png" alt="Gold" class="gold-icon-menu"> <span id="menu-gold-amount">0</span>
+                </div>
                 <div id="menu-buttons-container">
+                    <button id="restart-level-menu-button" class="menu-ui-button" title="Restart Current Level">🔄 Restart Level</button>
                     <button id="leaderboard-button" class="menu-ui-button" title="Leaderboard">🏆 Leaderboard</button>
                     <button id="mute-button" class="menu-ui-button" title="Toggle Sound (M)">🔊 Mute Sound</button>
                     <button id="fullscreen-button" class="menu-ui-button" title="Toggle Fullscreen (F)" disabled>&#x26F6; Fullscreen</button>
+                    <button id="quit-to-level-select-button" class="menu-ui-button" title="Quit to Level Select">🚪 Quit</button>
                 </div>
                 <button id="close-menu-button" class="overlay-button-like">Close Menu</button>
             </div>
@@ -1191,15 +1222,16 @@
     </div>
 
     <script>
-        let gameContainer, gameBoard, uiPanel, levelDisplayElement, goldDisplayElement, spellAreaElement,
-            fireballElement, flameWaveElement, frostNovaElement, healElement, turnInfo, unitInfo, unitPortraitElement,
-            currentTurnDisplay, actionsLeftDisplay, unitNameDisplay, unitHpDisplay, unitAtkDisplay, unitMovDisplay,
+        let gameContainer, gameBoard, uiPanel, levelDisplayElement, goldDisplayUIElement, spellAreaElement,
+            fireballElement, flameWaveElement, frostNovaElement, healElement, unitInfo, unitPortraitElement,
+            actionsLeftDisplayElement, unitNameDisplay, unitHpDisplay, unitAtkDisplay, unitMovDisplay,
             unitRngDisplay, unitStatusDisplay, boardFeedbackArea, endTurnButton, startScreen, gameOverScreen,
             startButton, restartButton, gameOverTitle, gameOverMessage, fullscreenButton, muteButton, tooltipElement,
             leaderboardButton, leaderboardOverlay, leaderboardList, closeLeaderboardButton,
-            menuButton, menuOverlay, closeMenuButton;
+            menuButton, menuOverlay, closeMenuButton, restartLevelMenuButton, quitToLevelSelectButton,
+            levelSelectScreen, levelSelectContainer, backToStartButton, menuGoldAmountElement;
 
-        const musicTracks = ['audio/music_Treasure.mp3', 'audio/music_AoiUsagi-Die.mp3', 'audio/music_WormsTheme.mp3', 'audio/bgm.mp3'];
+        const musicTracks = ['audio/music_WarcraftOrc.mp3', 'audio/music_Luffy.mp3', 'audio/music_WormsTheme.mp3'];
         const sfx = {};
         let bgMusic = new Audio();
         bgMusic.loop = true;
@@ -1214,7 +1246,8 @@
             frostNovaCast: 'audio/sfxFrostboltCast.wav', frostNovaHit: 'audio/sfxFrostboltHit.wav',
             playerDie: 'audio/player_die.wav', startBeep: 'audio/start_beep.wav', heal: 'audio/heal.wav',
             arrowShoot: 'audio/arrow_shoot.wav', pickup: 'audio/pickup.wav', goldDrop: 'audio/gold_drop.wav',
-            cheat: 'audio/Success.wav', menuOpen: 'audio/sfxSelect.wav', menuClose: 'audio/sfxSelect.wav'
+            cheat: 'audio/Success.wav', menuOpen: 'audio/sfxSelect.wav', menuClose: 'audio/sfxSelect.wav',
+            levelSelect: 'audio/start_beep.wav'
         };
 
         function loadSfx() {
@@ -1229,6 +1262,7 @@
             sfx.playerDie.volume = 0.7; sfx.startBeep.volume = 0.6; sfx.heal.volume = 0.7;
             sfx.arrowShoot.volume = 0.5; sfx.pickup.volume = 0.7; sfx.goldDrop.volume = 0.6;
             sfx.cheat.volume = 0.7; sfx.menuOpen.volume = 0.5; sfx.menuClose.volume = 0.5;
+            sfx.levelSelect.volume = 0.6;
         }
 
         function playSfx(soundKey) {
@@ -1242,13 +1276,15 @@
 
         function startMusic() {
             if (isMuted || !audioInitialized) return;
-            if (!bgMusic.src) {
+            if (!bgMusic.src || bgMusic.ended) {
                 selectAndLoadMusic();
                 if (!bgMusic.src) return;
             }
-            const playPromise = bgMusic.play();
-            if (playPromise) {
-                playPromise.catch(error => { if (error.name === 'NotAllowedError') {} });
+             if (bgMusic.paused) {
+                 const playPromise = bgMusic.play();
+                 if (playPromise) {
+                     playPromise.catch(error => { if (error.name === 'NotAllowedError') {} });
+                 }
             }
         }
 
@@ -1261,10 +1297,14 @@
 
         function selectAndLoadMusic() {
             if (musicTracks.length === 0) return;
-            const i = Math.floor(Math.random() * musicTracks.length);
-            const t = musicTracks[i];
-            if (t) {
-                bgMusic.src = t;
+            const currentTrackIndex = musicTracks.indexOf(bgMusic.src.split('/').pop());
+            let nextTrackIndex = (currentTrackIndex + 1) % musicTracks.length;
+            if (currentTrackIndex === -1 || musicTracks.length === 1) {
+                 nextTrackIndex = Math.floor(Math.random() * musicTracks.length);
+            }
+            const track = musicTracks[nextTrackIndex];
+            if (track) {
+                bgMusic.src = track;
                 bgMusic.load();
             }
         }
@@ -1301,7 +1341,7 @@
 
 
         function startMusicIfNotPlaying() {
-            if (startScreen && !startScreen.classList.contains('visible') && !isGameOver() && !isMuted && bgMusic.paused) {
+            if (isGameActive && !isGameOver() && !isLevelSelectOpen() && !isMuted && bgMusic.paused) {
                 startMusic();
             }
         }
@@ -1317,7 +1357,7 @@
         const FROST_NOVA_DURATION = 3;
         const HEAL_UNLOCK_LEVEL = 16;
         const HEAL_AMOUNT = 3;
-        const ARCHER_KNIGHT_INTRO_LEVEL = 2;
+        const ARCHER_KNIGHT_INTRO_LEVEL = 6;
         const GOBLIN_ARCHER_INTRO_LEVEL = 3;
         const CLUBBER_INTRO_LEVEL = 7;
         const ARROW_FLY_DURATION_MS = 300;
@@ -1370,6 +1410,7 @@
         let currentMouseY = 0;
         let lastHoveredUnitId = null;
         let tooltipUpdateInterval = null;
+        let isGameActive = false;
 
         function isUnitAliveAndValid(unit) {
             return unit && unit.hp > 0 && unit.element && !unit.element.classList.contains('dead');
@@ -1432,17 +1473,34 @@
             if (resizeTimeout) clearTimeout(resizeTimeout);
             resizeTimeout = null;
             isProcessing = false;
-            document.querySelectorAll('#game-board .unit, #game-board .damage-popup, #game-board .freeze-popup, #game-board .heal-popup, #game-board .projectile, #game-board .obstacle, #game-board .item, #game-board .fireball-explosion').forEach(el => el.remove());
-            document.querySelectorAll('#game-board .grid-cell').forEach(cell => {
-                 cell.classList.remove('has-obstacle');
-                 cell.innerHTML = '';
-            });
+            if (gameBoard) {
+                const selectorsToRemove = '#game-board .unit, #game-board .damage-popup, #game-board .freeze-popup, #game-board .heal-popup, #game-board .projectile, #game-board .obstacle, #game-board .item, #game-board .fireball-explosion';
+                document.querySelectorAll(selectorsToRemove).forEach(el => el.remove());
+                document.querySelectorAll('#game-board .grid-cell').forEach(cell => {
+                     cell.classList.remove('has-obstacle', 'valid-move', 'valid-attack-target', 'frost-aoe-preview');
+                     cell.innerHTML = '';
+                });
+            }
             clearHighlights();
             if (endTurnButton) {
                 endTurnButton.innerHTML = `<span class="hotkey-e">[E]</span>nd Turn`;
                 endTurnButton.title = "End Player Turn (E)";
                 endTurnButton.classList.remove('next-level-mode');
             }
+        }
+
+        function fullGameReset() {
+            resetLevelState();
+            stopMusic();
+            stopTooltipUpdater();
+            document.removeEventListener('mousemove', trackMousePosition);
+            window.removeEventListener('resize', handleResize);
+            document.removeEventListener('fullscreenchange', updateFullscreenButton);
+            document.removeEventListener('webkitfullscreenchange', updateFullscreenButton);
+            document.removeEventListener('mozfullscreenchange', updateFullscreenButton);
+            document.removeEventListener('MSFullscreenChange', updateFullscreenButton);
+            isGameActive = false;
+            if(gameBoard) gameBoard.innerHTML = '';
         }
 
         function calculateCellSize() {
@@ -1486,19 +1544,10 @@
 
         function updateUnitVisualPositionOnly(element, x, y) {
              if (!element || !isCellInBounds(x,y)) return;
-             const targetX = x; const targetY = y;
-             element.style.setProperty('--unit-x', targetX + 1);
-             element.style.setProperty('--unit-y', targetY + 1);
-
-             const baseLeft = (targetX * currentCellSize);
-             const baseTop = (targetY * currentCellSize);
-             const width = parseFloat(getComputedStyle(element).width);
-             const height = parseFloat(getComputedStyle(element).height);
-             const offsetX = (currentCellSize - width) / 2;
-             const offsetY = (currentCellSize - height) / 2;
-
-             element.style.left = `${baseLeft + offsetX}px`;
-             element.style.top = `${baseTop + offsetY}px`;
+             element.style.setProperty('--unit-x', x + 1);
+             element.style.setProperty('--unit-y', y + 1);
+             element.style.left = `calc((var(--unit-x) - 0.5) * var(--cell-size))`;
+             element.style.top = `calc((var(--unit-y) - 0.5) * var(--cell-size))`;
         }
 
         function updateObstaclePosition(element) {
@@ -1506,26 +1555,14 @@
              const x = parseInt(element.style.getPropertyValue('--obs-x')) - 1;
              const y = parseInt(element.style.getPropertyValue('--obs-y')) - 1;
              if (!isCellInBounds(x, y)) return;
-
-             const isRock = element.classList.contains('rock');
-             if (isRock) {
-                element.style.width = `calc(var(--cell-size) * 0.8)`;
-                element.style.height = `calc(var(--cell-size) * 0.8)`;
-                element.style.left = `calc(${x} * var(--cell-size) + var(--cell-size) * 0.1)`;
-                element.style.top = `calc(${y} * var(--cell-size) + var(--cell-size) * 0.1)`;
-             } else {
-                element.style.width = `var(--cell-size)`;
-                element.style.height = `var(--cell-size)`;
-                element.style.left = `calc(${x} * var(--cell-size))`;
-                element.style.top = `calc(${y} * var(--cell-size))`;
-             }
+             element.style.left = `calc((var(--obs-x) - 0.5) * var(--cell-size))`;
+             element.style.top = `calc((var(--obs-y) - 0.5) * var(--cell-size))`;
         }
-
 
         const handleResize = () => {
             if (resizeTimeout) clearTimeout(resizeTimeout);
             resizeTimeout = setTimeout(() => {
-                if (isGameOver() || (startScreen && startScreen.classList.contains('visible'))) return;
+                if (!isGameActive || isGameOver() || isLevelSelectOpen() || (startScreen && startScreen.classList.contains('visible'))) return;
                 requestAnimationFrame(() => {
                     try {
                         calculateCellSize();
@@ -1567,10 +1604,12 @@
         }
 
         function initGame(startLevel = 1) {
+            isGameActive = true;
             isProcessing = true;
             if (!audioInitialized) initializeAudio();
             playSfx('startBeep');
             currentLevel = startLevel;
+            levelToRestartOnLoss = currentLevel;
             if (startLevel === 1) {
                 playerGold = 0;
             }
@@ -1587,8 +1626,8 @@
                 updateGoldDisplay();
                 updateUnitInfo(null);
                 if (boardFeedbackArea) {
-                    boardFeedbackArea.textContent = '';
-                    boardFeedbackArea.className = '';
+                    boardFeedbackArea.innerHTML = '';
+                    boardFeedbackArea.className = 'board-feedback-area';
                     boardFeedbackArea.style.opacity = '1';
                 }
                 if (endTurnButton) {
@@ -1599,6 +1638,7 @@
                 if (startScreen) startScreen.classList.remove('visible');
                 if (menuOverlay) menuOverlay.classList.remove('visible');
                 if (leaderboardOverlay) leaderboardOverlay.classList.remove('visible');
+                if (levelSelectScreen) levelSelectScreen.classList.remove('visible');
 
                 window.addEventListener('resize', handleResize, { passive: true });
                 document.addEventListener('fullscreenchange', updateFullscreenButton);
@@ -1632,6 +1672,7 @@
             } catch (initError) {
                 isProcessing = false;
                 updateTurnDisplay();
+                isGameActive = false;
             }
         }
 
@@ -1800,51 +1841,33 @@
         }
 
 
-        function updateUnitPosition(unit, forceUpdateSize = false) {
+        function updateUnitPosition(unit, forceUpdate = false) {
             if (!unit || !unit.element || unit.element.classList.contains('dead')) return;
-            const targetCol = unit.x + 1; const targetRow = unit.y + 1;
+            const targetCol = unit.x + 1;
+            const targetRow = unit.y + 1;
             unit.element.style.setProperty('--unit-x', targetCol);
             unit.element.style.setProperty('--unit-y', targetRow);
 
-            const baseLeft = (unit.x * currentCellSize);
-            const baseTop = (unit.y * currentCellSize);
-            const width = parseFloat(getComputedStyle(unit.element).width);
-            const height = parseFloat(getComputedStyle(unit.element).height);
-            const offsetX = (currentCellSize - width) / 2;
-            const offsetY = (currentCellSize - height) / 2;
-
-            unit.element.style.left = `${baseLeft + offsetX}px`;
-            unit.element.style.top = `${baseTop + offsetY}px`;
-
+            if (!unit.element.classList.contains('is-moving') || forceUpdate) {
+                 unit.element.style.left = `calc((var(--unit-x) - 0.5) * var(--cell-size))`;
+                 unit.element.style.top = `calc((var(--unit-y) - 0.5) * var(--cell-size))`;
+                 unit.element.style.transform = 'translate(-50%, -50%)';
+            }
 
             unit.element.classList.toggle('acted', unit.acted);
             unit.element.classList.toggle('selected', selectedUnit?.id === unit.id);
             unit.element.classList.toggle('frozen', unit.isFrozen);
-
-            if (!unit.element.classList.contains('is-moving')) {
-                 unit.element.style.transform = 'none';
-            }
-
             unit.element.style.opacity = '1';
         }
-
 
         function updateItemPosition(element, x, y, stackIndex = 0) {
             if (!element) return;
             element.style.setProperty('--item-x', x + 1);
             element.style.setProperty('--item-y', y + 1);
             element.style.setProperty('--stackIndex', stackIndex);
-
-            const baseLeft = (x * currentCellSize);
-            const baseTop = (y * currentCellSize);
-            const width = parseFloat(getComputedStyle(element).width);
-            const height = parseFloat(getComputedStyle(element).height);
-            const offsetX = (currentCellSize - width) / 2;
-            const offsetY = (currentCellSize - height) / 2;
-
-            element.style.left = `${baseLeft + offsetX + stackIndex * parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--stack-offset-x') || 0)}px`;
-            element.style.top = `${baseTop + offsetY + stackIndex * parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--stack-offset-y') || 0)}px`;
-            element.style.transform = 'none';
+            element.style.left = `calc((var(--item-x) - 0.5) * var(--cell-size))`;
+            element.style.top = `calc((var(--item-y) - 0.5) * var(--cell-size))`;
+            element.style.transform = `translate(calc(-50% + ${stackIndex} * var(--stack-offset-x)), calc(-50% + ${stackIndex} * var(--stack-offset-y)))`;
         }
 
         function clearHighlights() {
@@ -1879,18 +1902,15 @@
             });
         }
 
-
         function showPopup(x, y, text, className) {
             if (!gameBoard) return;
             const popup = document.createElement('div');
             popup.classList.add(className);
             popup.textContent = text;
-            const boardRect = gameBoard.getBoundingClientRect();
             const popupX = (x + 0.5) * currentCellSize;
             const popupY = (y + 0.5) * currentCellSize - 15;
             popup.style.left = `${popupX}px`;
             popup.style.top = `${popupY}px`;
-            popup.style.transform = 'translateX(-50%)';
             gameBoard.appendChild(popup);
             const duration = (className === 'freeze-popup') ? 800 : 1000;
             setTimeout(() => popup.remove(), duration);
@@ -1900,7 +1920,15 @@
         function showFreezePopup(x, y) { showPopup(x, y, `Frozen!`, 'freeze-popup'); }
         function showHealPopup(x, y, amount) { showPopup(x, y, `+${amount}`, 'heal-popup'); }
         function updateLevelDisplay() { if (levelDisplayElement) levelDisplayElement.textContent = `Level: ${currentLevel}`; }
-        function updateGoldDisplay() { if (goldDisplayElement) goldDisplayElement.textContent = `Gold: ${playerGold}`; }
+
+        function updateGoldDisplay() {
+            if (menuGoldAmountElement) {
+                menuGoldAmountElement.textContent = playerGold;
+            }
+            if (goldDisplayUIElement) {
+                 goldDisplayUIElement.textContent = `Gold: ${playerGold}`;
+             }
+        }
 
         function updateSpellUI() {
             if (!fireballElement || !flameWaveElement || !frostNovaElement || !healElement) return;
@@ -1952,20 +1980,18 @@
         }
 
         function updateTurnDisplay() {
-            if (!currentTurnDisplay || !actionsLeftDisplay || !endTurnButton) return;
+            if (!actionsLeftDisplayElement || !endTurnButton) return;
             const isPlayer = currentTurn === 'player';
-            currentTurnDisplay.textContent = `Turn: ${isPlayer ? 'Player' : 'Enemy'}`;
             let btnDisabled = false; let btnClassDisabled = false;
             if (isPlayer) {
                 const rem = units.filter(u => u.team === 'player' && !u.acted && !u.isFrozen && isUnitAliveAndValid(u)).length;
-                actionsLeftDisplay.textContent = levelClearedAwaitingInput ? `Collect Gold!` : `Actions Left: ${rem}`;
+                actionsLeftDisplayElement.textContent = levelClearedAwaitingInput ? `Collect Gold!` : `Actions Left: ${rem}`;
                 btnDisabled = isProcessing; btnClassDisabled = isProcessing;
             } else {
-                actionsLeftDisplay.textContent = `AI Thinking...`;
+                actionsLeftDisplayElement.textContent = `AI Thinking...`;
                 btnDisabled = true; btnClassDisabled = true;
             }
-            endTurnButton.disabled = btnDisabled;
-            endTurnButton.classList.toggle('disabled', btnClassDisabled);
+
             if (levelClearedAwaitingInput) {
                 endTurnButton.innerHTML = `N<span class="hotkey-e">[E]</span>xt Level`;
                 endTurnButton.title = "Proceed to Next Level (E)";
@@ -2029,25 +2055,21 @@
              }
         }
 
-
         function showFeedback(message, type = '', duration = 2500) {
             if (!boardFeedbackArea) return;
-            boardFeedbackArea.textContent = message;
-            boardFeedbackArea.className = type;
+            boardFeedbackArea.innerHTML = message;
+            boardFeedbackArea.className = `board-feedback-area ${type}`;
             boardFeedbackArea.style.opacity = '1';
-
-            const standardFadeDelay = 1500;
-            const fadeDuration = duration - standardFadeDelay;
 
             if (type === 'feedback-gold') { duration = 1500; }
             else if (type === 'feedback-cheat') { duration = 1500; }
             else if (type === 'feedback-levelup') { duration = 2000; }
 
             setTimeout(() => {
-                if (boardFeedbackArea.textContent === message) {
+                if (boardFeedbackArea.innerHTML === message) {
                      boardFeedbackArea.style.opacity = '0';
                      setTimeout(() => {
-                         if (boardFeedbackArea.style.opacity === '0') boardFeedbackArea.textContent = '';
+                         if (boardFeedbackArea.style.opacity === '0') boardFeedbackArea.innerHTML = '';
                      }, 500);
                  }
             }, duration - 500);
@@ -2093,7 +2115,7 @@
 
         async function handleCellClick(event) {
              if (event.target.classList.contains('unit') || isProcessing) return;
-             if (!initializeAudio()) return;
+             if (!isGameActive || !initializeAudio()) return;
              const cell = event.currentTarget;
              const x = parseInt(cell.dataset.x);
              const y = parseInt(cell.dataset.y);
@@ -2162,7 +2184,7 @@
 
         function handleUnitClick(event, clickedUnit) {
              event.stopPropagation();
-             if (isProcessing || !clickedUnit || !isUnitAliveAndValid(clickedUnit)) {
+             if (!isGameActive || isProcessing || !clickedUnit || !isUnitAliveAndValid(clickedUnit)) {
                  deselectUnit(false); updateUnitInfo(null);
                  return;
              }
@@ -2214,7 +2236,7 @@
                              const targetExists = units.find(u => u.id === clickedUnit.id && isUnitAliveAndValid(u));
                              if (targetExists) {
                                  if (getDistance(selectedUnit, targetExists) > selectedUnit.range) showFeedback("Enemy out of range.", "feedback-error");
-                                 else if (selectedUnit.range > 1 && !hasLineOfSight(selectedUnit.x, selectedUnit.y, targetExists.x, targetExists.y)) showFeedback("Line of sight blocked.", "feedback-error");
+                                 else if (selectedUnit.range > 1 && !hasLineOfSight(selectedUnit, targetExists)) showFeedback("Line of sight blocked.", "feedback-error");
                                  else showFeedback("Invalid target.", "feedback-error");
                              } else showFeedback("Invalid target.", "feedback-error");
                          } else showFeedback("Invalid action.", "feedback-error");
@@ -2233,18 +2255,18 @@
         }
 
         function handleMouseLeaveOnBoard(event) {
-            if (isProcessing || currentSpell || !gameBoard) return;
+            if (!isGameActive || isProcessing || !gameBoard) return;
             if (currentSpell !== 'flameWave') gameBoard.style.removeProperty('--hover-col');
             if (currentSpell === 'frostNova') clearFrostNovaPreview();
         }
         function handleCellMouseEnter(event) {
-            if (isProcessing || !gameBoard) return;
+            if (!isGameActive || isProcessing || !gameBoard) return;
             const cell = event.currentTarget;
             if (cell.classList.contains('has-obstacle')) { clearFrostNovaPreview(); return; }
             if (currentSpell === 'flameWave') gameBoard.style.setProperty('--hover-col', parseInt(cell.dataset.x));
             else if (currentSpell === 'frostNova') { clearFrostNovaPreview(); highlightFrostNovaArea(parseInt(cell.dataset.x), parseInt(cell.dataset.y)); }
         }
-        function handleCellMouseLeave(event) { if (currentSpell === 'frostNova' && !isProcessing) clearFrostNovaPreview(); }
+        function handleCellMouseLeave(event) { if (isGameActive && currentSpell === 'frostNova' && !isProcessing) clearFrostNovaPreview(); }
         function highlightFrostNovaArea(centerX, centerY) {
             for (let dx = -1; dx <= 1; dx++) {
                 for (let dy = -1; dy <= 1; dy++) {
@@ -2264,7 +2286,7 @@
         }
 
          function updateTooltip() {
-            if (!tooltipElement || isProcessing || !gameBoard || isGameOver() || (startScreen && startScreen.classList.contains('visible'))) {
+            if (!isGameActive || !tooltipElement || isProcessing || !gameBoard || isGameOver() || isLevelSelectOpen() || (startScreen && startScreen.classList.contains('visible'))) {
                 hideTooltip();
                 return;
             }
@@ -2373,7 +2395,6 @@
             }
         }
 
-
         function finishAction(unit) {
             if (!unit || (unit.acted && !levelClearedAwaitingInput) || !isUnitAliveAndValid(unit) || levelClearedAwaitingInput) return;
             unit.acted = true;
@@ -2401,18 +2422,12 @@
                  unit.element.classList.add('is-moving');
                  playSfx('move');
 
-                 const finalBaseLeft = targetX * currentCellSize;
-                 const finalBaseTop = targetY * currentCellSize;
-                 const width = parseFloat(getComputedStyle(unit.element).width);
-                 const height = parseFloat(getComputedStyle(unit.element).height);
-                 const finalOffsetX = (currentCellSize - width) / 2;
-                 const finalOffsetY = (currentCellSize - height) / 2;
-                 const finalLeft = `${finalBaseLeft + finalOffsetX}px`;
-                 const finalTop = `${finalBaseTop + finalOffsetY}px`;
+                 const finalLeft = `calc((${targetX} + 0.5) * var(--cell-size))`;
+                 const finalTop = `calc((${targetY} + 0.5) * var(--cell-size))`;
 
                  unit.element.style.left = finalLeft;
                  unit.element.style.top = finalTop;
-                 unit.element.style.transform = 'none';
+                 unit.element.style.transform = 'translate(-50%, -50%)';
 
                  let moveFinalized = false;
                  const finalizeMove = () => {
@@ -2420,7 +2435,6 @@
                      moveFinalized = true;
                      unit.element.removeEventListener('transitionend', transitionEndHandler);
                      unit.element.classList.remove('is-moving');
-
                      unit.x = targetX; unit.y = targetY;
                      unit.element.style.setProperty('--unit-x', targetX + 1);
                      unit.element.style.setProperty('--unit-y', targetY + 1);
@@ -2448,8 +2462,8 @@
                 const totalAmountPickedUp = goldStack.length;
                 playerGold += totalAmountPickedUp;
                 playSfx('pickup');
-                showFeedback(`+${totalAmountPickedUp} Gold!`, 'feedback-gold'); // Show feedback
                 updateGoldDisplay();
+                showFeedback(`+${totalAmountPickedUp} Gold!<img src="./sprites/gold.png" class="feedback-gold-icon" alt="G"> ${playerGold}`, 'feedback-gold');
                 goldStack.forEach(goldItem => { if (goldItem.element) goldItem.element.remove(); });
                 droppedGold = droppedGold.filter(gold => gold.x !== x || gold.y !== y);
                 if (levelClearedAwaitingInput && droppedGold.length === 0) {
@@ -2473,7 +2487,7 @@
             const angleDeg = angleRad * (180 / Math.PI);
             projectile.style.left = `${startX}px`; projectile.style.top = `${startY}px`;
             projectile.style.transform = `translate(-50%, -50%) rotate(${angleDeg}deg)`;
-             projectile.style.transformOrigin = 'center center';
+            projectile.style.transformOrigin = 'center center';
             gameBoard.appendChild(projectile);
             playSfx('arrowShoot');
             void projectile.offsetWidth;
@@ -2520,7 +2534,7 @@
                  const deltaX = defender.x - attacker.x; const deltaY = defender.y - attacker.y;
                  const tapDistanceFactor = 0.2 * currentCellSize;
                  const translateX = deltaX * tapDistanceFactor; const translateY = deltaY * tapDistanceFactor;
-                 const transformValue = `translate(${translateX}px, ${translateY}px)`;
+                 const transformValue = `translate(calc(-50% + ${translateX}px), calc(-50% + ${translateY}px))`;
 
                  attackerElement.style.zIndex = attackZIndex;
                  attackerElement.style.transition = `transform ${animDurationMs}ms ease-out`;
@@ -2529,7 +2543,7 @@
 
                  setTimeout(() => {
                      if (attackerElement?.parentNode) {
-                          attackerElement.style.transform = 'none';
+                          attackerElement.style.transform = 'translate(-50%, -50%)';
                           setTimeout(() => { if(attackerElement) attackerElement.style.zIndex = originalZIndex; }, returnPause);
                      }
                  }, animDurationMs + strikePause);
@@ -2585,7 +2599,6 @@
              }, impactDelay);
         }
 
-
         function castFireball(targetUnit) {
             if (levelClearedAwaitingInput || !isUnitAliveAndValid(targetUnit)) return;
             const normallyUnlocked = currentLevel >= FIREBALL_UNLOCK_LEVEL;
@@ -2598,7 +2611,6 @@
             updateSpellUI();
             const targetUnitId = targetUnit.id; const originalCoords = { x: targetUnit.x, y: targetUnit.y };
             const projectileEl = document.createElement('div'); projectileEl.classList.add('projectile', 'fireball-projectile');
-            const projectileWidth = 72; const projectileHeight = 72;
             const spellIconRect = fireballElement.getBoundingClientRect(); const boardRect = gameBoard.getBoundingClientRect();
             const startX = spellIconRect.left - boardRect.left + spellIconRect.width / 2;
             const startY = spellIconRect.top - boardRect.top + spellIconRect.height / 2;
@@ -2607,7 +2619,6 @@
 
             const angleRad = Math.atan2(endY - startY, endX - startX); const angleDeg = angleRad * (180 / Math.PI);
             projectileEl.style.transform = `translate(-50%, -50%) rotate(${angleDeg}deg)`;
-             projectileEl.style.transformOrigin = 'center center';
             projectileEl.style.left = `${startX}px`; projectileEl.style.top = `${startY}px`;
             gameBoard.appendChild(projectileEl); playSfx('fireballShoot');
             void projectileEl.offsetWidth;
@@ -2625,9 +2636,8 @@
                     if (stillTarget.hp <= 0) removeUnit(stillTarget, originalCoords.x, originalCoords.y);
                 }
                 const explosionEl = document.createElement('div'); explosionEl.classList.add('fireball-explosion');
-                const explosionBaseWidth = 120; const explosionBaseHeight = 120;
-                explosionEl.style.left = `${endX - explosionBaseWidth / 2}px`;
-                explosionEl.style.top = `${endY - explosionBaseHeight / 2}px`;
+                explosionEl.style.left = `${endX}px`;
+                explosionEl.style.top = `${endY}px`;
                 gameBoard.appendChild(explosionEl); setTimeout(() => explosionEl.remove(), FIREBALL_EXPLOSION_DURATION_MS);
                 isProcessing = false; checkWinLossConditions(); updateTurnDisplay();
             }, FIREBALL_PROJECTILE_DURATION_MS);
@@ -2659,8 +2669,7 @@
                      const cellCenterY = (targetRow + 0.5) * currentCellSize;
 
                      const explosionEl = document.createElement('div'); explosionEl.classList.add('fireball-explosion');
-                     const explosionBaseWidth = 120; const explosionBaseHeight = 120;
-                     explosionEl.style.left = `${cellCenterX - explosionBaseWidth / 2}px`; explosionEl.style.top = `${cellCenterY - explosionBaseHeight / 2}px`;
+                     explosionEl.style.left = `${cellCenterX}px`; explosionEl.style.top = `${cellCenterY}px`;
                      gameBoard.appendChild(explosionEl); setTimeout(() => explosionEl.remove(), FIREBALL_EXPLOSION_DURATION_MS);
 
                      if (!soundPlayed) { playSfx('fireballHit'); soundPlayed = true; }
@@ -2780,7 +2789,8 @@
                       unitElement.classList.add('dead');
                       unitElement.classList.remove('selected', 'acted', 'unit-hit-flash', 'player', 'enemy', 'valid-attack', 'valid-move', 'frozen', 'is-moving');
                       unitElement.style.filter = 'none'; unitElement.style.boxShadow = 'none';
-                      unitElement.style.transform = 'none'; unitElement.style.pointerEvents = 'none';
+                      unitElement.style.transform = 'translate(-50%, -50%)';
+                      unitElement.style.pointerEvents = 'none';
                       unitElement.style.opacity = '1';
                       updateUnitVisualPositionOnly(unitElement, deathX, deathY);
                   }
@@ -2813,7 +2823,6 @@
              if (selectedUnit?.id === unit.id) deselectUnit(false);
              if (lastHoveredUnitId === unit.id) hideTooltip();
              updateUnitInfo(selectedUnit);
-
         }
 
         function getUnitAt(x, y) { return units.find(unit => unit.x === x && unit.y === y && isUnitAliveAndValid(unit)); }
@@ -2840,31 +2849,48 @@
             return moves;
         }
 
-        function hasLineOfSight(startX, startY, endX, endY) {
+        function hasLineOfSight(startUnit, endUnit) {
+             if (!startUnit || !endUnit) return false;
+             const startX = startUnit.x; const startY = startUnit.y;
+             const endX = endUnit.x; const endY = endUnit.y;
+
              let x = startX; let y = startY;
              const dx = Math.abs(endX - startX); const dy = -Math.abs(endY - startY);
              const sx = startX < endX ? 1 : -1; const sy = startY < endY ? 1 : -1;
              let err = dx + dy;
+
              while (true) {
+                 if (x === endX && y === endY) break;
+
                  let nextX = x; let nextY = y;
                  let e2 = 2 * err;
                  let moved = false;
-                 if (e2 >= dy) { if (x === endX) break; nextX += sx; err += dy; moved = true; }
-                 if (e2 <= dx) { if (y === endY) break; nextY += sy; err += dx; moved = true; }
+
+                 if (e2 >= dy) {
+                     if (x === endX) break;
+                     err += dy;
+                     nextX += sx;
+                     moved = true;
+                 }
+                 if (e2 <= dx) {
+                     if (y === endY) break;
+                     err += dx;
+                     nextY += sy;
+                     moved = true;
+                 }
 
                  if (!moved) break;
 
                  if (nextX === endX && nextY === endY) break;
 
-                 const unitInCell = getUnitAt(nextX, nextY);
                  const obstacleData = getObstacleAt(nextX, nextY);
-                 if (unitInCell || (obstacleData?.blocksLOS)) {
+                 if (obstacleData?.blocksLOS) {
                      return false;
                  }
 
                  x = nextX; y = nextY;
 
-                 if (Math.abs(x - startX) > GRID_COLS || Math.abs(y - startY) > GRID_ROWS) break;
+                 if (Math.abs(x - startX) > GRID_COLS * 2 || Math.abs(y - startY) > GRID_ROWS * 2) break;
              }
              return true;
         }
@@ -2878,7 +2904,7 @@
                 if (target.team !== unit.team && isUnitAliveAndValid(target)) {
                     const distance = getDistance(unit, target);
                     if (distance <= unitRange) {
-                        if (unitRange === 1 || hasLineOfSight(unit.x, unit.y, target.x, target.y)) attacks.push(target.id);
+                        if (unitRange === 1 || hasLineOfSight(unit, target)) attacks.push(target.id);
                     }
                 }
             });
@@ -2923,7 +2949,7 @@
              const minActionDuration = Math.max(MOVE_ANIMATION_DURATION_MS, ARROW_FLY_DURATION_MS) + 150;
 
              async function processNextAIUnit() {
-                 if (isGameOver()) { endAITurnSequence(true); return; }
+                 if (!isGameActive || isGameOver()) { endAITurnSequence(true); return; }
                  if (currentAIUnitIndex >= totalActions) { endAITurnSequence(false); return; }
 
                  const unitToProcess = unitsToAct[currentAIUnitIndex];
@@ -2934,7 +2960,7 @@
                  if (stillValidUnit) {
                      const actionStartTime = Date.now();
                      try {
-                         if (currentTurnDisplay) updateTurnDisplay();
+                         if (actionsLeftDisplayElement) updateTurnDisplay();
                          await performAIAction(stillValidUnit);
                      } catch (e) {
                           if (stillValidUnit && isUnitAliveAndValid(stillValidUnit) && !stillValidUnit.acted) finishAction(stillValidUnit);
@@ -2950,15 +2976,14 @@
              }
 
              function endAITurnSequence(interrupted) {
+                 if (!isGameActive) return;
                  if (!isGameOver()) {
                      currentTurn = 'player';
                      processFreezeTicks('player');
-                      // Reset player acted state AND refresh all unit visuals
                       units.forEach(u => {
                           if (u.team === 'player' && isUnitAliveAndValid(u)) {
                               u.acted = false;
                           }
-                          // Refresh visuals for *all* units to remove enemy 'acted' filters etc.
                           if (isUnitAliveAndValid(u) && u.element) {
                               updateUnitPosition(u);
                           }
@@ -2966,18 +2991,17 @@
 
                      showFeedback("Player Turn!");
                      isProcessing = false;
-                     if (currentTurnDisplay) updateTurnDisplay();
+                     if (actionsLeftDisplayElement) updateTurnDisplay();
                  } else {
                      if (endTurnButton) { endTurnButton.disabled = true; endTurnButton.classList.add('disabled'); }
                      isProcessing = true;
-                     if (currentTurnDisplay) updateTurnDisplay();
+                     if (actionsLeftDisplayElement) updateTurnDisplay();
                  }
              }
 
              if (totalActions === 0) endAITurnSequence(false);
              else setTimeout(processNextAIUnit, 100);
         }
-
 
         async function performAIAction(unit) {
              if (!unit || !isUnitAliveAndValid(unit)) return;
@@ -3042,13 +3066,12 @@
                          }
 
                           if (distAfterMove <= unitRange && unitRange > 1) {
-                               if (hasLineOfSight(moveOption.x, moveOption.y, nearestPlayer.x, nearestPlayer.y)) {
+                               if (hasLineOfSight({x:moveOption.x, y:moveOption.y}, nearestPlayer)) {
                                     moveScore += 200;
                                }
                           } else if (distAfterMove <= unitRange && unitRange === 1) {
                                moveScore += 200;
                           }
-
 
                          if (moveScore > bestMoveScore) {
                              bestMoveScore = moveScore;
@@ -3057,7 +3080,7 @@
                      });
 
                      const currentPosScore = 1000 - minDistance;
-                      if (unitRange > 1 && minDistance <= unit.range && minDistance > 0 && hasLineOfSight(unit.x, unit.y, nearestPlayer.x, nearestPlayer.y)) currentPosScore += 700;
+                      if (unitRange > 1 && minDistance <= unit.range && minDistance > 0 && hasLineOfSight(unit, nearestPlayer)) currentPosScore += 700;
                       else if (unitRange === 1 && minDistance === 1) currentPosScore += 700;
 
                      if (bestMove && bestMoveScore > currentPosScore) {
@@ -3076,11 +3099,10 @@
              }
         }
 
-
         function checkWinLossConditions() {
             if (winCheckTimeout) clearTimeout(winCheckTimeout);
             winCheckTimeout = setTimeout(() => {
-                if (isGameOver() || levelClearedAwaitingInput) { winCheckTimeout = null; return; }
+                if (!isGameActive || isGameOver() || levelClearedAwaitingInput) { winCheckTimeout = null; return; }
                 const playersLeft = units.some(u => u.team === 'player' && isUnitAliveAndValid(u));
                 const enemiesLeft = units.some(u => u.team === 'enemy' && isUnitAliveAndValid(u));
                 if (!enemiesLeft && playersLeft) {
@@ -3105,6 +3127,7 @@
         function startNextLevel() {
             if (isGameOver()) return;
             currentLevel++;
+            levelToRestartOnLoss = currentLevel;
             isProcessing = true;
             stopMusic();
             selectAndLoadMusic();
@@ -3132,20 +3155,28 @@
         function isGameOver() { return gameOverScreen && gameOverScreen.classList.contains('visible'); }
         function isMenuOpen() { return menuOverlay && menuOverlay.classList.contains('visible'); }
         function isLeaderboardOpen() { return leaderboardOverlay && leaderboardOverlay.classList.contains('visible'); }
+        function isLevelSelectOpen() { return levelSelectScreen && levelSelectScreen.classList.contains('visible'); }
 
         function gameOver(playerWon) {
             if (isGameOver()) return;
+            isGameActive = false;
             levelClearedAwaitingInput = false; isProcessing = true; stopMusic(); hideTooltip(); stopTooltipUpdater();
             document.removeEventListener('mousemove', trackMousePosition);
+            window.removeEventListener('resize', handleResize);
+            document.removeEventListener('fullscreenchange', updateFullscreenButton);
+            document.removeEventListener('webkitfullscreenchange', updateFullscreenButton);
+            document.removeEventListener('mozfullscreenchange', updateFullscreenButton);
+            document.removeEventListener('MSFullscreenChange', updateFullscreenButton);
+            if (winCheckTimeout) clearTimeout(winCheckTimeout); winCheckTimeout = null;
+            if (resizeTimeout) clearTimeout(resizeTimeout); resizeTimeout = null;
 
             let messageText = "";
             if (!playerWon) {
                 playSfx('gameOver');
-                levelToRestartOnLoss = currentLevel;
                 const goldBeforePenalty = playerGold;
                 playerGold = Math.max(0, playerGold - GOLD_PENALTY_ON_DEATH);
                 updateGoldDisplay();
-                messageText = `You have fallen on Level ${currentLevel}! Gold: ${goldBeforePenalty} - ${GOLD_PENALTY_ON_DEATH} Penalty = ${playerGold}`;
+                messageText = `You have fallen on Level ${currentLevel}!<br>Gold: ${goldBeforePenalty} - ${GOLD_PENALTY_ON_DEATH} Penalty = ${playerGold}`;
                 if (restartButton) restartButton.textContent = "Restart Level";
             } else {
                 playSfx('success');
@@ -3157,28 +3188,20 @@
             deselectUnit(false); updateUnitInfo(null); lastHoveredUnitId = null; setActiveSpell(null);
             if (endTurnButton) { endTurnButton.disabled = true; endTurnButton.classList.add('disabled'); }
             if (gameOverTitle) gameOverTitle.textContent = playerWon ? "Victory!" : "Defeat!";
-            if (gameOverMessage) gameOverMessage.textContent = messageText;
+            if (gameOverMessage) gameOverMessage.innerHTML = messageText;
             if (gameOverScreen) gameOverScreen.classList.add('visible');
             if (menuOverlay) menuOverlay.classList.remove('visible');
             if (leaderboardOverlay) leaderboardOverlay.classList.remove('visible');
-
-            window.removeEventListener('resize', handleResize);
-            document.removeEventListener('fullscreenchange', updateFullscreenButton);
-            document.removeEventListener('webkitfullscreenchange', updateFullscreenButton);
-            document.removeEventListener('mozfullscreenchange', updateFullscreenButton);
-            document.removeEventListener('MSFullscreenChange', updateFullscreenButton);
-            if (winCheckTimeout) clearTimeout(winCheckTimeout); winCheckTimeout = null;
-            if (resizeTimeout) clearTimeout(resizeTimeout); resizeTimeout = null;
+            if (levelSelectScreen) levelSelectScreen.classList.remove('visible');
         }
-
 
         function toggleMute() {
             if (!initializeAudio()) return;
             isMuted = !isMuted; bgMusic.muted = isMuted;
             Object.values(sfx).forEach(s => s.muted = isMuted);
             updateMuteButtonVisual();
-            if (!isMuted && audioInitialized && startScreen && !startScreen.classList.contains('visible') && !isGameOver()) startMusicIfNotPlaying();
-            else if (isMuted) stopMusic();
+            if (!isMuted) startMusicIfNotPlaying();
+            else stopMusic();
         }
 
         function updateMuteButtonVisual() {
@@ -3189,13 +3212,14 @@
         }
 
          function showMenu() {
-             if (!initializeAudio()) return;
+             if (!isGameActive && !startScreen.classList.contains('visible') || isGameOver() || isLevelSelectOpen() ) return;
              if (isMenuOpen()) return;
+             if (!initializeAudio()) return;
              playSfx('menuOpen');
-             updateGoldDisplay(); // Ensure gold is current when opening
+             updateGoldDisplay();
              if(menuOverlay) menuOverlay.classList.add('visible');
-             if(leaderboardOverlay) leaderboardOverlay.classList.remove('visible'); // Close others
-             hideTooltip(); // Hide tooltip when menu opens
+             if(leaderboardOverlay) leaderboardOverlay.classList.remove('visible');
+             hideTooltip();
          }
          function hideMenu() {
              if (!isMenuOpen()) return;
@@ -3207,11 +3231,37 @@
              if (!initializeAudio()) return;
              playSfx('select');
              if(leaderboardOverlay) leaderboardOverlay.classList.add('visible');
-             if(menuOverlay) menuOverlay.classList.remove('visible'); // Close menu if opening leaderboard from it
+             if(menuOverlay) menuOverlay.classList.remove('visible');
+             hideTooltip();
          }
          function hideLeaderboard() {
+             if (!isLeaderboardOpen()) return;
              playSfx('select');
              if(leaderboardOverlay) leaderboardOverlay.classList.remove('visible');
+         }
+
+         function showLevelSelect() {
+             fullGameReset();
+             if (startScreen) startScreen.classList.remove('visible');
+             if (gameOverScreen) gameOverScreen.classList.remove('visible');
+             if (menuOverlay) menuOverlay.classList.remove('visible');
+             if (leaderboardOverlay) leaderboardOverlay.classList.remove('visible');
+             if (levelSelectScreen) levelSelectScreen.classList.add('visible');
+         }
+         function hideLevelSelect() {
+              if (levelSelectScreen) levelSelectScreen.classList.remove('visible');
+         }
+
+         function showStartScreen() {
+              fullGameReset();
+              if (startScreen) startScreen.classList.add('visible');
+              if (gameOverScreen) gameOverScreen.classList.remove('visible');
+              if (menuOverlay) menuOverlay.classList.remove('visible');
+              if (leaderboardOverlay) leaderboardOverlay.classList.remove('visible');
+              if (levelSelectScreen) levelSelectScreen.classList.remove('visible');
+              if (endTurnButton) { endTurnButton.classList.add('disabled'); endTurnButton.disabled = true; }
+              updateUnitInfo(null); updateLevelDisplay(); updateGoldDisplay();
+              updateTurnDisplay(); isProcessing = false; isGameActive = false;
          }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -3219,17 +3269,15 @@
             gameBoard = document.getElementById('game-board');
             uiPanel = document.getElementById('ui-panel');
             levelDisplayElement = document.getElementById('level-display');
-            goldDisplayElement = document.getElementById('gold-display');
+            goldDisplayUIElement = document.getElementById('gold-display-ui-panel');
             spellAreaElement = document.getElementById('spell-area');
             fireballElement = document.getElementById('fireball-spell');
             flameWaveElement = document.getElementById('flame-wave-spell');
             frostNovaElement = document.getElementById('frost-nova-spell');
             healElement = document.getElementById('heal-spell');
-            turnInfo = document.getElementById('turn-info');
             unitInfo = document.getElementById('unit-info');
             unitPortraitElement = document.getElementById('unit-portrait');
-            currentTurnDisplay = document.getElementById('current-turn');
-            actionsLeftDisplay = document.getElementById('actions-left');
+            actionsLeftDisplayElement = document.getElementById('actions-left-display');
             unitNameDisplay = document.getElementById('unit-name');
             unitHpDisplay = document.getElementById('unit-hp');
             unitAtkDisplay = document.getElementById('unit-atk');
@@ -3254,6 +3302,13 @@
             menuButton = document.getElementById('menu-button');
             menuOverlay = document.getElementById('menu-overlay');
             closeMenuButton = document.getElementById('close-menu-button');
+            restartLevelMenuButton = document.getElementById('restart-level-menu-button');
+            quitToLevelSelectButton = document.getElementById('quit-to-level-select-button');
+            levelSelectScreen = document.getElementById('level-select-screen');
+            levelSelectContainer = document.getElementById('level-select-container');
+            backToStartButton = document.getElementById('back-to-start-button');
+            menuGoldAmountElement = document.getElementById('menu-gold-amount');
+
 
             try {
                 const moveDurationStr = getComputedStyle(document.documentElement).getPropertyValue('--move-anim-time').trim();
@@ -3276,6 +3331,8 @@
             if (fullscreenButton) fullscreenButton.addEventListener('click', toggleFullscreen);
             if (leaderboardButton) leaderboardButton.addEventListener('click', showLeaderboard);
             if (closeLeaderboardButton) closeLeaderboardButton.addEventListener('click', hideLeaderboard);
+            if (backToStartButton) backToStartButton.addEventListener('click', showStartScreen);
+
             if (startButton) startButton.addEventListener('click', () => {
                  if (!audioInitialized && !initializeAudio()) {}
                 if (startScreen && startScreen.classList.contains('visible') && !isProcessing) initGame(1);
@@ -3284,25 +3341,49 @@
                 if (!audioInitialized && !initializeAudio()) {}
                 initGame(levelToRestartOnLoss);
             });
-            if (endTurnButton) endTurnButton.addEventListener('click', () => {
-                if (currentTurn === 'player' && !isProcessing && !isGameOver()) endTurn();
+            if (restartLevelMenuButton) restartLevelMenuButton.addEventListener('click', () => {
+                 if (!isGameActive) return;
+                 playSfx('select');
+                 hideMenu();
+                 setTimeout(() => initGame(currentLevel), 50);
+            });
+            if (quitToLevelSelectButton) quitToLevelSelectButton.addEventListener('click', () => {
+                 playSfx('menuClose');
+                 hideMenu();
+                 showLevelSelect();
             });
 
-            if (startScreen) startScreen.classList.add('visible');
-            if (gameOverScreen) gameOverScreen.classList.remove('visible');
-            if (leaderboardOverlay) leaderboardOverlay.classList.remove('visible');
-            if (menuOverlay) menuOverlay.classList.remove('visible');
-            if (endTurnButton) { endTurnButton.classList.add('disabled'); endTurnButton.disabled = true; }
-            updateUnitInfo(null); updateLevelDisplay(); updateGoldDisplay();
-            setupBoard(); resetLevelState(); updateTurnDisplay(); isProcessing = false;
+            if (levelSelectContainer) {
+                levelSelectContainer.addEventListener('click', (event) => {
+                    if (event.target.classList.contains('level-select-button')) {
+                        const level = parseInt(event.target.dataset.level);
+                        if (!isNaN(level)) {
+                             playSfx('levelSelect');
+                             hideLevelSelect();
+                             if (level === 1) playerGold = 0;
+                             setTimeout(() => initGame(level), 50);
+                        }
+                    }
+                });
+            }
+
+            if (endTurnButton) endTurnButton.addEventListener('click', () => {
+                if (isGameActive && currentTurn === 'player' && !isProcessing && !isGameOver()) endTurn();
+            });
+
+            if (bgMusic) {
+                bgMusic.addEventListener('ended', selectAndLoadMusic);
+            }
+
+            showStartScreen();
             updateMuteButtonVisual();
             requestAnimationFrame(() => { try { calculateCellSize(); updateFullscreenButton(); } catch (e) {} });
             window.addEventListener('keydown', handleKeyDown);
         });
 
         function handleKeyDown(event) {
-             const gameActive = startScreen && !startScreen.classList.contains('visible') && !isGameOver();
-             const anOverlayIsOpen = isGameOver() || isMenuOpen() || isLeaderboardOpen();
+             const gameShouldProcessKeys = isGameActive && !isGameOver() && !isMenuOpen() && !isLeaderboardOpen() && !isLevelSelectOpen();
+             const anyOverlayOpen = isGameOver() || isMenuOpen() || isLeaderboardOpen() || isLevelSelectOpen() || startScreen.classList.contains('visible');
 
             if (event.key.toLowerCase() === 'm') { toggleMute(); event.preventDefault(); return; }
             if (event.key.toLowerCase() === 'f') { toggleFullscreen(); event.preventDefault(); return; }
@@ -3310,15 +3391,16 @@
              if (event.key.toLowerCase() === 'escape') {
                   if (isMenuOpen()) { hideMenu(); event.preventDefault(); return; }
                   if (isLeaderboardOpen()) { hideLeaderboard(); event.preventDefault(); return; }
+                  if (isLevelSelectOpen()) { showStartScreen(); event.preventDefault(); return; }
 
-                 if (gameActive && !anOverlayIsOpen && currentTurn === 'player' && !isProcessing) {
+                 if (gameShouldProcessKeys && currentTurn === 'player' && !isProcessing) {
                       if (currentSpell) { setActiveSpell(null); event.preventDefault(); }
                       else if (selectedUnit) { deselectUnit(); event.preventDefault(); }
                  }
                  return;
             }
 
-             if (anOverlayIsOpen || !gameActive) return;
+             if (!gameShouldProcessKeys) return;
              if (isProcessing) return;
 
              if (event.shiftKey) {
@@ -3335,6 +3417,10 @@
                      showFeedback("CHEAT: Skipping Level...", "feedback-levelup"); playSfx('cheat');
                      setTimeout(startNextLevel, 100); event.preventDefault(); return;
                  }
+                  if (event.key.toLowerCase() === 'p') {
+                      event.preventDefault(); playerGold += 10; updateGoldDisplay();
+                      showFeedback("+10 Cheat Gold!", "feedback-cheat"); playSfx('cheat'); return;
+                  }
              }
 
             if ((event.metaKey || event.ctrlKey || event.altKey)) return;
