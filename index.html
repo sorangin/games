@@ -23,22 +23,34 @@
             <div class="game-grid">
 
                 <a href="rota/index.html" class="game-card">
-                    <img src="images/rota_screenshot.png" alt="Revenge of the Ants Screenshot">
+                    <img src="images/rota_screenshot.png"
+                         alt="Revenge of the Ants Screenshot"
+                         data-static-src="images/rota_screenshot.png"
+                         data-gif-src="images/rota_anim.gif"> {/* <-- ADDED data-* attributes */}
                     <h3>Revenge of the Ants</h3>
                 </a>
 
                 <a href="KnightsGambit/index.html" class="game-card">
-                    <img src="images/knights_vs_goblins_screenshot.png" alt="Knight's Gambit Screenshot">
+                    <img src="images/knights_vs_goblins_screenshot.png"
+                         alt="Knight's Gambit Screenshot"
+                         data-static-src="images/knights_vs_goblins_screenshot.png"
+                         data-gif-src="images/knights_vs_goblins_anim.gif"> {/* <-- ADDED data-* attributes */}
                     <h3>Knight's Gambit</h3>
                 </a>
-                
+
                 <a href="OrcsVsHumansChess.html" class="game-card">
-                    <img src="images/chess_screenshot.png" alt="Kingsfall Screenshot">
+                    <img src="images/chess_screenshot.png"
+                         alt="Kingsfall Screenshot"
+                         data-static-src="images/chess_screenshot.png"
+                         data-gif-src="images/chess_anim.gif"> {/* <-- ADDED data-* attributes */}
                     <h3>Kingsfall Chess</h3>
                 </a>
 
                 <a href="tcg.html" class="game-card">
-                    <img src="images/tcg_screenshot.png" alt="Risen Realms Screenshot">
+                    <img src="images/tcg_screenshot.png"
+                         alt="Risen Realms Screenshot"
+                         data-static-src="images/tcg_screenshot.png"
+                         data-gif-src="images/tcg_anim.gif"> {/* <-- ADDED data-* attributes */}
                     <h3>Risen Realms</h3>
                 </a>
 
@@ -47,46 +59,57 @@
 
 
         <!-- Section 2: Test Games / Experiments -->
-        <!-- **** ADDED class="prototype-section" **** -->
         <section class="game-section prototype-section">
             <h2 class="section-title">Prototypes & Experiments</h2>
              <div class="game-grid">
 
-                <!-- **** Medieval Math MOVED here **** -->
                 <a href="MedievalMath.html" class="game-card">
-                    <img src="images/medieval_math_screenshot.png" alt="Medieval Math Screenshot">
+                    <img src="images/medieval_math_screenshot.png"
+                         alt="Medieval Math Screenshot"
+                         data-static-src="images/medieval_math_screenshot.png"
+                         data-gif-src="images/medieval_math_anim.gif"> {/* <-- ADDED data-* attributes */}
                     <h3>Medieval Math</h3>
                 </a>
 
-                <!-- Game Card: Goblin Typing Invasion -->
                 <a href="GoblinTypingInvasion.html" class="game-card">
-                    <img src="images/goblin_typing_invasion_screenshot.png" alt="Goblin Typing Invasion Screenshot">
+                    <img src="images/goblin_typing_invasion_screenshot.png"
+                         alt="Goblin Typing Invasion Screenshot"
+                         data-static-src="images/goblin_typing_invasion_screenshot.png"
+                         data-gif-src="images/goblin_typing_invasion_anim.gif"> {/* <-- ADDED data-* attributes */}
                     <h3>Goblin Typing Invasion</h3>
                 </a>
 
-                <!-- Game Card: Goblin Siege Defense -->
                 <a href="GoblinSiegeDefense.html" class="game-card">
-                    <img src="images/goblin_siege_defense_screenshot.png" alt="Goblin Siege Defense Screenshot">
+                    <img src="images/goblin_siege_defense_screenshot.png"
+                         alt="Goblin Siege Defense Screenshot"
+                         data-static-src="images/goblin_siege_defense_screenshot.png"
+                         data-gif-src="images/goblin_siege_defense_anim.gif"> {/* <-- ADDED data-* attributes */}
                     <h3>Goblin Siege Defense</h3>
                 </a>
 
                  <a href="PyroKnightDash.html" class="game-card">
-                    <img src="images/pyro_knight_dash_screenshot.png" alt="Pyro Knight Dash Screenshot">
+                    <img src="images/pyro_knight_dash_screenshot.png"
+                         alt="Pyro Knight Dash Screenshot"
+                         data-static-src="images/pyro_knight_dash_screenshot.png"
+                         data-gif-src="images/pyro_knight_dash_anim.gif"> {/* <-- ADDED data-* attributes */}
                     <h3>Pyro Knight Dash</h3>
                 </a>
-                 
+
                  <a href="ASCII.html" class="game-card">
-                    <img src="images/ascii_screenshot.png" alt="ASCII Screenshot">
+                    <img src="images/ascii_screenshot.png"
+                         alt="ASCII Screenshot"
+                         data-static-src="images/ascii_screenshot.png"
+                         data-gif-src="images/ascii_anim.gif"> {/* <-- ADDED data-* attributes */}
                     <h3>ASCII Roguelike</h3>
                 </a>
 
-                <!-- Game Card: Color Cascade -->
                 <a href="ColorCascade.html" class="game-card">
-                    <img src="images/color_cascade_screenshot.png" alt="Color Cascade Screenshot">
+                    <img src="images/color_cascade_screenshot.png"
+                         alt="Color Cascade Screenshot"
+                         data-static-src="images/color_cascade_screenshot.png"
+                         data-gif-src="images/color_cascade_anim.gif"> {/* <-- ADDED data-* attributes */}
                     <h3>Color Cascade</h3>
                 </a>
-
-                <!-- *** MOVE any other 'test' games here *** -->
 
             </div> <!-- End .game-grid for Test Games -->
         </section> <!-- End Section 2 -->
@@ -96,6 +119,36 @@
     <footer class="site-footer">
         <p>© 2025 Sora Ngin / Sora Entertainment</p>
     </footer>
+
+    <!-- **** ADD THE JAVASCRIPT HERE **** -->
+    <script>
+        // Wait until the DOM is fully loaded before running the script
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // Get all the game cards
+            const gameCards = document.querySelectorAll('.game-card');
+
+            // Loop through each game card
+            gameCards.forEach(card => {
+                const img = card.querySelector('img'); // Find the image inside the card
+                const staticSrc = img.dataset.staticSrc; // Get the static image source from data attribute
+                const gifSrc = img.dataset.gifSrc;     // Get the GIF image source from data attribute
+
+                // Only add listeners if both static and gif sources are defined
+                if (img && staticSrc && gifSrc) {
+                    // Event listener for when the mouse enters the card area
+                    card.addEventListener('mouseenter', () => {
+                        img.src = gifSrc; // Change image source to the GIF
+                    });
+
+                    // Event listener for when the mouse leaves the card area
+                    card.addEventListener('mouseleave', () => {
+                        img.src = staticSrc; // Change image source back to the static image
+                    });
+                }
+            });
+        });
+    </script>
 
 </body>
 </html>
