@@ -3,580 +3,260 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Goblin Typing Invasion (Mobile Keyboard Fix)</title>
+    <title>Typing Knight: Apex v3 (Fixed)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        /* Reset and Basic Setup */
-        * { box-sizing: border-box; }
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            overflow: hidden; /* Prevent scrollbars on body */
-        }
-        body {
-            font-family: 'Courier New', Courier, monospace;
-            display: flex;
-            justify-content: center;
-            align-items: center; /* Align container vertically */
-            background-color: #5c7e5c;
-            background-image: linear-gradient(to bottom, #3a4f3a, #2a3a2a);
-            /* Ensure body takes full height even when keyboard changes viewport */
-            min-height: 100%;
-        }
-
-        /* Game Container - Vertical Flex Layout */
-        #game-container {
-            position: relative;
-            display: flex;
-            flex-direction: column; /* Stack children vertically */
-            width: 95vw;         /* Primarily scale based on viewport width */
-            max-width: 800px;    /* Max pixel width */
-            height: 90vh;        /* Use significant viewport height */
-            max-height: 700px;   /* Increase max-height slightly if needed */
-            margin: auto;        /* Center container */
-            background-color: #d2b48c;
-            border: 8px solid #4a3b2a;
-            border-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="%238b5a2b"/><stop offset="100%" stop-color="%234a3b2a"/></linearGradient></defs><rect fill="url(%23g)" width="100" height="100"/></svg>') 8 stretch;
-            box-shadow: 0 0 20px rgba(0,0,0,0.6);
-            overflow: hidden;    /* Hide anything going outside container */
-        }
-
-        /* UI Top Bar - Fixed Height */
-        #ui-top {
-            padding: 8px 15px;
-            background-color: rgba(210, 180, 140, 0.8);
-            border-bottom: 4px solid #4a3b2a;
-            text-align: center;
-            flex-shrink: 0; /* Prevent shrinking */
-            position: relative; /* For fullscreen button */
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            z-index: 5; /* Keep above game area if overlap occurs */
-        }
-        #stats-display { /* Unchanged */
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 8px; font-size: clamp(0.9em, 2.5vw, 1.1em); color: #f5deb3;
-            background-color: rgba(74, 59, 42, 0.8); padding: 5px 50px 5px 10px;
-            border-radius: 5px; position: relative; border: 1px solid #a0522d;
-        }
-        #score-display, #level-display { margin: 0 5px; white-space: nowrap; }
-
-        /* --- Typing Input - Moved Out of UI Bar, Fixed Height --- */
-        #typing-input {
-            font-size: clamp(1.2em, 4vw, 1.5em);
-            font-family: inherit;
-            padding: 10px; /* More padding */
-            width: 90%; /* Wider */
-            max-width: 400px;
-            text-align: center;
-            border: 3px solid #4a3b2a;
-            border-radius: 5px;
-            outline: none;
-            margin: 8px auto; /* Center horizontally with margin */
-            background-color: #fffaf0;
-            flex-shrink: 0; /* Prevent shrinking */
-            display: block; /* Ensure it behaves as a block */
-            order: 1; /* Position after ui-top in flex */
-            z-index: 5; /* Keep above game area */
-            /* Mobile input helpers */
-            autocomplete="off"; autocapitalize="off"; autocorrect="off"; spellcheck="false";
-        }
-        #typing-input:focus { border-color: #cd853f; box-shadow: 0 0 5px #cd853f; }
-        #typing-input::placeholder { color: #aaa; }
-
-        /* Start Button Container (Inside ui-top) */
-        #start-button-container { text-align: center; padding-top: 0; /* No extra padding needed now */ }
-        button#start-button { /* Unchanged */
-            display: inline-block; font-size: clamp(1.2em, 3.5vw, 1.5em); padding: 10px 20px; cursor: pointer;
-            background-color: #8b4513; color: white; border: 2px solid #4a3b2a; border-radius: 5px; font-family: inherit;
-        }
-        button#start-button:hover { background-color: #a0522d; }
-
-
-        /* Game Area - Flexible Height, Fixed Aspect Ratio */
-        #game-area {
-            flex-grow: 1; /* Takes remaining vertical space */
-            position: relative; /* For absolute positioning of children */
-            width: 100%; /* Fill horizontal space */
-            aspect-ratio: 800 / 500; /* ** ASPECT RATIO HERE, maybe less tall */
-            overflow: hidden; /* Important: Hide parts outside the aspect ratio box */
-            background-image: /* Adjust gradient if needed */
-                linear-gradient(to top, #556b2f 0%, #6b8e23 35%, transparent 60%),
-                linear-gradient(to bottom, #6ca0dc 20%, #87ceeb 50%, #556b2f 60%);
-            background-size: cover; /* Ensure gradient covers */
-            background-position: center center;
-            order: 2; /* Position after input in flex */
-            min-height: 150px; /* Prevent collapsing too small */
-        }
-
-        /* Knight - Positioned relative to new game area size */
-        #knight {
-            position: absolute;
-            left: 5%;
-            bottom: 10px; /* Relative to game-area bottom */
-            /* Size relative to game-area's current size */
-            width: clamp(60px, 15%, 100px); /* Use percentage? */
-            height: clamp(80px, 20%, 120px);
-            background: url("sprites/Knight.png") no-repeat center bottom / contain;
-            z-index: 2;
-            filter: drop-shadow(2px 2px 3px rgba(0,0,0,0.5));
-        }
-
-        /* Goblin - Positioned relative to new game area size */
-        .goblin {
-            position: absolute;
-             /* Size relative to game-area's current size */
-            width: clamp(45px, 10%, 70px);
-            height: clamp(60px, 15%, 90px);
-            background: url("sprites/Goblin.png") no-repeat center bottom / contain;
-            transition: transform 0.15s ease-out, opacity 0.3s ease-in-out, left 0.04s linear;
-            z-index: 1;
-            display: flex; flex-direction: column; align-items: center;
-            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.4));
-        }
-        .goblin.hit { transform: translateX(8px) rotate(3deg); }
-        .goblin.dying { opacity: 0; transform: scale(0.8) rotate(-15deg); pointer-events: none; }
-
-        /* Goblin Word - Size relative to goblin */
-        .goblin-word {
-            position: absolute; left: 50%; transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.75); color: #fff; border: 1px solid rgba(255, 255, 255, 0.3);
-            padding: 3px 6px; /* Slightly smaller padding */
-            border-radius: 4px;
-            font-size: clamp(0.9em, 2.5vw, 1.2em); /* Slightly smaller font */
-            font-weight: bold; white-space: nowrap; text-align: center; text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
-            transition: background-color 0.1s linear, top 0.2s ease-out, z-index 0s linear;
-             /* Adjust top positions if needed based on smaller font/padding */
-             /* top: -30px etc. if necessary */
-        }
-        .goblin-word.correct-prefix { background-color: #32cd32; color: #000; }
-
-        /* Message Display */
-        #message-display {
-            position: absolute;
-            /* Position relative to game-container, not game-area */
-            top: 55%; /* Adjust vertical position */
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: clamp(1.4em, 4vw, 2.2em);
-            color: #ffdddd; background-color: rgba(0, 0, 0, 0.85);
-            padding: 15px 25px; border-radius: 10px; text-align: center;
-            z-index: 100; /* Highest */
-            display: none; width: 80%; max-width: 450px; white-space: pre-wrap;
-        }
-
-        /* Fullscreen Button (in ui-top) */
-        #fullscreen-button { /* Unchanged */
-            position: absolute; top: 5px; right: 10px; background: rgba(74, 59, 42, 0.6); border: 1px solid #f0e68c;
-            color: #f0e68c; font-size: clamp(1.2em, 3vw, 1.8em); width: 35px; height: 35px; line-height: 33px;
-            text-align: center; border-radius: 5px; cursor: pointer; z-index: 15; user-select: none;
-        }
-        #fullscreen-button:hover { background: rgba(74, 59, 42, 0.8); }
-
-        /* Fullscreen State */
-        #game-container:fullscreen {
-            max-width: none; max-height: none; width: 100%; height: 100%; border: none;
-             /* Ensure flex layout works well in fullscreen too */
-             height: 100%; width: 100%;
-        }
-        #game-container:fullscreen #game-area {
-             /* Optionally change aspect ratio in fullscreen? Or keep it? */
-             /* aspect-ratio: 16 / 9; */
-        }
-
+        :root{--font-main:'Roboto', sans-serif;--font-title:'MedievalSharp', cursive;--color-bg-deep:#1a1f1a;--color-bg-mid:#2a3a2a;--color-bg-near:#5c7e5c;--color-ui-bg:rgba(42, 30, 18, 0.92);--color-ui-border:#b8860b;--color-ui-accent:#daa520;--color-text-light:#f5e9d3;--color-text-dark:#3a2a1a;--color-health:#ef4444;--color-freeze:#3b82f6;--color-bomb:#f97316;--color-heal:#22c55e;--color-target:#facc15;--color-correct:#4ade80;--color-streak:#f472b6;--color-letter-highlight:#4ade80; --screen-transition:0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);--z-bg:-10;--z-game:1;--z-enemies:5;--z-knight:10;--z-words:15;--z-particles:20;--z-powerups:25;--z-ui:50;--z-message:100;--z-overlay:200;--z-pause-menu:250;--z-screen:300}
+        *{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-user-select:none;outline:none;-webkit-tap-highlight-color:transparent}
+        html,body{height:100%;overflow:hidden;background-color:var(--color-bg-deep);font-family:var(--font-main);color:var(--color-text-light)}
+        body{display:flex;justify-content:center;align-items:center}
+        #app-container{position:relative;width:100%;height:100%;max-width:1200px;max-height:800px;background:var(--color-ui-bg);border:12px solid transparent;border-image:url('data:image/svg+xml;utf8,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="%23daa520"/><stop offset="100%" stop-color="%236b4423"/></linearGradient></defs><rect fill="url(%23g)" width="100" height="100"/></svg>') 12 stretch;box-shadow:0 0 40px rgba(0, 0, 0, 0.8);overflow:hidden;display:flex;flex-direction:column}
+        .screen{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:25px;opacity:0;visibility:hidden;z-index:var(--z-screen);transition:opacity var(--screen-transition), visibility 0s linear var(--screen-transition);background:rgba(0, 0, 0, 0.5)}
+        .screen.active{opacity:1;visibility:visible;transition-delay:0s}
+        #main-menu,#game-over-screen{background:radial-gradient(circle, var(--color-bg-near) 0%, var(--color-bg-mid) 70%, var(--color-bg-deep) 100%)}
+        #game-screen{background:none;padding:0;z-index:var(--z-game);display:flex;flex-direction:column}
+        #main-menu h1,#game-over-screen h2,#pause-menu h2{font-family:var(--font-title);font-size:clamp(3em, 10vw, 6em);color:var(--color-ui-accent);text-shadow:4px 4px 8px rgba(0, 0, 0, 0.9);margin-bottom:40px;text-align:center;line-height:1.1}
+        .menu-button,.overlay-button{font-family:var(--font-title);font-size:clamp(1.5em, 4vw, 2.2em);padding:12px 30px;margin:12px;min-width:220px;text-align:center;background-color:var(--color-ui-border);color:var(--color-text-light);border:4px solid var(--color-ui-accent);border-radius:8px;cursor:pointer;text-shadow:2px 2px 3px var(--color-text-dark);transition:all 0.2s ease;box-shadow:0 5px 10px rgba(0,0,0,0.5)}
+        .menu-button:hover,.overlay-button:hover{background-color:var(--color-ui-accent);border-color:var(--color-text-light);transform:translateY(-3px) scale(1.03);box-shadow:0 8px 15px rgba(0,0,0,0.6)}
+        .menu-button:active,.overlay-button:active{transform:translateY(1px) scale(1);box-shadow:0 3px 6px rgba(0,0,0,0.5)}
+        .menu-button:disabled{background-color:#555;border-color:#777;color:#aaa;cursor:not-allowed;opacity:0.6;transform:none;box-shadow:none}
+        #high-score-display{margin-top:20px;font-size:1.2em; color:var(--color-text-light); text-shadow:1px 1px 2px #000;}
+        #high-score-display span { color: var(--color-ui-accent); font-weight: bold; }
+        #loading-indicator{position:absolute;bottom:20px;font-size:1.2em;color:var(--color-ui-accent);background:rgba(0,0,0,0.5);padding:5px 10px;border-radius:5px}
+        #game-over-screen #final-stats{font-size:clamp(1.1em, 2.5vw, 1.5em);margin-bottom:30px;line-height:1.9;color:var(--color-text-light);background:rgba(0,0,0,0.3);padding:15px;border-radius:8px;border:1px solid var(--color-ui-border);min-width:300px;text-align:left}
+        #game-over-screen #final-stats span{font-weight:bold;color:var(--color-ui-accent);margin-left:8px}
+        .overlay{position:fixed;top:0;left:0;width:100%;height:100%;background-color:rgba(0, 0, 0, 0.9);z-index:var(--z-overlay);display:flex;justify-content:center;align-items:center;opacity:0;visibility:hidden;transition:opacity 0.4s ease, visibility 0s linear 0.4s}
+        .overlay.active{opacity:1;visibility:visible;transition-delay:0s}
+        .overlay-content{background:var(--color-ui-bg);padding:30px 40px;border:6px solid var(--color-ui-border);border-radius:15px;max-width:90%;width:600px;color:var(--color-text-light);box-shadow:0 0 30px rgba(0, 0, 0, 0.7);position:relative;text-align:center;max-height:90vh;overflow-y:auto}
+        .overlay-content h2{font-family:var(--font-title);font-size:clamp(2em, 6vw, 3em);margin-bottom:25px;color:var(--color-ui-accent);text-shadow:2px 2px 4px #000}
+        .overlay-content p{font-size:clamp(1em, 2.5vw, 1.15em);line-height:1.7;margin-bottom:18px}
+        .overlay-content ul{list-style:none;padding-left:0;margin-bottom:18px}
+        .overlay-content li{margin-bottom:10px;text-align:left;padding-left:1.5em;position:relative}
+        .overlay-content li::before{content:'⚔️';position:absolute;left:0px;top:2px;font-size:1em}
+        .overlay-close-button{position:absolute;top:15px;right:15px;background:var(--color-health);color:white;border:3px solid darkred;border-radius:50%;width:35px;height:35px;line-height:31px;text-align:center;font-weight:bold;font-size:1.4em;cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,0.6);transition:all 0.2s ease;z-index:1}
+        .overlay-close-button:hover{background-color:#ff5c5c;transform:scale(1.1)}
+        .settings-group{margin-bottom:25px}
+        .settings-group label{display:block;margin-bottom:10px;font-size:1.2em;font-weight:bold;color:var(--color-ui-accent)}
+        .settings-group input[type="range"]{width:80%;cursor:pointer;height:8px;appearance:none;background:var(--color-text-dark);border-radius:5px;border:1px solid var(--color-ui-border)}
+        .settings-group input[type="range"]::-webkit-slider-thumb{appearance:none;width:20px;height:20px;background:var(--color-ui-accent);border-radius:50%;cursor:pointer;border:2px solid var(--color-text-light)}
+        .settings-group input[type="range"]::-moz-range-thumb{width:18px;height:18px;background:var(--color-ui-accent);border-radius:50%;cursor:pointer;border:2px solid var(--color-text-light)}
+        #ui-bar{padding:8px 15px;background-color:var(--color-ui-bg);border-bottom:5px solid var(--color-ui-border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;box-shadow:0 5px 12px rgba(0,0,0,0.4);z-index:var(--z-ui);position:relative;min-height:55px}
+        #stats-left,#stats-right{display:flex;align-items:center; gap:50px; margin-left: 10px; margin-right: 60px; font-size:clamp(1em, 2.2vw, 1.3em);font-weight:bold}
+        #stats-right { gap: 50px; margin-right: 60px; }
+        #health-display,#score-display,#wave-display,#streak-display{display:flex;align-items:center;gap:8px}
+        .heart{width:22px;height:22px;background:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ef4444"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>') center/contain no-repeat;transition:opacity 0.3s ease}
+        .heart.lost{opacity:0.3}
+        .score-icon{width:24px;height:24px;background:url('sprites/coin.png') center/contain no-repeat}
+        #streak-value{color:var(--color-streak);font-size:1.1em;transition:color 0.2s}
+        #input-display-area{padding:12px 0;text-align:center;background-color:rgba(0,0,0,0.3);flex-shrink:0;z-index:var(--z-ui);min-height:50px}
+        #current-input-display{font-size:clamp(1.4em, 3.5vw, 1.8em);font-family:var(--font-main);color:var(--color-text-light);background-color:rgba(255, 255, 255, 0.1);padding:8px 15px;border-radius:5px;display:inline-block;min-width:200px;min-height:1.5em;border:2px solid transparent;transition:border-color 0.2s ease}
+        #current-input-display.has-target{border-color:var(--color-target)}
+        #current-input-display:empty::after{content:'Start Typing...';color:#aaa;font-style:italic;}
+        #game-area{flex-grow:1;position:relative;width:100%;overflow:hidden;z-index:var(--z-game);background:#1a2e1a}
+        .parallax-bg{position:absolute;top:0;left:0;width:100%;height:100%;background-repeat:repeat-x;background-position:0 bottom;will-change:background-position;z-index:var(--z-bg);pointer-events:none}
+        .parallax-bg.paused{animation-play-state:paused !important}
+        #bg-layer-1{background-image:url('sprites/background_sky.png');background-size:auto 100%;animation:parallax-scroll-slight 180s linear infinite}
+        #bg-layer-2{background-image:url('sprites/background_hills.png');background-size:auto 80%;animation:parallax-scroll 90s linear infinite;opacity:0.8;background-position:0 80%}
+        #bg-layer-3{background-image:url('sprites/background_ground.png');background-size:auto 45%;animation:parallax-scroll 45s linear infinite;opacity:1;background-position:0 bottom}
+        @keyframes parallax-scroll{0%{background-position-x:0}100%{background-position-x:-2000px}}
+        @keyframes parallax-scroll-slight{0%{background-position-x:0}100%{background-position-x:-500px}}
+        #knight{position:absolute;left:5%;bottom:15px;width:clamp(80px, 10vw, 120px);height:clamp(100px, 13vh, 150px);background:url("sprites/Knight.png") no-repeat center bottom / contain;z-index:var(--z-knight);filter:drop-shadow(4px 4px 6px rgba(0,0,0,0.7));transition:transform 0.1s ease-out}
+        #knight.hit{animation:knightHitFeedback 0.4s ease-in-out}
+        @keyframes knightHitFeedback{0%,100%{transform:translateX(0);filter:drop-shadow(4px 4px 6px rgba(0,0,0,0.7))}25%{transform:translateX(-6px) rotate(-2deg);filter:drop-shadow(4px 4px 6px rgba(0,0,0,0.7)) brightness(1.8)}75%{transform:translateX(4px) rotate(1deg);filter:drop-shadow(4px 4px 6px rgba(0,0,0,0.7)) brightness(1.4)}}
+        .enemy{position:absolute;display:flex;flex-direction:column;align-items:center;width:clamp(60px, 7vw, 90px);height:clamp(75px, 9vh, 110px);background-size:contain;background-repeat:no-repeat;background-position:center bottom;z-index:var(--z-enemies);filter:drop-shadow(3px 3px 3px rgba(0,0,0,0.5));transition:left 0.1s linear, opacity 0.5s ease-out, transform 0.5s ease-out;opacity:0;transform:translateX(30px) scale(0.8);will-change:left, opacity, transform}
+        .enemy.paused{animation-play-state:paused !important}
+        .enemy.boss{width:clamp(100px, 12vw, 150px);height:clamp(120px, 15vh, 180px);z-index:calc(var(--z-enemies) + 1)}
+        .enemy.spawned{opacity:1;transform:translateX(0) scale(1)}
+        .enemy.hit{animation:enemyHitFeedback 0.2s ease-out}
+        @keyframes enemyHitFeedback{0%,100%{transform:scale(1) rotate(0)}50%{transform:scale(1.08) rotate(3deg)}}
+        .enemy.dying{opacity:0 !important;transform:scale(0.6) rotate(-20deg) translateY(30px) !important;transition:opacity 0.4s ease-out, transform 0.4s cubic-bezier(0.6, -0.28, 0.735, 0.045);pointer-events:none}
+        .enemy-word{position:absolute;bottom:105%;left:50%;transform:translateX(-50%);background-color:rgba(0, 0, 0, 0.85);color:#fff;border:2px solid rgba(255, 255, 255, 0.5);padding:5px 10px;border-radius:6px;font-size:clamp(0.9em, 2vw, 1.2em);font-weight:bold;white-space:nowrap;text-shadow:1px 1px 2px rgba(0,0,0,0.9);z-index:var(--z-words);pointer-events:none;transition:background-color 0.15s linear, color 0.15s linear, transform 0.2s ease-out, box-shadow 0.2s ease-out, border-color 0.15s ease, opacity 0.2s ease-out}
+        .enemy-word span { display: inline-block; transition: color 0.1s linear; color: var(--color-text-light); }
+        .enemy-word span.typed { color: var(--color-letter-highlight); font-weight: bold; }
+        .enemy.paused .enemy-word{opacity:0.7}
+        .enemy.boss .enemy-word{font-size:clamp(1em, 2.5vw, 1.4em);padding:7px 12px;border-width:3px}
+        .enemy-word.target { background-color: rgba(0, 0, 0, 0.85); color: var(--color-text-light); border-color: var(--color-target); transform: translateX(-50%) scale(1.15); box-shadow: 0 0 12px var(--color-target); z-index: calc(var(--z-words) + 1); }
+        .enemy-word.target span { color: var(--color-text-light); }
+        .enemy-word.target span.typed { color: var(--color-letter-highlight); font-weight: bold; }
+        #message-display{position:absolute;top:45%;left:50%;transform:translate(-50%, -50%);font-size:clamp(1.8em, 5vw, 3em);color:var(--color-text-light);background-color:rgba(0, 0, 0, 0.9);padding:25px 40px;border-radius:12px;border:4px solid var(--color-ui-border);text-align:center;z-index:var(--z-message);display:none;width:85%;max-width:600px;white-space:pre-wrap;box-shadow:0 0 25px rgba(0,0,0,0.6);animation:messageFadeIn 0.3s ease-out;pointer-events:none}
+        @keyframes messageFadeIn{from{opacity:0;transform:translate(-50%, -40%)}to{opacity:1;transform:translate(-50%, -50%)}}
+        #message-display.wave-complete{color:var(--color-ui-accent);font-family:var(--font-title);font-size:clamp(2em, 6vw, 3.5em)}
+        #particle-container{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:var(--z-particles)}
+        .particle{position:absolute;width:8px;height:8px;border-radius:50%;background:white;opacity:1;will-change:transform, opacity;animation:particleAnim 0.8s ease-out forwards}
+        .particle.paused{animation-play-state:paused !important}
+        .particle.sparkle{background:url('sprites/sFireball1.png') center/contain no-repeat;width:15px;height:15px;border-radius:0;background-color:transparent !important}
+        .particle.streak{background:var(--color-streak);box-shadow:0 0 5px var(--color-streak)}
+        .particle.hit{background:var(--color-correct);box-shadow:0 0 5px var(--color-correct)}
+        .particle.death{background:#ffcc00;box-shadow:0 0 6px #ffcc00;width:12px;height:12px}
+        .particle.powerup-get{width:20px;height:20px}
+        .particle.powerup-bomb{background-color:var(--color-bomb)}
+        .particle.powerup-freeze{background-color:var(--color-freeze)}
+        .particle.powerup-heal{background-color:var(--color-heal)}
+        @keyframes particleAnim{0%{transform:translate(0, 0) scale(1);opacity:1}100%{transform:translate(var(--tx, 0), var(--ty, -80px)) scale(0);opacity:0}}
+        .powerup{position:absolute;z-index:var(--z-powerups);width:clamp(50px, 6vw, 70px);height:clamp(50px, 6vw, 70px);border-radius:50%;border:4px solid white;cursor:pointer;opacity:0;transform:translateY(20px) scale(0.5);background-size:60%;background-repeat:no-repeat;background-position:center;box-shadow:0 0 15px 5px white;animation:powerupAppear 0.5s ease-out forwards, powerupPulse 1.5s infinite ease-in-out 0.5s;will-change:transform, opacity, box-shadow}
+        .powerup.paused{animation-play-state:paused !important}
+        @keyframes powerupAppear{to{opacity:1;transform:translateY(0) scale(1)}}
+        @keyframes powerupPulse{0%,100%{transform:scale(1);box-shadow:0 0 15px 5px var(--shadow-color, white)}50%{transform:scale(1.1);box-shadow:0 0 25px 10px var(--shadow-color, white)}}
+        .powerup-word{position:absolute;top:110%;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);padding:3px 8px;border-radius:4px;font-weight:bold;font-size:0.9em;color:white;border:1px solid white;pointer-events:none}
+        .powerup-word span { display: inline-block; transition: color 0.1s linear; color: var(--color-text-light); }
+        .powerup-word span.typed { color: var(--color-letter-highlight); font-weight: bold; }
+        .powerup.target .powerup-word { border-color: var(--color-target); }
+        .powerup.heal{background-color:var(--color-heal);border-color:var(--color-heal);--shadow-color:var(--color-heal);background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 9a.75.75 0 00-1.5 0v2.25H9a.75.75 0 000 1.5h2.25V15a.75.75 0 001.5 0v-2.25H15a.75.75 0 000-1.5h-2.25V9z" clip-rule="evenodd" /></svg>')}
+        .powerup.bomb{background-color:var(--color-bomb);border-color:var(--color-bomb);--shadow-color:var(--color-bomb);background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M11.47 1.72a.75.75 0 011.06 0l3 3a.75.75 0 01-1.06 1.06l-1.72-1.72V7.5h-1.5V4.06L9.53 5.78a.75.75 0 01-1.06-1.06l3-3zM11.25 9.75A5.25 5.25 0 006 15v.954l-1.447.868a.75.75 0 00-.448 1.103 9.05 9.05 0 0011.79 0 .75.75 0 00-.447-1.103L13.5 15.954V15a5.25 5.25 0 00-2.25-4.5V9.75z" /><path fill-rule="evenodd" d="M12.75 11.25a.75.75 0 00-1.5 0v1.856l-.41.247a6.75 6.75 0 00-5.59 6.578v.04c.006.016.012.032.02.047a.75.75 0 00.607.588A7.52 7.52 0 0012 21a7.52 7.52 0 006.623-3.414.75.75 0 00.608-.588c.008-.015.014-.03.02-.047v-.04a6.75 6.75 0 00-5.59-6.578l-.41-.247V11.25zM13.5 15.406l.15.09a5.25 5.25 0 014.33 5.097v.003a.75.75 0 01-.014.145 6.003 6.003 0 01-11.932 0A.75.75 0 016 20.596v-.003a5.25 5.25 0 014.33-5.097l.15-.09v-.001h2.984v.001z" clip-rule="evenodd" /></svg>')}
+        .powerup.freeze{background-color:var(--color-freeze);border-color:var(--color-freeze);--shadow-color:var(--color-freeze);background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-2.625 6c-.54 0-1.024.19-1.411.513l-1.36 1.36a.75.75 0 000 1.06l4.879 4.879a.75.75 0 001.06 0l1.36-1.36c.322-.387.513-.871.513-1.411v-2.625a.75.75 0 00-.75-.75h-2.625zm6 3a.75.75 0 00-1.06 0l-1.36 1.36a1.5 1.5 0 00-.513 1.411v2.625a.75.75 0 00.75.75h2.625c.54 0 1.024-.19 1.411-.513l1.36-1.36a.75.75 0 000-1.06l-4.879-4.879zM9.375 9.75a.75.75 0 000 1.5h1.875v1.875a.75.75 0 001.5 0V11.25h1.875a.75.75 0 000-1.5H12.75V9.375a.75.75 0 00-1.5 0v1.875H9.375z" clip-rule="evenodd" /></svg>')}
+        #pause-menu{z-index:var(--z-pause-menu);background:rgba(0,0,0,0.85)}
+        #pause-menu-button { position: absolute; top: 8px; right: 15px; background: rgba(74, 59, 42, 0.7); border: 1px solid var(--color-ui-accent); color: var(--color-ui-accent); font-size: clamp(1.5em, 3vw, 2.2em); width: 40px; height: 40px; line-height: 38px; text-align: center; border-radius: 5px; cursor: pointer; z-index: calc(var(--z-ui) + 1); transition: background-color 0.2s; display: none; }
+        #pause-menu-button:hover { background: rgba(74, 59, 42, 0.9); }
+        #game-screen.playing #pause-menu-button { display: block; }
+        .hidden{display:none !important}
     </style>
 </head>
 <body>
-     <!-- Game Container (Now a flex column) -->
-     <div id="game-container">
-         <!-- UI Top Bar (First flex item) -->
-         <div id="ui-top">
-             <button id="fullscreen-button" title="Toggle Fullscreen">⛶</button>
-             <div id="stats-display">
-                 <div id="score-display">Score: 0</div>
-                 <div id="level-display">Wave: 1</div>
-             </div>
-             <!-- Start Button moved inside ui-top for simplicity -->
-             <div id="start-button-container">
-                <button id="start-button">Start Invasion</button>
-             </div>
-         </div>
-
-         <!-- Typing Input (Second flex item - MOVED HERE) -->
-         <input type="text" id="typing-input" placeholder="Type goblin words..." disabled>
-
-         <!-- Game Area (Third flex item - takes remaining space) -->
-         <div id="game-area">
-             <div id="knight"></div>
-             <!-- Goblins are added here dynamically -->
-         </div>
-
-         <!-- Message Overlay (Positioned absolutely over container) -->
-         <div id="message-display"></div>
-     </div>
+    <div id="app-container">
+        <div id="main-menu" class="screen active"><h1>Typing Knight:<br>Apex</h1><div id="high-score-display">High Score: <span>0</span></div><button id="start-button" class="menu-button" disabled>Start Invasion</button><button id="how-to-play-button" class="menu-button">How to Play</button><button id="settings-button" class="menu-button">Settings</button><div id="loading-indicator" class="hidden">Loading Assets...</div></div>
+        <div id="game-screen" class="screen"><div id="ui-bar"><div id="stats-left"><div id="health-display" title="Health"><span id="health-hearts"></span></div><div id="score-display" title="Score"><span class="score-icon"></span> <span id="score-value">0</span></div></div><div id="stats-right"><div id="wave-display" title="Wave">Wave: <span id="wave-value">1</span></div><div id="streak-display" title="Kill Streak">Streak: <span id="streak-value">x1</span></div></div><button id="pause-menu-button" title="Pause Game">☰</button></div><div id="input-display-area"><span id="current-input-display"></span></div><div id="game-area"><div id="bg-layer-1" class="parallax-bg"></div><div id="bg-layer-2" class="parallax-bg"></div><div id="bg-layer-3" class="parallax-bg"></div><div id="knight"></div><div id="particle-container"></div></div><div id="message-display" class="hidden"></div></div>
+        <div id="game-over-screen" class="screen"><h2>Invasion Ended!</h2><div id="final-stats">Final Score: <span id="final-score">0</span><br>Highest Wave: <span id="final-wave">1</span><br>Highest Streak: <span id="final-streak">x1</span><br>Accuracy: <span id="final-accuracy">-%</span></div><button id="play-again-button" class="menu-button">Play Again</button><button id="main-menu-return-button" class="menu-button">Main Menu</button></div>
+        <div id="pause-menu" class="screen"><h2>Paused</h2><button id="resume-button" class="menu-button">Resume</button><button id="pause-fullscreen-button" class="menu-button">Toggle Fullscreen</button><button id="pause-quit-button" class="menu-button">Quit to Menu</button></div>
+    </div>
+    <div id="how-to-play-overlay" class="overlay"><div class="overlay-content"><span class="overlay-close-button" data-overlay-close="how-to-play-overlay">&times;</span><h2>How to Play</h2><p>Defend the knight from the oncoming horde by typing the words above their heads! Accuracy and speed are key.</p><ul><li>Type the word displayed above an enemy EXACTLY to damage or vanquish them. No need to click!</li><li>Typed letters will highlight in green.</li><li>Backspace removes the last typed letter. Pressing Enter or Space clears your current input.</li><li>Typing the start of a word locks onto the closest matching target (enemy or power-up).</li><li>Enemies with multiple health points will require multiple words (they get a new word after each hit).</li><li>Defeated enemies may drop Power-Ups! Type the power-up word (or tap it) to activate its effect.</li><li>Consecutive kills build a score Multiplier Streak! Don't miss or let enemies reach the knight.</li><li>Watch out for powerful Bosses on certain waves!</li><li>Press ESC or click the ☰ button during gameplay to pause.</li><li>Survive as long as you can and set a new High Score!</li></ul><button class="overlay-button" data-overlay-close="how-to-play-overlay">Got It!</button></div></div>
+    <div id="settings-overlay" class="overlay"><div class="overlay-content"><span class="overlay-close-button" data-overlay-close="settings-overlay">&times;</span><h2>Settings</h2><div class="settings-group"><label for="music-volume">Music Volume</label><input type="range" id="music-volume" min="0" max="1" step="0.05" value="0.3"></div><div class="settings-group"><label for="sfx-volume">Sound Effects Volume</label><input type="range" id="sfx-volume" min="0" max="1" step="0.05" value="0.5"></div><button class="overlay-button" data-overlay-close="settings-overlay">Close</button></div></div>
+    <div style="display: none;"><audio id="audio-bgm" loop></audio><audio id="audio-sfx-coin"></audio><audio id="audio-sfx-enemy-hit"></audio><audio id="audio-sfx-error"></audio><audio id="audio-sfx-game-over"></audio><audio id="audio-sfx-player-die"></audio><audio id="audio-sfx-player-hurt"></audio><audio id="audio-sfx-powerup-spawn"></audio><audio id="audio-sfx-powerup-get"></audio><audio id="audio-sfx-powerup-bomb"></audio><audio id="audio-sfx-powerup-freeze"></audio><audio id="audio-sfx-powerup-heal"></audio><audio id="audio-sfx-enemy-dead-goblin"></audio><audio id="audio-sfx-enemy-dead-knight"></audio><audio id="audio-sfx-enemy-dead-boss"></audio><audio id="audio-sfx-hit"></audio><audio id="audio-sfx-move"></audio><audio id="audio-sfx-select"></audio><audio id="audio-sfx-shoot"></audio><audio id="audio-sfx-start-beep"></audio><audio id="audio-sfx-success"></audio><audio id="audio-sfx-streak"></audio><audio id="audio-sfx-wave-complete"></audio></div>
 
     <script>
-        // --- DOM Elements ---
-        let gameContainer, gameArea, knight, typingInput, scoreDisplay, levelDisplay, messageDisplay, startButton, startButtonContainer, fullscreenButton;
+    (() => {
+        const CONFIG = { INITIAL_PLAYER_HEALTH: 3, GAME_LOOP_INTERVAL: 33, KNIGHT_DEFENSE_BUFFER: 15, POWERUP_CHANCE: 0.15, POWERUP_LIFETIME: 8000, POWERUP_TYPES: ['HEAL', 'BOMB', 'FREEZE'], STREAK_BONUS_THRESHOLD: 5, STREAK_MAX_MULTIPLIER: 5, BOSS_WAVE_INTERVAL: 5, WAVE_COMPLETE_DELAY: 2500, PARTICLE_COUNT_HIT: 8, PARTICLE_COUNT_DEATH: 15, PARTICLE_COUNT_STREAK: 10, PARTICLE_COUNT_POWERUP: 20, POWERUP_MIN_Y_PERCENT: 0.2, POWERUP_MAX_Y_PERCENT: 0.75,
+            ENEMY_CONFIG: { 'Pawn':   { baseHp: 1, baseSpeed: 1.4, score: 10, spritePrefixes: ['bPawn', 'wPawn'], deathSound: 'enemyDeadGoblin' }, 'Goblin': { baseHp: 1, baseSpeed: 1.6, score: 10, spritePrefixes: ['Goblin'], deathSound: 'enemyDeadGoblin' }, 'Knight': { baseHp: 2, baseSpeed: 1.2, score: 20, spritePrefixes: ['bKnight', 'wKnight'], deathSound: 'enemyDeadKnight' }, 'Rook':   { baseHp: 3, baseSpeed: 1.0, score: 25, spritePrefixes: ['bRook', 'wRook'], deathSound: 'enemyDeadKnight' }, 'Bishop': { baseHp: 2, baseSpeed: 1.5, score: 30, spritePrefixes: ['bBishop', 'wBishop'], deathSound: 'enemyDeadKnight' }, 'Queen':  { baseHp: 5, baseSpeed: 1.8, score: 100, spritePrefixes: ['bQueen', 'wQueen'], deathSound: 'enemyDeadBoss', isBoss: true }, 'King':   { baseHp: 7, baseSpeed: 1.0, score: 150, spritePrefixes: ['bKing', 'wKing'], deathSound: 'enemyDeadBoss', isBoss: true } },
+            WAVE_SCALING: { spawnIntervalReduction: 150, minSpawnInterval: 700, baseSpawnInterval: 3500, speedIncrease: 0.06, hpIncreaseFactor: 0.1, baseEnemies: 4, enemiesIncrease: 1.2, wordLengthMinBonus: 0.1, wordLengthMaxBonus: 0.25, }
+        };
+        const AUDIO_FILES = { bgm: 'audio/music_WormsTheme.mp3', coin: 'audio/coin.wav', enemyHit: 'audio/enemy_hit.wav', error: 'audio/Error.wav', gameOver: 'audio/GameOver.wav', playerDie: 'audio/player_die.wav', playerHurt: 'audio/player_hurt.wav', powerupSpawn: 'audio/powerup.wav', powerupGet: 'audio/Success.wav', powerupBomb: 'audio/sfxFireballHit.wav', powerupFreeze: 'audio/sfxFireballCast.wav', powerupHeal: 'audio/jump.wav', enemyDeadGoblin: 'audio/sfxGoblinDead.wav', enemyDeadKnight: 'audio/sfxHit.wav', enemyDeadBoss: 'audio/player_die.wav', hit: 'audio/sfxHit.wav', move: 'audio/sfxMove.wav', select: 'audio/sfxSelect.wav', shoot: 'audio/shoot.wav', startBeep: 'audio/start_beep.wav', success: 'audio/Success.wav', streak: 'audio/coin.wav', waveComplete: 'audio/Success.wav', };
+        const WORD_LIST_SOURCE = [ "goblin", "attack", "knight", "sword", "shield", "magic", "danger", "quick", "type", "defend", "wave", "score", "castle", "arrow", "forest", "speed", "ogre", "troll", "dragon", "bash", "charge", "block", "enemy", "power", "haste", "invade", "retreat", "valor", "victory", "defeat", "elf", "dwarf", "orc", "beast", "monster", "human", "undead", "skeleton", "zombie", "ghoul", "imp", "demon", "angel", "wizard", "sorcerer", "witch", "warrior", "rogue", "ranger", "cleric", "paladin", "barbarian", "gnome", "sprite", "fairy", "giant", "cyclops", "minotaur", "griffin", "chimera", "strike", "cast", "heal", "dodge", "parry", "flee", "pursue", "summon", "banish", "enchant", "curse", "explore", "sneak", "ambush", "shoot", "throw", "swing", "slash", "stab", "crush", "guard", "protect", "reinforce", "counter", "advance", "flank", "surround", "conquer", "fortify", "axe", "mace", "spear", "dagger", "bow", "crossbow", "staff", "wand", "armor", "helmet", "gauntlets", "boots", "potion", "scroll", "amulet", "ring", "key", "map", "treasure", "gold", "gem", "crystal", "artifact", "relic", "standard", "banner", "catapult", "ram", "siege", "dungeon", "cave", "mountain", "swamp", "desert", "plains", "village", "city", "tower", "keep", "fortress", "ruins", "temple", "shrine", "abyss", "portal", "realm", "kingdom", "empire", "battlefield", "graveyard", "tavern", "inn", "shop", "strength", "agility", "wisdom", "courage", "fear", "chaos", "order", "light", "dark", "shadow", "fire", "water", "earth", "air", "ice", "lightning", "poison", "holy", "arcane", "divine", "ancient", "mythic", "legendary", "epic", "rage", "fury", "focus", "stealth", "cunning", "loyalty", "betrayal", "honor", "glory", "doom", "fate", "destiny", "quest", "mission", "bounty", "reward", "penalty", "brave", "fierce", "mighty", "hidden", "lost", "sacred", "corrupt", "noble", "savage", "wild", "tame", "free", "bound", "about", "above", "across", "action", "active", "actual", "always", "amount", "animal", "answer", "appear", "around", "author", "aware", "balance", "become", "before", "behind", "better", "between", "beyond", "border", "bring", "build", "button", "cable", "camera", "cancel", "carbon", "center", "change", "circle", "clean", "clear", "close", "coffee", "color", "common", "corner", "could", "cover", "create", "credit", "current", "cycle", "daily", "dance", "decide", "define", "degree", "delete", "depend", "detail", "differ", "direct", "divide", "doctor", "dollar", "double", "dream", "drive", "during", "early", "either", "empty", "enough", "enter", "equal", "error", "event", "every", "exact", "except", "exist", "expect", "explain", "extra", "factor", "family", "father", "field", "figure", "final", "floor", "follow", "force", "format", "forward", "friend", "front", "future", "gather", "general", "group", "guide", "happen", "happy", "heavy", "hello", "house", "however", "image", "impact", "import", "indeed", "index", "inform", "input", "inside", "issue", "itself", "jacket", "joint", "judge", "keyboard", "known", "label", "large", "later", "layer", "learn", "leave", "legal", "level", "listen", "little", "local", "logic", "longer", "lower", "lucky", "lunch", "major", "manage", "manual", "margin", "market", "master", "match", "maybe", "measure", "media", "member", "memory", "mention", "message", "metal", "method", "middle", "might", "minor", "minus", "minute", "mirror", "mobile", "model", "modify", "moment", "money", "month", "morning", "mother", "mouse", "movie", "music", "myself", "native", "nearby", "nearly", "network", "never", "noise", "normal", "north", "notice", "number", "object", "occur", "offer", "often", "online", "only", "open", "option", "order", "other", "output", "outside", "owner", "paint", "paper", "parent", "parse", "party", "pause", "peace", "people", "period", "person", "phase", "phone", "photo", "piece", "place", "plant", "please", "point", "policy", "pretty", "press", "price", "print", "prior", "private", "process", "proof", "proper", "public", "query", "quest", "radio", "raise", "range", "reach", "react", "ready", "really", "reason", "record", "refer", "region", "reject", "relate", "remove", "repeat", "reply", "report", "reset", "result", "return", "right", "round", "route", "sample", "scale", "scene", "scope", "screen", "search", "secure", "select", "sense", "series", "server", "service", "session", "setup", "share", "shift", "short", "should", "simple", "since", "single", "skill", "small", "smart", "smile", "solid", "solve", "sound", "south", "space", "speak", "special", "split", "sport", "stack", "stage", "stand", "start", "state", "static", "status", "still", "stock", "store", "story", "stream", "street", "study", "style", "subject", "sugar", "super", "supply", "support", "surely", "surface", "switch", "symbol", "system", "table", "target", "teach", "team", "thank", "their", "theme", "there", "these", "thick", "thing", "think", "third", "those", "though", "three", "through", "title", "today", "token", "total", "touch", "trace", "track", "trade", "train", "trend", "truck", "truly", "trust", "twice", "under", "union", "unique", "until", "update", "upper", "usual", "valid", "value", "video", "virus", "visit", "visual", "voice", "volume", "watch", "while", "white", "whole", "width", "window", "within", "without", "woman", "world", "worry", "worth", "would", "write", "wrong", "yellow", "yield", "young" ];
 
-        // --- Game Words ---
-        const wordListSource = [ /* ... Word list unchanged ... */
-            "goblin", "attack", "knight", "sword", "shield", "magic", "danger", "quick", "type", "defend", "wave", "score", "castle", "arrow", "forest", "speed", "ogre", "troll", "dragon", "bash", "charge", "block", "enemy", "power", "haste", "invade", "retreat", "valor", "victory", "defeat", "elf", "dwarf", "orc", "beast", "monster", "human", "undead", "skeleton", "zombie", "ghoul", "imp", "demon", "angel", "wizard", "sorcerer", "witch", "warrior", "rogue", "ranger", "cleric", "paladin", "barbarian", "gnome", "sprite", "fairy", "giant", "cyclops", "minotaur", "griffin", "chimera", "strike", "cast", "heal", "dodge", "parry", "flee", "pursue", "summon", "banish", "enchant", "curse", "explore", "sneak", "ambush", "shoot", "throw", "swing", "slash", "stab", "crush", "guard", "protect", "reinforce", "counter", "advance", "flank", "surround", "conquer", "fortify", "axe", "mace", "spear", "dagger", "bow", "crossbow", "staff", "wand", "armor", "helmet", "gauntlets", "boots", "potion", "scroll", "amulet", "ring", "key", "map", "treasure", "gold", "gem", "crystal", "artifact", "relic", "standard", "banner", "catapult", "ram", "siege", "dungeon", "cave", "mountain", "swamp", "desert", "plains", "village", "city", "tower", "keep", "fortress", "ruins", "temple", "shrine", "abyss", "portal", "realm", "kingdom", "empire", "battlefield", "graveyard", "tavern", "inn", "shop", "strength", "agility", "wisdom", "courage", "fear", "chaos", "order", "light", "dark", "shadow", "fire", "water", "earth", "air", "ice", "lightning", "poison", "holy", "arcane", "divine", "ancient", "mythic", "legendary", "epic", "rage", "fury", "focus", "stealth", "cunning", "loyalty", "betrayal", "honor", "glory", "doom", "fate", "destiny", "quest", "mission", "bounty", "reward", "penalty", "brave", "fierce", "mighty", "hidden", "lost", "sacred", "corrupt", "noble", "savage", "wild", "tame", "free", "bound", "about", "above", "across", "action", "active", "actual", "always", "amount", "animal", "answer", "appear", "around", "author", "aware", "balance", "become", "before", "behind", "better", "between", "beyond", "border", "bring", "build", "button", "cable", "camera", "cancel", "carbon", "center", "change", "circle", "clean", "clear", "close", "coffee", "color", "common", "corner", "could", "cover", "create", "credit", "current", "cycle", "daily", "dance", "decide", "define", "degree", "delete", "depend", "detail", "differ", "direct", "divide", "doctor", "dollar", "double", "dream", "drive", "during", "early", "either", "empty", "enough", "enter", "equal", "error", "event", "every", "exact", "except", "exist", "expect", "explain", "extra", "factor", "family", "father", "field", "figure", "final", "floor", "follow", "force", "format", "forward", "friend", "front", "future", "gather", "general", "group", "guide", "happen", "happy", "heavy", "hello", "house", "however", "image", "impact", "import", "indeed", "index", "inform", "input", "inside", "issue", "itself", "jacket", "joint", "judge", "keyboard", "known", "label", "large", "later", "layer", "learn", "leave", "legal", "level", "listen", "little", "local", "logic", "longer", "lower", "lucky", "lunch", "major", "manage", "manual", "margin", "market", "master", "match", "maybe", "measure", "media", "member", "memory", "mention", "message", "metal", "method", "middle", "might", "minor", "minus", "minute", "mirror", "mobile", "model", "modify", "moment", "money", "month", "morning", "mother", "mouse", "movie", "music", "myself", "native", "nearby", "nearly", "network", "never", "noise", "normal", "north", "notice", "number", "object", "occur", "offer", "often", "online", "only", "open", "option", "order", "other", "output", "outside", "owner", "paint", "paper", "parent", "parse", "party", "pause", "peace", "people", "period", "person", "phase", "phone", "photo", "piece", "place", "plant", "please", "point", "policy", "pretty", "press", "price", "print", "prior", "private", "process", "proof", "proper", "public", "query", "quest", "radio", "raise", "range", "reach", "react", "ready", "really", "reason", "record", "refer", "region", "reject", "relate", "remove", "repeat", "reply", "report", "reset", "result", "return", "right", "round", "route", "sample", "scale", "scene", "scope", "screen", "search", "secure", "select", "sense", "series", "server", "service", "session", "setup", "share", "shift", "short", "should", "simple", "since", "single", "skill", "small", "smart", "smile", "solid", "solve", "sound", "south", "space", "speak", "special", "split", "sport", "stack", "stage", "stand", "start", "state", "static", "status", "still", "stock", "store", "story", "stream", "street", "study", "style", "subject", "sugar", "super", "supply", "support", "surely", "surface", "switch", "symbol", "system", "table", "target", "teach", "team", "thank", "their", "theme", "there", "these", "thick", "thing", "think", "third", "those", "though", "three", "through", "title", "today", "token", "total", "touch", "trace", "track", "trade", "train", "trend", "truck", "truly", "trust", "twice", "under", "union", "unique", "until", "update", "upper", "usual", "valid", "value", "video", "virus", "visit", "visual", "voice", "volume", "watch", "while", "white", "whole", "width", "window", "within", "without", "woman", "world", "worry", "worth", "would", "write", "wrong", "yellow", "yield", "young" ];
-        let wordsAvailable = [];
-
-        // --- Game State ---
-        let score = 0; let wave = 1; let goblins = []; let gameActive = false;
-        let gameLoopTimerId = null; let spawnTimerId = null; let nextGoblinId = 0;
-        let knightDefenseLine = 0; let killsThisWave = 0; let goblinsNeededForNextWave = 3;
-        let currentTypingTarget = null;
-
-        // --- Game Parameters ---
-        const baseSpawnInterval = 3500; const minSpawnInterval = 800; const spawnIntervalDecreasePerWave = 180;
-        const baseGoblinSpeed = 1.8; const speedIncreasePerWave = 0.09;
-        const baseGoblinHP = 1; const pushbackAmount = 35; const killScore = 10;
-        const gameLoopInterval = 40; const baseGoblinsPerWave = 3; const goblinsPerWaveIncrease = 2;
-
-        // --- Text Staggering & Z-index Parameters ---
-        // Note: Top positions might need adjustment if game area is significantly shorter
-        const textOverlapCheckDistance = 65;
-        const NORMAL_TEXT_TOP = -30; // Adjusted slightly up
-        const HIGH_TEXT_TOP = -50;   // Adjusted slightly up
-        const HIGHEST_TEXT_TOP = -70;// Adjusted slightly up
-        const STAGGER_LEVELS = [NORMAL_TEXT_TOP, HIGH_TEXT_TOP, HIGHEST_TEXT_TOP];
-        const DEFAULT_WORD_ZINDEX = 3; const ACTIVE_WORD_ZINDEX = 10;
-
-        // --- Functions ---
-
-        function updateUIDisplay() { /* ... unchanged ... */
-            if (scoreDisplay) scoreDisplay.textContent = `Score: ${score}`;
-            if (levelDisplay) levelDisplay.textContent = `Wave: ${wave}`;
-         }
-        function getRandomWord() { /* ... unchanged ... */
-            if (wordsAvailable.length === 0) {
-                if (wordListSource.length > 0) { wordsAvailable = [...wordListSource]; }
-                else { console.error("CRITICAL: wordListSource empty!"); return "ERROR"; }
-            }
-            const randomIndex = Math.floor(Math.random() * wordsAvailable.length);
-            return wordsAvailable.splice(randomIndex, 1)[0];
-         }
-        function startNewWave() { /* ... unchanged ... */
-            console.log(`Starting Wave ${wave}. Need ${goblinsNeededForNextWave} kills.`);
-            killsThisWave = 0; clearTimeout(spawnTimerId); spawnTimerId = null;
-            const currentSpawnInterval = Math.max(minSpawnInterval, baseSpawnInterval - (spawnIntervalDecreasePerWave * (wave - 1)));
-            console.log(`Spawn interval: ${currentSpawnInterval}ms`);
-            function scheduleNextSpawn() {
-                 if (!gameActive) return;
-                 spawnTimerId = setTimeout(() => { spawnGoblin(); scheduleNextSpawn(); }, currentSpawnInterval);
-            }
-            scheduleNextSpawn();
+        class AudioManager {
+             constructor(elements, settingsElements) { this.elements = elements; this.settingsElements = settingsElements; this.musicVolume = 0.3; this.sfxVolume = 0.5; this.isMuted = false; this.assetsLoaded = false; }
+             initVolumes() { const savedMusicVol = localStorage.getItem('typingKnight_musicVolume'); const savedSfxVol = localStorage.getItem('typingKnight_sfxVolume'); this.musicVolume = savedMusicVol !== null ? parseFloat(savedMusicVol) : this.musicVolume; this.sfxVolume = savedSfxVol !== null ? parseFloat(savedSfxVol) : this.sfxVolume; if(this.settingsElements.musicVolume) this.settingsElements.musicVolume.value = this.musicVolume; if(this.settingsElements.sfxVolume) this.settingsElements.sfxVolume.value = this.sfxVolume; if(this.elements.bgm) this.elements.bgm.volume = this.musicVolume; }
+             setMusicVolume(volume) { this.musicVolume = Number(volume); if (this.elements.bgm) this.elements.bgm.volume = this.musicVolume; localStorage.setItem('typingKnight_musicVolume', this.musicVolume.toString()); }
+             setSfxVolume(volume) { this.sfxVolume = Number(volume); localStorage.setItem('typingKnight_sfxVolume', this.sfxVolume.toString()); }
+             _playSound(audioElement, volume, loop = false) { if (!audioElement || !this.assetsLoaded || this.isMuted) return; try { audioElement.volume = volume; audioElement.loop = loop; if (!loop || audioElement.paused) { audioElement.currentTime = 0; } audioElement.play().catch(()=>{}); } catch (error) {} }
+             play(soundName, loop = false) { const element = this.elements[soundName]; if (element) { const volume = (soundName === 'bgm') ? this.musicVolume : this.sfxVolume; this._playSound(element, volume, loop); } }
+             stop(soundName) { const element = this.elements[soundName]; if (element) { try { element.pause(); element.currentTime = 0; } catch(e){} } }
+             stopAllSfx() { Object.entries(this.elements).forEach(([key, element]) => { if (key !== 'bgm' && element) { try { element.pause(); element.currentTime = 0; } catch (e) {} } }); }
+             setPauseState(isPaused) { Object.values(this.elements).forEach(el => { if(el && !el.loop && !el.paused) { try { if(isPaused) el.pause(); else el.play().catch(()=>{}); } catch(e){} } }); if(this.elements.bgm) { try { if(isPaused) this.elements.bgm.pause(); else if(this.assetsLoaded && this.elements.bgm.paused) this.elements.bgm.play().catch(()=>{}); } catch(e){} } }
+             loadAssets() { return new Promise((resolve) => { const assetKeys = Object.keys(AUDIO_FILES); let loadedCount = 0; let errorCount = 0; const totalAssets = assetKeys.length; let timedOut = false; if(totalAssets === 0) { this.assetsLoaded = true; resolve(); return; } const checkCompletion = () => { if (timedOut) return; if (loadedCount + errorCount === totalAssets) { this.assetsLoaded = true; resolve(); } }; const onAssetLoad = () => { loadedCount++; checkCompletion(); }; const onAssetError = () => { errorCount++; checkCompletion(); }; assetKeys.forEach(key => { const element = this.elements[key]; const src = AUDIO_FILES[key]; if (element && src) { element.src = src; element.addEventListener('canplaythrough', onAssetLoad, { once: true }); element.addEventListener('error', onAssetError, { once: true }); element.load(); } else { errorCount++; checkCompletion(); } }); setTimeout(() => { if (!this.assetsLoaded && !timedOut) { timedOut = true; this.assetsLoaded = true; resolve(); } }, 15000); }); }
+        }
+        class ParticleManager {
+             constructor(container) { this.container = container; }
+             createParticle(x, y, count, type = '', options = {}) { if (!this.container || this.container.classList.contains('paused')) return; const { color, baseClass = 'particle', spread = 50, duration = 800, size = 8 } = options; for (let i = 0; i < count; i++) { const particle = document.createElement('div'); particle.className = `${baseClass} ${type}`; particle.style.left = `${x}px`; particle.style.top = `${y}px`; particle.style.width = `${size}px`; particle.style.height = `${size}px`; if (color) particle.style.background = color; const angle = Math.random() * Math.PI * 2; const tx = Math.cos(angle) * (Math.random() * spread); const ty = Math.sin(angle) * (Math.random() * spread) - (spread / 2); particle.style.setProperty('--tx', `${tx}px`); particle.style.setProperty('--ty', `${ty}px`); particle.style.animationDuration = `${(duration + Math.random() * 200) / 1000}s`; this.container.appendChild(particle); setTimeout(() => { particle.remove(); }, duration + 200); } }
+             emit(type, x, y) { if(!this.container) return; switch(type) { case 'hit': this.createParticle(x, y, CONFIG.PARTICLE_COUNT_HIT, 'hit sparkle', { size: 12, spread: 60 }); break; case 'death': this.createParticle(x, y, CONFIG.PARTICLE_COUNT_DEATH, 'death sparkle', { size: 15, spread: 80, duration: 1000 }); break; case 'streak': this.createParticle(x, y, CONFIG.PARTICLE_COUNT_STREAK, 'streak', { size: 10, spread: 70, duration: 900 }); break; case 'powerup-heal': this.createParticle(x, y, CONFIG.PARTICLE_COUNT_POWERUP, 'powerup-get powerup-heal', { size: 18, spread: 90, duration: 1200 }); break; case 'powerup-bomb': this.createParticle(x, y, CONFIG.PARTICLE_COUNT_POWERUP, 'powerup-get powerup-bomb', { size: 18, spread: 120, duration: 1000 }); break; case 'powerup-freeze': this.createParticle(x, y, CONFIG.PARTICLE_COUNT_POWERUP, 'powerup-get powerup-freeze', { size: 18, spread: 100, duration: 1400 }); break; case 'type': break; } }
+             setPauseState(isPaused) { this.container?.classList.toggle('paused', isPaused); this.container?.querySelectorAll('.particle').forEach(p => p.classList.toggle('paused', isPaused)); }
+        }
+        class UIManager {
+             constructor(game, dom) { this.game = game; this.dom = dom; }
+             showScreen(screenId) { Object.values(this.dom.screens).forEach(screen => screen?.classList.remove('active')); this.dom.screens[screenId]?.classList.add('active'); this.dom.game.screen?.classList.toggle('playing', screenId === 'game'); }
+             showOverlay(overlayId) { this.dom.overlays[overlayId]?.classList.add('active'); }
+             hideOverlay(overlayId) { this.dom.overlays[overlayId]?.classList.remove('active'); }
+             updateGameUI(player, wave) { if(!this.dom.game.scoreValue || !this.dom.game.waveValue || !this.dom.game.streakValue || !this.dom.game.healthHearts) return; this.dom.game.scoreValue.textContent = player.score; this.dom.game.waveValue.textContent = wave; this.dom.game.streakValue.textContent = `x${player.streakMultiplier}`; this.dom.game.streakValue.style.color = player.streakMultiplier > 1 ? 'var(--color-streak)' : 'var(--color-text-light)'; this.dom.game.healthHearts.innerHTML = ''; for (let i = 0; i < player.maxHealth; i++) { const heart = document.createElement('span'); heart.className = `heart ${i >= player.health ? 'lost' : ''}`; this.dom.game.healthHearts.appendChild(heart); } }
+             updateGameOverUI(player, wave) { if(!this.dom.gameOver.finalScore || !this.dom.gameOver.finalWave || !this.dom.gameOver.finalStreak || !this.dom.gameOver.finalAccuracy) return; this.dom.gameOver.finalScore.textContent = player.score; this.dom.gameOver.finalWave.textContent = wave; this.dom.gameOver.finalStreak.textContent = `x${player.maxStreakMultiplier}`; const accuracy = player.totalTyped === 0 ? 0 : ((player.correctTyped / player.totalTyped) * 100); this.dom.gameOver.finalAccuracy.textContent = `${accuracy.toFixed(1)}%`; }
+             showMessage(text, duration = 3000, type = '') { if (!this.dom.game.messageDisplay) return; this.dom.game.messageDisplay.innerHTML = text.replace(/\n/g, '<br>'); this.dom.game.messageDisplay.className = ''; if (type) this.dom.game.messageDisplay.classList.add(type); this.dom.game.messageDisplay.classList.remove('hidden'); if (this.dom.game.messageDisplay.hideTimeout) clearTimeout(this.dom.game.messageDisplay.hideTimeout); if (duration > 0) { this.dom.game.messageDisplay.hideTimeout = setTimeout(() => this.hideMessage(), duration); } else { this.dom.game.messageDisplay.hideTimeout = null; } }
+             hideMessage() { if (!this.dom.game.messageDisplay) return; this.dom.game.messageDisplay.classList.add('hidden'); if (this.dom.game.messageDisplay.hideTimeout) { clearTimeout(this.dom.game.messageDisplay.hideTimeout); this.dom.game.messageDisplay.hideTimeout = null; } }
+             setLoading(isLoading, message = "Loading Assets...") { if(!this.dom.loadingIndicator || !this.dom.buttons.start) return; this.dom.loadingIndicator.textContent = message; this.dom.loadingIndicator.classList.toggle('hidden', !isLoading); this.dom.buttons.start.disabled = isLoading; }
+             updateHighScore(score) { if(this.dom.highScoreDisplay) { const scoreSpan = this.dom.highScoreDisplay.querySelector('span'); if(scoreSpan) scoreSpan.textContent = score; } }
+             updateInputDisplay(text, hasTarget) { if(this.dom.game.inputDisplay) { this.dom.game.inputDisplay.textContent = text; this.dom.game.inputDisplay.classList.toggle('has-target', hasTarget); } }
+             clearInputDisplay() { if(this.dom.game.inputDisplay) { this.dom.game.inputDisplay.textContent = ''; this.dom.game.inputDisplay.classList.remove('has-target'); } }
+             highlightTarget(target, isTarget) { target?.wordElement?.classList.toggle('target', isTarget); }
+             updateLetterHighlight(target, typedLength) { if(!target?.letterSpans) return; target.letterSpans.forEach((span, index) => { span.classList.toggle('typed', index < typedLength); }); }
+             setPauseState(isPaused) { this.dom.game.gameArea?.querySelectorAll('.parallax-bg').forEach(el => el.classList.toggle('paused', isPaused)); this.dom.game.gameArea?.querySelectorAll('.enemy').forEach(el => el.classList.toggle('paused', isPaused)); this.dom.game.gameArea?.querySelectorAll('.powerup').forEach(el => el.classList.toggle('paused', isPaused)); }
+        }
+        class Player {
+             constructor() { this.maxHealth = CONFIG.INITIAL_PLAYER_HEALTH; this.reset(); }
+             reset() { this.health = this.maxHealth; this.score = 0; this.streak = 0; this.streakMultiplier = 1; this.maxStreakMultiplier = 1; this.correctTyped = 0; this.totalTyped = 0; }
+             takeDamage(amount = 1) { this.health -= amount; this.resetStreak(); return this.health <= 0; }
+             heal(amount = 1) { this.health = Math.min(this.maxHealth, this.health + amount); }
+             increaseStreak() { this.streak++; if (this.streak >= CONFIG.STREAK_BONUS_THRESHOLD) { this.streakMultiplier = Math.min(CONFIG.STREAK_MAX_MULTIPLIER, 1 + Math.floor(this.streak / CONFIG.STREAK_BONUS_THRESHOLD)); this.maxStreakMultiplier = Math.max(this.maxStreakMultiplier, this.streakMultiplier); } }
+             resetStreak() { this.streak = 0; this.streakMultiplier = 1; }
+             addScore(baseScore) { this.score += baseScore * this.streakMultiplier; }
+             recordTyping(correct) { this.totalTyped++; if (correct) this.correctTyped++; }
+        }
+        class Enemy {
+             constructor(id, type, wave, gameAreaWidth, dom) { this.id = id; this.config = CONFIG.ENEMY_CONFIG[type]; this.dom = dom; if (!this.config) throw new Error(`Invalid enemy type: ${type}`); this.type = type; this.isBoss = this.config.isBoss || false; this.maxHp = Math.max(1, Math.round(this.config.baseHp * (1 + (wave - 1) * CONFIG.WAVE_SCALING.hpIncreaseFactor))); this.hp = this.maxHp; this.speed = this.config.baseSpeed * (1 + (wave - 1) * CONFIG.WAVE_SCALING.speedIncrease); this.scoreValue = this.config.score; const spriteName = this.config.spritePrefixes[Math.floor(Math.random() * this.config.spritePrefixes.length)]; this.spriteUrl = `sprites/${spriteName}.png`; this.deathSound = this.config.deathSound; this.element = document.createElement('div'); this.element.className = `enemy ${this.isBoss ? 'boss' : ''}`; this.element.id = `enemy-${id}`; this.element.style.backgroundImage = `url('${this.spriteUrl}')`; const baseBottom = 10 + (this.isBoss ? 5 : 0); const verticalVariance = 30; const randomBottom = baseBottom + (Math.random() * verticalVariance) - (verticalVariance / 2); this.element.style.bottom = `${Math.max(5, randomBottom)}px`; this.xPosition = gameAreaWidth + Math.random() * 60 + (this.isBoss ? 80 : 30); this.element.style.left = `${this.xPosition}px`; this.wordElement = document.createElement('div'); this.wordElement.className = 'enemy-word'; this.element.appendChild(this.wordElement); this.isDying = false; this.isFrozen = false; this.letterSpans = []; this.word = ''; this.wordLower = ''; }
+             setWord(word) { this.word = word; this.wordLower = word.toLowerCase(); if(this.wordElement) { this.wordElement.innerHTML = ''; this.letterSpans = []; word.split('').forEach(char => { const span = document.createElement('span'); span.textContent = char; this.wordElement.appendChild(span); this.letterSpans.push(span); }); } }
+             update(deltaTime, knightDefenseLine, game) { if (this.isDying || this.isFrozen || game.state === 'paused') return; const distance = this.speed * (deltaTime / (1000 / 60)); this.xPosition -= distance; if(this.element) this.element.style.left = `${this.xPosition}px`; if (this.xPosition <= knightDefenseLine) { game.handleEnemyReachedKnight(this); } }
+             spawn() { if (!this.dom.game.gameArea || !this.element) return; try { this.dom.game.gameArea.appendChild(this.element); this.element.offsetHeight; this.element.classList.add('spawned'); } catch (e) {} }
+             takeDamage(amount = 1, game) { this.hp -= amount; if (this.hp <= 0) { return true; } else { this.element?.classList.add('hit'); setTimeout(() => this.element?.classList.remove('hit'), 150); game.assignNewWordToEnemy(this); return false; } }
+             die(killedByPlayer, game) { if (this.isDying) return; this.isDying = true; clearTimeout(this.freezeTimeout); this.element?.classList.add('dying'); this.wordElement?.remove(); game.particleManager?.emit('death', this.xPosition + (this.element?.offsetWidth || 0) / 2, (this.element?.offsetTop || 0) + (this.element?.offsetHeight || 0) / 2); if(killedByPlayer) { game.audioManager?.play(this.deathSound); if (Math.random() < CONFIG.POWERUP_CHANCE) { game.spawnPowerUp(this.xPosition + (this.element?.offsetWidth || 0) / 2, (this.element?.offsetTop || 0) + (this.element?.offsetHeight || 0) / 2); } } setTimeout(() => { this.element?.remove(); }, 500); }
+             freeze(duration) { if(this.isBoss) duration /= 2; this.isFrozen = true; this.element?.style.setProperty('filter', 'brightness(0.7) saturate(0) contrast(1.2)'); this.wordElement?.style.setProperty('border-color', 'var(--color-freeze)'); this.wordElement?.style.setProperty('color', 'var(--color-freeze)'); this.freezeTimeout = setTimeout(() => this.unfreeze(), duration); }
+             unfreeze() { clearTimeout(this.freezeTimeout); this.isFrozen = false; this.element?.style.removeProperty('filter'); this.wordElement?.style.removeProperty('border-color'); this.wordElement?.style.removeProperty('color'); }
+        }
+        class PowerUp {
+             constructor(id, type, x, y, game) { this.id = id; this.type = type; this.word = type; this.wordLower = type.toLowerCase(); this.game = game; this.dom = game.dom; this.element = document.createElement('div'); this.element.className = `powerup ${type.toLowerCase()}`; this.element.id = `powerup-${id}`; this.element.style.left = `${x}px`; this.element.style.top = `${y}px`; this.element.style.transformOrigin = 'center center'; this.wordElement = document.createElement('div'); this.wordElement.className = 'powerup-word'; this.element.appendChild(this.wordElement); this.clickHandler = () => this.game.handlePowerUpTyped(this); this.touchHandler = (e) => { e.preventDefault(); this.game.handlePowerUpTyped(this); }; this.element.addEventListener('click', this.clickHandler); this.element.addEventListener('touchstart', this.touchHandler, { passive: false }); this.letterSpans = []; this.word.split('').forEach(char => { const span = document.createElement('span'); span.textContent = char; this.wordElement.appendChild(span); this.letterSpans.push(span); }); if(this.dom.game.gameArea) { this.dom.game.gameArea.appendChild(this.element); this.element.style.left = `${x - (this.element.offsetWidth / 2)}px`; this.element.style.top = `${y - (this.element.offsetHeight / 2)}px`; } this.spawnTime = Date.now(); this.removeTimeout = setTimeout(() => this.remove(false, true), CONFIG.POWERUP_LIFETIME); game.audioManager?.play('powerupSpawn'); this.isDying = false; }
+             remove(collected = false, expired = false) { this.isDying = true; clearTimeout(this.removeTimeout); this.element?.removeEventListener('click', this.clickHandler); this.element?.removeEventListener('touchstart', this.touchHandler); this.element?.remove(); this.game?.removePowerUp(this.id, collected); }
+             activate() { if (this.game.state === 'paused' || this.isDying) return; this.game.audioManager?.play('powerupGet'); const centerX = this.element.offsetLeft + this.element.offsetWidth / 2; const centerY = this.element.offsetTop + this.element.offsetHeight / 2; switch (this.type) { case 'HEAL': this.game.player.heal(1); this.game.uiManager?.updateGameUI(this.game.player, this.game.wave); this.game.particleManager?.emit('powerup-heal', centerX, centerY); this.game.audioManager?.play('powerupHeal'); break; case 'BOMB': this.game.enemies.slice().forEach(enemy => { if (!enemy.isDying && !enemy.isBoss) { const killed = enemy.takeDamage(100, this.game); if (killed) this.game.handleEnemyKilled(enemy, false); } }); this.game.particleManager?.emit('powerup-bomb', centerX, centerY); this.game.audioManager?.play('powerupBomb'); break; case 'FREEZE': this.game.enemies.forEach(enemy => { if (!enemy.isDying) enemy.freeze(4000); }); this.game.particleManager?.emit('powerup-freeze', centerX, centerY); this.game.audioManager?.play('powerupFreeze'); break; } this.remove(true); }
+        }
+        class Game {
+            constructor(domCache) { this.dom = domCache; this.state = 'menu'; this.wave = 1; this.enemies = []; this.powerups = []; this.availableWords = []; this.gameLoopTimerId = null; this.spawnTimerId = null; this.nextEnemyId = 0; this.nextPowerUpId = 0; this.knightDefenseLine = 80; this.currentTypingTarget = null; this.lastUpdateTime = 0; this.enemiesToSpawnThisWave = 0; this.enemiesSpawnedThisWave = 0; this.enemiesKilledThisWave = 0; this.isBossWave = false; this.highScore = 0; this.player = new Player(); this.audioManager = null; this.uiManager = null; this.particleManager = null; this.currentInput = ""; }
+            init() { if (!this.validateDOMCache()) { throw new Error("Critical DOM elements missing!"); } this.audioManager = new AudioManager(this.dom.audioElements, this.dom.settings); this.uiManager = new UIManager(this, this.dom); this.particleManager = new ParticleManager(this.dom.game.particleContainer); this.audioManager.initVolumes(); this.loadHighScore(); this.uiManager.updateHighScore(this.highScore); this.uiManager.setLoading(true, "Loading Audio..."); this.audioManager.loadAssets().then(() => { this.uiManager.setLoading(false); }).catch(err => { this.uiManager.setLoading(false, "Error Loading Assets!"); }); this.setupEventListeners(); this.calculateKnightDefenseLine(); this.uiManager.showScreen('menu'); }
+            validateDOMCache() { let allFound = true; const criticalElements = [ this.dom.appContainer, this.dom.screens.menu, this.dom.screens.game, this.dom.screens.gameOver, this.dom.game.gameArea, this.dom.game.knight, this.dom.game.inputDisplay, this.dom.buttons.start, this.dom.settings.musicVolume, this.dom.settings.sfxVolume, this.dom.screens.pause, this.dom.buttons.pauseMenu, this.dom.buttons.pauseFullscreen ]; criticalElements.forEach((el, i) => { if (!el) { console.error(`Critical DOM element missing: index ${i}`); allFound = false; } }); for(const key in this.dom.audioElements) { if (!this.dom.audioElements[key]) { console.error(`Audio element missing: ${key}`); allFound = false; } } return allFound; }
+            loadHighScore() { this.highScore = parseInt(localStorage.getItem('typingKnight_highScore') || '0'); }
+            saveHighScore() { if (this.player.score > this.highScore) { this.highScore = this.player.score; localStorage.setItem('typingKnight_highScore', this.highScore.toString()); this.uiManager?.updateHighScore(this.highScore); } }
+            setupEventListeners() { this.dom.buttons.start.onclick = () => { this.audioManager?.play('select'); this.startNewGame(); }; this.dom.buttons.playAgain.onclick = () => { this.audioManager?.play('select'); this.startNewGame(); }; this.dom.buttons.mainMenuReturn.onclick = () => { this.audioManager?.play('select'); this.goToMenu(); }; this.dom.buttons.howToPlay.onclick = () => { this.audioManager?.play('select'); this.uiManager?.showOverlay('howToPlay'); }; this.dom.buttons.settings.onclick = () => { this.audioManager?.play('select'); this.uiManager?.showOverlay('settings'); }; this.dom.buttons.pauseFullscreen.onclick = () => { this.audioManager?.play('select'); this.toggleFullscreen(); }; this.dom.buttons.overlayClose.forEach(btn => { btn.onclick = (e) => { const overlayId = e.target.dataset.overlayClose; if(overlayId) { this.audioManager?.play('select'); this.uiManager?.hideOverlay(overlayId); }}; }); this.dom.settings.musicVolume.oninput = (e) => this.audioManager?.setMusicVolume(e.target.value); this.dom.settings.sfxVolume.oninput = (e) => this.audioManager?.setSfxVolume(e.target.value); this.dom.settings.sfxVolume.onchange = () => this.audioManager?.play('coin'); this.dom.buttons.resume.onclick = () => this.togglePause(); this.dom.buttons.pauseQuit.onclick = () => { this.audioManager?.play('select'); this.togglePause(true); this.goToMenu(); }; this.dom.buttons.pauseMenu.onclick = () => this.togglePause(); window.onresize = () => this.handleResize(); if (window.visualViewport) window.visualViewport.onresize = () => this.handleResize(); document.onfullscreenchange = () => {}; window.addEventListener('keydown', (e) => this.handleGlobalKeyPress(e)); }
+            handleResize() { requestAnimationFrame(() => this.calculateKnightDefenseLine()); }
+            calculateKnightDefenseLine() { if (this.dom.game.knight && this.dom.game.gameArea) { const knightRect = this.dom.game.knight.getBoundingClientRect(); const gameAreaRect = this.dom.game.gameArea.getBoundingClientRect(); this.knightDefenseLine = (knightRect.right - gameAreaRect.left) - CONFIG.KNIGHT_DEFENSE_BUFFER; } else { this.knightDefenseLine = 80; } }
+            getRandomWord(wave) { const minLen = 3 + Math.floor((wave - 1) * CONFIG.WAVE_SCALING.wordLengthMinBonus); const maxLen = 6 + Math.floor((wave - 1) * CONFIG.WAVE_SCALING.wordLengthMaxBonus); let potentialWords = this.availableWords.filter(w => w.length >= minLen && w.length <= maxLen); if(potentialWords.length === 0) { potentialWords = this.availableWords.filter(w => w.length >= minLen) } if(potentialWords.length === 0) { potentialWords = this.availableWords; } if (potentialWords.length === 0) { if (WORD_LIST_SOURCE.length > 0) { this.resetWordList(); potentialWords = this.availableWords; } else { return "ERROR"; } } const randomIndex = Math.floor(Math.random() * potentialWords.length); const word = potentialWords[randomIndex]; const mainIndex = this.availableWords.indexOf(word); if(mainIndex > -1) this.availableWords.splice(mainIndex, 1); if (this.availableWords.length < 50) this.resetWordList(); return word; }
+            resetWordList() { if (WORD_LIST_SOURCE.length > 0) { this.availableWords = [...WORD_LIST_SOURCE]; } }
+            startNewGame() { if (this.state === 'playing') return; if (!this.audioManager?.assetsLoaded) { this.uiManager?.showMessage("Assets still loading...", 2000); return; } this.state = 'playing'; this.wave = 1; this.player.reset(); this.enemies.forEach(e => e.element?.remove()); this.enemies = []; this.powerups.forEach(p => p.remove()); this.powerups = []; if (this.dom.game.particleContainer) this.dom.game.particleContainer.innerHTML = ''; this.resetWordList(); this.currentInput = ""; this.currentTypingTarget = null; this.nextEnemyId = 0; this.nextPowerUpId = 0; this.uiManager?.showScreen('game'); this.uiManager?.updateGameUI(this.player, this.wave); this.uiManager?.clearInputDisplay(); this.uiManager?.hideMessage(); this.dom.screens.pause?.classList.remove('active'); this.uiManager?.setPauseState(false); this.particleManager?.setPauseState(false); if(this.dom.buttons.pauseMenu) this.dom.buttons.pauseMenu.style.display = 'block'; this.audioManager?.stopAllSfx(); this.audioManager?.play('startBeep'); this.audioManager?.play('bgm', true); this.startWave(); this.startGameLoop(); }
+            startWave() { this.isBossWave = (this.wave % CONFIG.BOSS_WAVE_INTERVAL === 0); this.enemiesSpawnedThisWave = 0; this.enemiesKilledThisWave = 0; if(this.isBossWave) { this.enemiesToSpawnThisWave = 1; } else { this.enemiesToSpawnThisWave = Math.floor(CONFIG.WAVE_SCALING.baseEnemies + (this.wave -1) * CONFIG.WAVE_SCALING.enemiesIncrease); } this.uiManager?.updateGameUI(this.player, this.wave); this.scheduleNextSpawn(); }
+            scheduleNextSpawn() { if (this.spawnTimerId) clearTimeout(this.spawnTimerId); if (this.state !== 'playing' || (this.enemiesSpawnedThisWave >= this.enemiesToSpawnThisWave && this.enemies.filter(e => !e.isDying).length > 0) || (this.enemiesSpawnedThisWave >= this.enemiesToSpawnThisWave && this.enemies.filter(e => !e.isDying).length === 0 && this.state === 'playing')) { return; } const baseInterval = CONFIG.WAVE_SCALING.baseSpawnInterval; const minInterval = CONFIG.WAVE_SCALING.minSpawnInterval; const reduction = CONFIG.WAVE_SCALING.spawnIntervalReduction * (this.wave - 1); let interval = Math.max(minInterval, baseInterval - reduction); if(this.isBossWave && this.enemiesSpawnedThisWave === 0) interval *= 1.5; this.spawnTimerId = setTimeout(() => this.spawnEnemy(), interval); }
+            spawnEnemy() { if(this.state !== 'playing') return; this.enemiesSpawnedThisWave++; this.nextEnemyId++; const gameAreaWidth = this.dom.game.gameArea?.offsetWidth || 800; let enemyType; if (this.isBossWave && this.enemiesSpawnedThisWave === 1) { enemyType = ((this.wave / CONFIG.BOSS_WAVE_INTERVAL) % 2 === 1) ? 'King' : 'Queen'; } else { const normalTypes = Object.keys(CONFIG.ENEMY_CONFIG).filter(t => !CONFIG.ENEMY_CONFIG[t].isBoss); enemyType = normalTypes[Math.floor(Math.random() * normalTypes.length)]; } const enemy = new Enemy(this.nextEnemyId, enemyType, this.wave, gameAreaWidth, this.dom); const word = this.getRandomWord(this.wave); if (word === "ERROR") { this.endGame("Word List Error!"); return; } enemy.setWord(word); enemy.spawn(); this.enemies.push(enemy); if (this.enemiesSpawnedThisWave < this.enemiesToSpawnThisWave) { this.scheduleNextSpawn(); } }
+            spawnPowerUp(x, y) { if (this.state !== 'playing' || !this.dom.game.gameArea) return; const gameAreaHeight = this.dom.game.gameArea.offsetHeight; const minY = gameAreaHeight * CONFIG.POWERUP_MIN_Y_PERCENT; const maxY = gameAreaHeight * CONFIG.POWERUP_MAX_Y_PERCENT; const spawnY = Math.max(minY, Math.min(y, maxY)); this.nextPowerUpId++; const type = CONFIG.POWERUP_TYPES[Math.floor(Math.random() * CONFIG.POWERUP_TYPES.length)]; const powerup = new PowerUp(this.nextPowerUpId, type, x, spawnY, this); this.powerups.push(powerup); }
+            removePowerUp(id, collected) { const index = this.powerups.findIndex(p => p.id === id); if (index > -1) { if (this.currentTypingTarget === this.powerups[index]) { this.clearTarget(); } this.powerups.splice(index, 1); } }
+            assignNewWordToEnemy(enemy) { if (!enemy || enemy.isDying) return; const newWord = this.getRandomWord(this.wave); if(newWord !== "ERROR") enemy.setWord(newWord); if(this.currentTypingTarget === enemy) { this.uiManager?.updateLetterHighlight(enemy, 0); this.clearInputBuffer(); this.clearTarget(false); } }
+            handleGlobalKeyPress(event) { const key = event.key; if (key === 'Escape') { event.preventDefault(); this.togglePause(); return; } if (this.state !== 'playing' || event.ctrlKey || event.altKey || event.metaKey) return; event.preventDefault(); if (key === 'Backspace') { if (this.currentInput.length > 0) { this.currentInput = this.currentInput.slice(0, -1); this.processCurrentInput(); } } else if (key === 'Enter' || key === ' ') { this.clearInputBuffer(); this.clearTarget(); } else if (key.length === 1 && key.match(/[a-z0-9]/i)) { const potentialInput = this.currentInput + key.toLowerCase(); const isValidStart = [...this.enemies, ...this.powerups].some(item => item && !item.isDying && item.wordLower.startsWith(potentialInput)); if (isValidStart) { this.currentInput = potentialInput; this.processCurrentInput(); } else { this.audioManager?.play('error'); } } }
+            processCurrentInput() { const currentInputLower = this.currentInput; this.uiManager?.updateInputDisplay(currentInputLower, !!this.currentTypingTarget); if (currentInputLower === '') { this.clearTarget(); return; } let targetChanged = false; let bestMatch = null; let minDistance = Infinity; const candidates = [...this.enemies, ...this.powerups].filter(item => item && item.element && !item.isDying && item.wordLower.startsWith(currentInputLower)); candidates.forEach(item => { const itemX = item.element.offsetLeft; if (itemX < minDistance) { minDistance = itemX; bestMatch = item; } }); if (bestMatch) { if (this.currentTypingTarget !== bestMatch) { this.setTarget(bestMatch); targetChanged = true; } this.uiManager?.updateLetterHighlight(this.currentTypingTarget, currentInputLower.length); if (currentInputLower === this.currentTypingTarget.wordLower) { this.handleWordCompletion(); } } else { if (this.currentTypingTarget) { if (!this.currentTypingTarget.wordLower.startsWith(currentInputLower)) { this.clearTarget(); this.audioManager?.play('error'); } else { this.uiManager?.updateLetterHighlight(this.currentTypingTarget, currentInputLower.length); } } else { this.audioManager?.play('error'); } } }
+            handleWordCompletion() { if (!this.currentTypingTarget) return; this.player.recordTyping(true); this.audioManager?.play('shoot'); if (this.currentTypingTarget instanceof Enemy) { this.handleEnemyTyped(this.currentTypingTarget); } else if (this.currentTypingTarget instanceof PowerUp) { this.handlePowerUpTyped(this.currentTypingTarget); } this.clearInputBuffer(); this.clearTarget(); }
+            handleEnemyTyped(enemy) { if (!enemy || enemy.isDying) return; const killed = enemy.takeDamage(1, this); if (killed) { this.handleEnemyKilled(enemy, true); } else { this.audioManager?.play('enemyHit'); this.particleManager?.emit('hit', enemy.xPosition + (enemy.element?.offsetWidth || 0) / 2, (enemy.element?.offsetTop || 0) + (enemy.element?.offsetHeight || 0) / 2); } }
+            handleEnemyKilled(enemy, byPlayerAction) { if (!enemy || enemy.isDying) return; enemy.die(byPlayerAction, this); if (byPlayerAction) { this.player.increaseStreak(); this.player.addScore(enemy.scoreValue); if(this.player.streakMultiplier > 1) { this.audioManager?.play('streak'); this.particleManager?.emit('streak', enemy.xPosition + (enemy.element?.offsetWidth || 0) / 2, (enemy.element?.offsetTop || 0) + (enemy.element?.offsetHeight || 0) / 2); } } this.enemiesKilledThisWave++; this.uiManager?.updateGameUI(this.player, this.wave); const index = this.enemies.findIndex(e => e.id === enemy.id); if (index > -1) this.enemies.splice(index, 1); if (this.enemiesSpawnedThisWave >= this.enemiesToSpawnThisWave && this.enemies.filter(e => !e.isDying).length === 0) { if(this.state === 'playing') this.endWave(); } }
+            handlePowerUpTyped(powerup) { if (!powerup || powerup.isDying || this.powerups.indexOf(powerup) === -1) return; powerup.activate(); this.player.recordTyping(true); this.clearInputBuffer(); this.clearTarget(); }
+            handleEnemyReachedKnight(enemy) { if (!enemy || enemy.isDying || this.state !== 'playing') return; this.audioManager?.play('playerHurt'); this.dom.game.knight?.classList.add('hit'); setTimeout(() => this.dom.game.knight?.classList.remove('hit'), 400); const isGameOver = this.player.takeDamage(1); this.uiManager?.updateGameUI(this.player, this.wave); enemy.die(false, this); const index = this.enemies.findIndex(e => e.id === enemy.id); if (index > -1) this.enemies.splice(index, 1); if (isGameOver) { this.audioManager?.play('playerDie'); this.endGame("The Knight has fallen!"); } }
+            setTarget(target) { this.clearTarget(false); this.currentTypingTarget = target; this.uiManager?.highlightTarget(target, true); this.uiManager?.updateInputDisplay(this.currentInput, true); this.uiManager?.updateLetterHighlight(target, this.currentInput.length); }
+            clearTarget(clearInputToo = true) { if (this.currentTypingTarget) { this.uiManager?.highlightTarget(this.currentTypingTarget, false); this.uiManager?.updateLetterHighlight(this.currentTypingTarget, 0); this.currentTypingTarget = null; } if(clearInputToo) { this.clearInputBuffer(); } else { this.uiManager?.updateInputDisplay(this.currentInput, false); } }
+            clearInputBuffer() { this.currentInput = ""; this.uiManager?.clearInputDisplay(); if(this.currentTypingTarget) { this.uiManager?.updateLetterHighlight(this.currentTypingTarget, 0); } }
+            endWave() { if (this.state !== 'playing') return; this.wave++; this.audioManager?.play('waveComplete'); this.clearTarget(); this.uiManager?.showMessage(`Wave ${this.wave}${ (this.wave % CONFIG.BOSS_WAVE_INTERVAL === 0) ? ' - BOSS!' : ''}`, 2000, 'wave-complete'); if(this.spawnTimerId) clearTimeout(this.spawnTimerId); this.spawnTimerId = setTimeout(() => { if(this.state === 'playing') this.startWave(); }, CONFIG.WAVE_COMPLETE_DELAY); }
+            startGameLoop() { if (this.gameLoopTimerId) clearInterval(this.gameLoopTimerId); this.lastUpdateTime = performance.now(); this.gameLoopTimerId = setInterval(() => this.gameLoop(), CONFIG.GAME_LOOP_INTERVAL); }
+            stopGameLoop() { clearInterval(this.gameLoopTimerId); this.gameLoopTimerId = null; clearTimeout(this.spawnTimerId); this.spawnTimerId = null; }
+            gameLoop() { if (this.state !== 'playing') return; const now = performance.now(); const deltaTime = Math.min(now - this.lastUpdateTime, 100); this.lastUpdateTime = now; this.enemies.forEach(enemy => enemy.update(deltaTime, this.knightDefenseLine, this)); }
+            endGame(reason = "Game Over!") { if(this.state === 'gameover') return; this.state = 'gameover'; this.stopGameLoop(); this.saveHighScore(); this.audioManager?.stop('bgm'); this.audioManager?.play('gameOver'); this.audioManager?.stopAllSfx(); this.uiManager?.updateGameOverUI(this.player, this.wave); this.uiManager?.showScreen('gameOver'); this.uiManager?.clearInputDisplay(); this.dom.screens.pause?.classList.remove('active'); if (this.dom.buttons.pauseMenu) this.dom.buttons.pauseMenu.style.display = 'none'; setTimeout(() => { this.enemies.forEach(e => e.element?.remove()); this.powerups.forEach(p => p.remove()); this.enemies = []; this.powerups = []; if (this.dom.game.particleContainer) this.dom.game.particleContainer.innerHTML = ''; }, 500); }
+            goToMenu() { this.state = 'menu'; this.stopGameLoop(); this.uiManager?.showScreen('menu'); this.uiManager?.updateHighScore(this.highScore); this.audioManager?.stopAllSfx(); this.audioManager?.stop('bgm'); this.uiManager?.clearInputDisplay(); this.dom.screens.pause?.classList.remove('active'); if (this.dom.buttons.pauseMenu) this.dom.buttons.pauseMenu.style.display = 'none'; }
+            togglePause(forceQuit = false) { if (this.state === 'gameover') return; if (this.state === 'playing') { this.state = 'paused'; this.stopGameLoop(); this.dom.screens.pause?.classList.add('active'); this.audioManager?.setPauseState(true); this.uiManager?.setPauseState(true); this.particleManager?.setPauseState(true); } else if (this.state === 'paused' && !forceQuit) { this.state = 'playing'; this.dom.screens.pause?.classList.remove('active'); this.startGameLoop(); this.scheduleNextSpawn(); this.audioManager?.setPauseState(false); this.uiManager?.setPauseState(false); this.particleManager?.setPauseState(false); } }
+            toggleFullscreen() { if (!document.fullscreenElement) { this.dom.appContainer?.requestFullscreen().catch(()=>{}); } else { if(document.exitFullscreen) document.exitFullscreen(); } }
         }
 
-        function spawnGoblin() { // **Position relative to game-area**
-            if (!gameActive || !gameArea) return;
+        function cacheDOM() {
+             return {
+                appContainer: document.getElementById('app-container'),
+                screens: { menu: document.getElementById('main-menu'), game: document.getElementById('game-screen'), gameOver: document.getElementById('game-over-screen'), pause: document.getElementById('pause-menu') },
+                buttons: { start: document.getElementById('start-button'), howToPlay: document.getElementById('how-to-play-button'), settings: document.getElementById('settings-button'), playAgain: document.getElementById('play-again-button'), mainMenuReturn: document.getElementById('main-menu-return-button'), overlayClose: document.querySelectorAll('[data-overlay-close]'), resume: document.getElementById('resume-button'), pauseQuit: document.getElementById('pause-quit-button'), pauseMenu: document.getElementById('pause-menu-button'), pauseFullscreen: document.getElementById('pause-fullscreen-button') },
+                overlays: { howToPlay: document.getElementById('how-to-play-overlay'), settings: document.getElementById('settings-overlay'), },
+                settings: { musicVolume: document.getElementById('music-volume'), sfxVolume: document.getElementById('sfx-volume'), },
+                game: { screen: document.getElementById('game-screen'), uiBar: document.getElementById('ui-bar'), scoreValue: document.getElementById('score-value'), waveValue: document.getElementById('wave-value'), healthHearts: document.getElementById('health-hearts'), streakValue: document.getElementById('streak-value'), inputDisplay: document.getElementById('current-input-display'), gameArea: document.getElementById('game-area'), knight: document.getElementById('knight'), messageDisplay: document.getElementById('message-display'), particleContainer: document.getElementById('particle-container'), },
+                gameOver: { finalScore: document.getElementById('final-score'), finalWave: document.getElementById('final-wave'), finalStreak: document.getElementById('final-streak'), finalAccuracy: document.getElementById('final-accuracy'), },
+                highScoreDisplay: document.getElementById('high-score-display'),
+                loadingIndicator: document.getElementById('loading-indicator'),
+                audioElements: { bgm: document.getElementById('audio-bgm'), coin: document.getElementById('audio-sfx-coin'), enemyHit: document.getElementById('audio-sfx-enemy-hit'), error: document.getElementById('audio-sfx-error'), gameOver: document.getElementById('audio-sfx-game-over'), playerDie: document.getElementById('audio-sfx-player-die'), playerHurt: document.getElementById('audio-sfx-player-hurt'), powerupSpawn: document.getElementById('audio-sfx-powerup-spawn'), powerupGet: document.getElementById('audio-sfx-powerup-get'), powerupBomb: document.getElementById('audio-sfx-powerup-bomb'), powerupFreeze: document.getElementById('audio-sfx-powerup-freeze'), powerupHeal: document.getElementById('audio-sfx-powerup-heal'), enemyDeadGoblin: document.getElementById('audio-sfx-enemy-dead-goblin'), enemyDeadKnight: document.getElementById('audio-sfx-enemy-dead-knight'), enemyDeadBoss: document.getElementById('audio-sfx-enemy-dead-boss'), hit: document.getElementById('audio-sfx-hit'), move: document.getElementById('audio-sfx-move'), select: document.getElementById('audio-sfx-select'), shoot: document.getElementById('audio-sfx-shoot'), startBeep: document.getElementById('audio-sfx-start-beep'), success: document.getElementById('audio-sfx-success'), streak: document.getElementById('audio-sfx-streak'), waveComplete: document.getElementById('audio-sfx-wave-complete'), }
+            };
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
             try {
-                nextGoblinId++; const id = nextGoblinId;
-                const newGoblin = document.createElement('div');
-                newGoblin.className = 'goblin'; newGoblin.id = `goblin-${id}`;
-
-                const areaWidth = gameArea.offsetWidth; // Width of the game area itself
-                let initialX = areaWidth > 0 ? areaWidth + Math.random() * 50 + 20 : 850; // Start off right edge of game area
-
-                // Base bottom position relative to game-area bottom
-                const baseBottom = 10; // Lower position is fine now
-                const verticalVariance = 30; // Less variance maybe needed if area is shorter
-                const randomBottom = baseBottom + (Math.random() * verticalVariance) - (verticalVariance / 2);
-                newGoblin.style.bottom = `${Math.max(5, randomBottom)}px`; // Ensure min 5px
-
-                const wordElement = document.createElement('div');
-                wordElement.className = 'goblin-word';
-                const word = getRandomWord();
-                if (!word || word === "ERROR") { console.error("Failed to get word."); return; }
-                wordElement.textContent = word;
-                wordElement.style.top = `${NORMAL_TEXT_TOP}px`; wordElement.style.zIndex = DEFAULT_WORD_ZINDEX;
-
-                newGoblin.appendChild(wordElement);
-                gameArea.appendChild(newGoblin); // Append to game area
-                newGoblin.offsetHeight; newGoblin.style.left = `${initialX}px`;
-
-                const goblinData = { id, element: newGoblin, wordElement, word, hp: baseGoblinHP, xPosition: initialX, staggerLevel: 0 };
-                goblins.push(goblinData);
-
-            } catch (error) { console.error("[spawnGoblin] CRITICAL ERROR:", error); gameOver("Error spawning!"); }
-        }
-
-        function updateGoblinPosition(goblinData, currentSpeed) {
-            if (!goblinData || !goblinData.element || !gameActive) return;
-            goblinData.xPosition -= currentSpeed;
-            goblinData.element.style.left = `${goblinData.xPosition}px`;
-             // Check against knightDefenseLine which is calculated relative to gameArea
-            if (goblinData.xPosition <= knightDefenseLine) {
-                console.log(`Goblin ${goblinData.id} ("${goblinData.word}") reached knight!`);
-                gameOver(`"${goblinData.word}" goblin broke through!`);
+                 const domCache = cacheDOM();
+                 const game = new Game(domCache);
+                 game.init();
+            } catch (e) {
+                console.error("Fatal error during initial setup:", e);
+                document.body.innerHTML = `<div style="color: red; padding: 20px; font-size: 1.5em; font-family: sans-serif;">Fatal Error: ${e.message}<br>Game cannot load. Check console (F12) for details.</div>`;
             }
-         }
-        function manageTextStaggering() { /* ... unchanged, uses goblinData.xPosition etc ... */
-            if (!gameActive || goblins.length < 1) return;
-            goblins.sort((a, b) => b.xPosition - a.xPosition);
-            for (let i = 0; i < goblins.length; i++) {
-                let currentGoblin = goblins[i]; if (!currentGoblin?.wordElement) continue;
-                let targetLevel = 0;
-                for (let j = i + 1; j < goblins.length; j++) {
-                    let otherGoblin = goblins[j]; if (!otherGoblin?.wordElement) continue;
-                    if (Math.abs(currentGoblin.xPosition - otherGoblin.xPosition) < textOverlapCheckDistance) {
-                         if (otherGoblin.staggerLevel >= targetLevel) { targetLevel = otherGoblin.staggerLevel + 1; }
-                    }
-                }
-                targetLevel = Math.min(targetLevel, STAGGER_LEVELS.length - 1);
-                currentGoblin.staggerLevel = targetLevel;
-                currentGoblin.wordElement.style.top = `${STAGGER_LEVELS[targetLevel]}px`;
-                if (currentGoblin === currentTypingTarget) {
-                    currentGoblin.wordElement.style.zIndex = ACTIVE_WORD_ZINDEX;
-                    if (typingInput?.value.length > 0 && currentGoblin.word.toLowerCase().startsWith(typingInput.value.trim().toLowerCase())) {
-                         currentGoblin.wordElement.classList.add('correct-prefix');
-                    } else { currentGoblin.wordElement.classList.remove('correct-prefix'); }
-                } else {
-                    currentGoblin.wordElement.style.zIndex = DEFAULT_WORD_ZINDEX + currentGoblin.staggerLevel;
-                    currentGoblin.wordElement.classList.remove('correct-prefix');
-                }
-            }
-         }
-        function killGoblin(goblinData) { /* ... unchanged ... */
-             if (!goblinData?.element) return;
-             goblinData.element.classList.add('dying');
-             setTimeout(() => { goblinData.element?.remove(); }, 500); // Use optional chaining
-             const index = goblins.findIndex(g => g.id === goblinData.id);
-             if (index > -1) { goblins.splice(index, 1); }
-             if (currentTypingTarget?.id === goblinData.id) {
-                 currentTypingTarget = null;
-                 if (typingInput) typingInput.value = '';
-                 checkInput();
-             }
-             score += killScore; killsThisWave++; updateUIDisplay();
-             if (killsThisWave >= goblinsNeededForNextWave) {
-                 wave++; goblinsNeededForNextWave += goblinsPerWaveIncrease;
-                 console.log(`Wave ${wave - 1} COMPLETE! Next: ${goblinsNeededForNextWave}`);
-                 showMessage(`Wave ${wave - 1} Complete!`, 1500);
-                 clearTimeout(spawnTimerId); spawnTimerId = null;
-                 if (wordsAvailable.length < 20 && wordListSource.length > 0) { wordsAvailable = [...wordListSource]; }
-                 spawnTimerId = setTimeout(startNewWave, 2000);
-             }
-         }
-        function processCorrectWord(goblinData) { /* ... unchanged ... */
-             goblinData.element.classList.add('hit');
-             setTimeout(() => { goblinData.element?.classList.remove('hit'); }, 150);
-             goblinData.xPosition += pushbackAmount;
-             if(gameArea) goblinData.xPosition = Math.min(goblinData.xPosition, gameArea.offsetWidth + 50);
-             goblinData.element.style.left = `${goblinData.xPosition}px`;
-             killGoblin(goblinData);
-         }
-        function checkInput() { /* ... unchanged ... */
-             if (!gameActive || !typingInput) return;
-             const currentInput = typingInput.value.trim().toLowerCase();
-             let previousTarget = currentTypingTarget;
-             if (!currentTypingTarget && currentInput !== '') {
-                 let bestMatch = null; let minDistance = Infinity;
-                 for (const goblin of goblins) {
-                     if (goblin.word.toLowerCase().startsWith(currentInput) && goblin.xPosition < minDistance) {
-                          minDistance = goblin.xPosition; bestMatch = goblin;
-                     }
-                 }
-                 if (bestMatch) { currentTypingTarget = bestMatch; }
-             }
-             if (currentTypingTarget) {
-                 const targetWordLower = currentTypingTarget.word.toLowerCase();
-                 if (targetWordLower.startsWith(currentInput)) {
-                     if (currentInput === targetWordLower) { processCorrectWord(currentTypingTarget); return; }
-                 } else {
-                     currentTypingTarget = null;
-                     if (currentInput !== '') { checkInput(); } else { manageTextStaggering(); }
-                     return;
-                 }
-             }
-             if (previousTarget !== currentTypingTarget || currentInput !== typingInput.lastValue) { manageTextStaggering(); }
-             typingInput.lastValue = currentInput;
-         }
-        function gameLoop() { /* ... unchanged ... */
-             if (!gameActive) return;
-             try {
-                 const currentSpeed = baseGoblinSpeed + (speedIncreasePerWave * (wave - 1));
-                 for (let i = goblins.length - 1; i >= 0; i--) { updateGoblinPosition(goblins[i], currentSpeed); }
-             } catch (error) { console.error("[gameLoop] ERROR:", error); gameOver("Critical Error!"); }
-         }
-
-        // **MODIFIED: Calculate relative to gameArea**
-        function calculateKnightDefenseLine() {
-            if (knight && gameArea) {
-                // Get knight's position relative to the viewport
-                const knightRect = knight.getBoundingClientRect();
-                // Get game area's position relative to the viewport
-                const gameAreaRect = gameArea.getBoundingClientRect();
-                // Calculate knight's right edge relative to the game area's left edge
-                // This value represents the "finish line" within the gameArea's coordinate system
-                knightDefenseLine = knightRect.right - gameAreaRect.left;
-                // console.log(`Knight defense line (relative to game area): ${knightDefenseLine.toFixed(1)}px`);
-            } else {
-                knightDefenseLine = 50; // Fallback
-                console.warn("Could not calculate defense line accurately.");
-            }
-        }
-
-        function startGame() { // Ensure elements are correctly referenced
-             console.log("--- startGame() ---"); if (gameActive) return;
-             try {
-                 gameActive = true; score = 0; wave = 1; killsThisWave = 0;
-                 goblinsNeededForNextWave = baseGoblinsPerWave; goblins = []; currentTypingTarget = null;
-                 if (gameArea) { gameArea.querySelectorAll('.goblin').forEach(gob => gob.remove()); } // Clear from game area
-                 updateUIDisplay(); hideMessage();
-                 if (typingInput) {
-                     typingInput.disabled = false; typingInput.placeholder = 'Type goblin words!';
-                     typingInput.value = ''; typingInput.lastValue = '';
-                     try { typingInput.focus(); } catch(e) { console.warn("Focus failed", e); }
-                 }
-                 // Hide Start button (now in ui-top)
-                 if(startButton) startButton.style.display = 'none';
-                 if(startButtonContainer) startButtonContainer.style.display = 'none'; // Hide container too
-
-                 calculateKnightDefenseLine();
-                 if (wordsAvailable.length < 50 || wordsAvailable.length < goblinsNeededForNextWave * 2) {
-                     wordsAvailable = [...wordListSource];
-                 }
-                 if (wordsAvailable.length === 0) { throw new Error("Word list empty!"); }
-                 clearInterval(gameLoopTimerId); clearTimeout(spawnTimerId);
-                 gameLoopTimerId = setInterval(gameLoop, gameLoopInterval);
-                 startNewWave(); console.log("[startGame] Game started.");
-             } catch (error) {
-                 console.error("[startGame] CRITICAL ERROR:", error); gameActive = false;
-                 showMessage("Error starting game:\n" + error.message, 0);
-                 if (typingInput) typingInput.disabled = true;
-                  // Show Start button again
-                 if(startButton) startButton.style.display = 'inline-block';
-                  if(startButtonContainer) startButtonContainer.style.display = 'block';
-             }
-         }
-        function gameOver(message = "Game Over!") { // Ensure elements are correctly referenced
-             console.log(`[gameOver] ${message}`); if (!gameActive) return; gameActive = false;
-             clearInterval(gameLoopTimerId); clearTimeout(spawnTimerId);
-             gameLoopTimerId = null; spawnTimerId = null;
-             showMessage(`${message}\n\nFinal Score: ${score}\nWave Reached: ${wave}\n\nClick Start again!`, 0);
-             if (typingInput) {
-                 typingInput.disabled = true; typingInput.placeholder = 'Game Over!';
-                 if(currentTypingTarget?.wordElement) currentTypingTarget.wordElement.classList.remove('correct-prefix');
-                 currentTypingTarget = null;
-             }
-              // Show Start button again
-             if(startButton) startButton.style.display = 'inline-block';
-             if(startButtonContainer) startButtonContainer.style.display = 'block';
-         }
-        function showMessage(text, duration = 3000) { /* ... unchanged ... */
-            if (!messageDisplay) return; messageDisplay.innerHTML = text.replace(/\n/g, '<br>');
-            messageDisplay.style.display = 'block';
-            if (messageDisplay.hideTimeout) clearTimeout(messageDisplay.hideTimeout);
-            if (duration > 0) { messageDisplay.hideTimeout = setTimeout(hideMessage, duration); }
-            else { messageDisplay.hideTimeout = null; }
-         }
-        function hideMessage() { /* ... unchanged ... */
-             if (!messageDisplay) return; messageDisplay.style.display = 'none';
-             if (messageDisplay.hideTimeout) { clearTimeout(messageDisplay.hideTimeout); messageDisplay.hideTimeout = null; }
-         }
-        function toggleFullscreen() { /* ... unchanged ... */
-             if(!gameContainer) { console.error("FS Error: gameContainer missing"); return; }
-             try {
-                 if (!document.fullscreenElement) {
-                     if (gameContainer.requestFullscreen) { gameContainer.requestFullscreen().catch(err => { console.error(`FS request failed: ${err.message}`, err); showMessage(`FS failed`, 4000); }); }
-                     else { console.error("FS API not supported."); showMessage("FS not supported.", 3000); }
-                 } else {
-                     if (document.exitFullscreen) { document.exitFullscreen().catch(err => { console.error(`Exit FS failed: ${err.message}`, err); }); }
-                     else { console.error("Exit FS not supported."); }
-                 }
-             } catch (error) { console.error("Error toggling fullscreen:", error); showMessage("Error FS toggle.", 3000); }
-         }
-
-        // --- Initial Setup & Event Listeners ---
-        function initializeGame() {
-             console.log("Initializing game...");
-             gameContainer = document.getElementById('game-container');
-             gameArea = document.getElementById('game-area'); // Essential for gameplay logic
-             knight = document.getElementById('knight');
-             typingInput = document.getElementById('typing-input'); // Now top-level child of container
-             scoreDisplay = document.getElementById('score-display');
-             levelDisplay = document.getElementById('level-display');
-             messageDisplay = document.getElementById('message-display');
-             startButton = document.getElementById('start-button');
-             startButtonContainer = document.getElementById('start-button-container'); // Still exists in ui-top
-             fullscreenButton = document.getElementById('fullscreen-button');
-
-              if (!gameContainer || !gameArea || !knight || !typingInput || !scoreDisplay || !levelDisplay || !messageDisplay || !startButton || !startButtonContainer || !fullscreenButton) {
-                  console.error("CRITICAL INIT ERROR: Elements missing!"); document.body.innerHTML = '<p style="color:red;">Error: Game assets missing.</p>'; return;
-              }
-              console.log("Elements found.");
-
-              wordsAvailable = [...wordListSource];
-              if (wordsAvailable.length === 0) { console.warn("Word list empty!"); showMessage("Warning: No words!", 5000); }
-              else { console.log(`Word list initialized: ${wordsAvailable.length} words.`); }
-
-             startButton.addEventListener('click', startGame);
-             fullscreenButton.addEventListener('click', toggleFullscreen);
-             typingInput.addEventListener('input', checkInput);
-
-             // Attempt to scroll input into view on focus, might help on some browsers
-             typingInput.addEventListener('focus', () => {
-                 setTimeout(() => { // Delay slightly to allow keyboard animation
-                    // Check if visualViewport API is available
-                     if (window.visualViewport) {
-                         // console.log('Visual viewport height:', window.visualViewport.height);
-                         // Attempt to scroll the container, or body, or the input itself
-                         // Experiment with which element works best
-                         // gameContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                     } else {
-                        // Fallback for older browsers
-                        // typingInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                     }
-                 }, 300); // Adjust delay if needed
-             });
-
-
-             let resizeTimeout;
-             const handleResize = () => {
-                clearTimeout(resizeTimeout);
-                resizeTimeout = setTimeout(() => {
-                    console.log("Resize detected");
-                    calculateKnightDefenseLine(); // Recalculate on resize
-                    // Potentially adjust layout further if needed based on new size
-                }, 150); // Debounce resize events
-             }
-
-             window.addEventListener('resize', handleResize);
-             // Also listen to visualViewport resize if available, as it triggers for keyboard
-             if (window.visualViewport) {
-                 window.visualViewport.addEventListener('resize', handleResize);
-                 console.log("VisualViewport API detected, attaching resize listener.");
-             } else {
-                 console.log("VisualViewport API not detected.");
-             }
-
-
-             document.addEventListener('fullscreenchange', () => {
-                 if (fullscreenButton) {
-                     const isFullscreen = !!document.fullscreenElement;
-                     fullscreenButton.textContent = isFullscreen ? '✕' : '⛶';
-                     fullscreenButton.title = isFullscreen ? 'Exit' : 'Enter';
-                     console.log("Fullscreen changed:", isFullscreen);
-                     // Recalculate layout dependent things after FS change
-                     setTimeout(calculateKnightDefenseLine, 100);
-                 }
-             });
-             console.log("Listeners attached.");
-
-             updateUIDisplay(); typingInput.disabled = true; typingInput.placeholder = 'Press Start!';
-             // Ensure start button is visible initially
-             startButton.style.display = 'inline-block';
-             startButtonContainer.style.display = 'block';
-             hideMessage();
-             setTimeout(calculateKnightDefenseLine, 200); // Delay initial calc slightly more
-             console.log("Initialization complete.");
-        }
-        window.addEventListener('DOMContentLoaded', initializeGame);
-
+        });
+    })();
     </script>
-
 </body>
 </html>
