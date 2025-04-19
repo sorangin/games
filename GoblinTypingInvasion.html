@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Typing Knight: Apex v5 (Fixed+Features)</title>
+    <title>Typing Knight: Apex v7 (Mobile Focus Fix)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root{--font-main:'Roboto', sans-serif;--font-title:'MedievalSharp', cursive;--color-bg-deep:#1a1f1a;--color-bg-mid:#2a3a2a;--color-bg-near:#5c7e5c;--color-ui-bg:rgba(42, 30, 18, 0.92);--color-ui-border:#b8860b;--color-ui-accent:#daa520;--color-text-light:#f5e9d3;--color-text-dark:#3a2a1a;--color-health:#ef4444;--color-freeze:#3b82f6;--color-bomb:#f97316;--color-heal:#22c55e;--color-target:#facc15;--color-correct:#4ade80;--color-streak:#f472b6;--color-letter-highlight:#4ade80; --color-arrow-letter: #ffebcd; --screen-transition:0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);--z-bg:-10;--z-game:1;--z-enemies:5;--z-arrows:7;--z-knight:10;--z-words:15;--z-particles:20;--z-powerups:25;--z-ui:50;--z-message:100;--z-overlay:200;--z-pause-menu:250;--z-screen:300}
+        :root{--font-main:'Roboto', sans-serif;--font-title:'MedievalSharp', cursive;--color-bg-deep:#1a1f1a;--color-bg-mid:#2a3a2a;--color-bg-near:#5c7e5c;--color-ui-bg:rgba(42, 30, 18, 0.92);--color-ui-border:#b8860b;--color-ui-accent:#daa520;--color-text-light:#f5e9d3;--color-text-dark:#3a2a1a;--color-health:#ef4444;--color-freeze:#3b82f6;--color-bomb:#f97316;--color-heal:#22c55e;--color-target:#facc15;--color-correct:#4ade80;--color-streak:#f472b6;--color-letter-highlight:#4ade80; --color-arrow-letter: #ffebcd; --color-hp-bar-bg: #5a1e1e; --color-hp-bar-fill: var(--color-health); --screen-transition:0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);--z-bg:-10;--z-game:1;--z-enemies:5;--z-arrows:7;--z-knight:10;--z-words:15; --z-hp-bar: 16; --z-particles:20;--z-powerups:25;--z-ui:50;--z-message:100;--z-overlay:200;--z-pause-menu:250;--z-screen:300}
         *{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-user-select:none;outline:none;-webkit-tap-highlight-color:transparent}
         html,body{height:100%;overflow:hidden;background-color:var(--color-bg-deep);font-family:var(--font-main);color:var(--color-text-light)}
         body{display:flex;justify-content:center;align-items:center}
@@ -73,11 +73,15 @@
         .enemy.hit{animation:enemyHitFeedback 0.2s ease-out}
         @keyframes enemyHitFeedback{0%,100%{transform:scale(1) rotate(0)}50%{transform:scale(1.08) rotate(3deg)}}
         .enemy.dying{opacity:0 !important;transform:scale(0.6) rotate(-20deg) translateY(30px) !important;transition:opacity 0.4s ease-out, transform 0.4s cubic-bezier(0.6, -0.28, 0.735, 0.045);pointer-events:none}
-        .enemy-word{position:absolute;bottom:105%;left:50%;transform:translateX(-50%);background-color:rgba(0, 0, 0, 0.85);color:#fff;border:2px solid rgba(255, 255, 255, 0.5);padding:5px 10px;border-radius:6px;font-size:clamp(0.9em, 2vw, 1.2em);font-weight:bold;white-space:nowrap;text-shadow:1px 1px 2px rgba(0,0,0,0.9);z-index:var(--z-words);pointer-events:none;transition:background-color 0.15s linear, color 0.15s linear, transform 0.2s ease-out, box-shadow 0.2s ease-out, border-color 0.15s ease, opacity 0.2s ease-out}
+        .enemy-word{position:absolute;bottom:calc(105% + 8px); left:50%;transform:translateX(-50%);background-color:rgba(0, 0, 0, 0.85);color:#fff;border:2px solid rgba(255, 255, 255, 0.5);padding:5px 10px;border-radius:6px;font-size:clamp(0.9em, 2vw, 1.2em);font-weight:bold;white-space:nowrap;text-shadow:1px 1px 2px rgba(0,0,0,0.9);z-index:var(--z-words);pointer-events:none;transition:background-color 0.15s linear, color 0.15s linear, transform 0.2s ease-out, box-shadow 0.2s ease-out, border-color 0.15s ease, opacity 0.2s ease-out}
+        .enemy-hp-bar-container { position: absolute; bottom: 103%; left: 50%; transform: translateX(-50%); width: 60px; height: 6px; background-color: var(--color-hp-bar-bg); border: 1px solid rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; z-index: var(--z-hp-bar); pointer-events: none; box-shadow: 0 1px 2px rgba(0,0,0,0.6); transition: opacity 0.2s ease-out; }
+        .enemy-hp-bar-fill { height: 100%; width: 100%; background-color: var(--color-hp-bar-fill); border-radius: 2px; transition: width 0.2s ease-out; }
+        .enemy.paused .enemy-hp-bar-container { opacity: 0.7; }
         .enemy-word span { display: inline-block; transition: color 0.1s linear; color: var(--color-text-light); }
         .enemy-word span.typed { color: var(--color-letter-highlight); font-weight: bold; }
         .enemy.paused .enemy-word{opacity:0.7}
         .enemy.boss .enemy-word{font-size:clamp(1em, 2.5vw, 1.4em);padding:7px 12px;border-width:3px}
+        .enemy.boss .enemy-hp-bar-container { width: 80px; height: 8px; }
         .enemy-word.target { background-color: rgba(0, 0, 0, 0.85); color: var(--color-text-light); border-color: var(--color-target); transform: translateX(-50%) scale(1.15); box-shadow: 0 0 12px var(--color-target); z-index: calc(var(--z-words) + 1); }
         .enemy-word.target span { color: var(--color-text-light); }
         .enemy-word.target span.typed { color: var(--color-letter-highlight); font-weight: bold; }
@@ -109,10 +113,10 @@
         .powerup.bomb{background-color:var(--color-bomb);border-color:var(--color-bomb);--shadow-color:var(--color-bomb);background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M11.47 1.72a.75.75 0 011.06 0l3 3a.75.75 0 01-1.06 1.06l-1.72-1.72V7.5h-1.5V4.06L9.53 5.78a.75.75 0 01-1.06-1.06l3-3zM11.25 9.75A5.25 5.25 0 006 15v.954l-1.447.868a.75.75 0 00-.448 1.103 9.05 9.05 0 0011.79 0 .75.75 0 00-.447-1.103L13.5 15.954V15a5.25 5.25 0 00-2.25-4.5V9.75z" /><path fill-rule="evenodd" d="M12.75 11.25a.75.75 0 00-1.5 0v1.856l-.41.247a6.75 6.75 0 00-5.59 6.578v.04c.006.016.012.032.02.047a.75.75 0 00.607.588A7.52 7.52 0 0012 21a7.52 7.52 0 006.623-3.414.75.75 0 00.608-.588c.008-.015.014-.03.02-.047v-.04a6.75 6.75 0 00-5.59-6.578l-.41-.247V11.25zM13.5 15.406l.15.09a5.25 5.25 0 014.33 5.097v.003a.75.75 0 01-.014.145 6.003 6.003 0 01-11.932 0A.75.75 0 016 20.596v-.003a5.25 5.25 0 014.33-5.097l.15-.09v-.001h2.984v.001z" clip-rule="evenodd" /></svg>')}
         .powerup.freeze{background-color:var(--color-freeze);border-color:var(--color-freeze);--shadow-color:var(--color-freeze);background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-2.625 6c-.54 0-1.024.19-1.411.513l-1.36 1.36a.75.75 0 000 1.06l4.879 4.879a.75.75 0 001.06 0l1.36-1.36c.322-.387.513-.871.513-1.411v-2.625a.75.75 0 00-.75-.75h-2.625zm6 3a.75.75 0 00-1.06 0l-1.36 1.36a1.5 1.5 0 00-.513 1.411v2.625a.75.75 0 00.75.75h2.625c.54 0 1.024-.19 1.411-.513l1.36-1.36a.75.75 0 000-1.06l-4.879-4.879zM9.375 9.75a.75.75 0 000 1.5h1.875v1.875a.75.75 0 001.5 0V11.25h1.875a.75.75 0 000-1.5H12.75V9.375a.75.75 0 00-1.5 0v1.875H9.375z" clip-rule="evenodd" /></svg>')}
         .arrow { position: absolute; width: 50px; height: 20px; background: url('sprites/arrow.png') no-repeat center center / contain; z-index: var(--z-arrows); pointer-events: none; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5)); will-change: transform, left, top; transform-origin: center center;}
-        .arrow-letter { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); /* Rotation is applied via JS */ font-size: clamp(1em, 2.5vw, 1.3em); font-weight: bold; color: var(--color-arrow-letter); background: rgba(0,0,0,0.7); padding: 0 5px; border-radius: 3px; text-shadow: 1px 1px 1px #000; will-change: transform; }
+        .arrow-letter { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: clamp(1em, 2.5vw, 1.3em); font-weight: bold; color: var(--color-arrow-letter); background: rgba(0,0,0,0.7); padding: 0 5px; border-radius: 3px; text-shadow: 1px 1px 1px #000; will-change: transform; }
         .arrow.paused { animation-play-state: paused !important; }
-        .arrow.dying { transition: opacity 0.3s ease-out, transform 0.3s ease-out !important; opacity: 0; transform: scale(0.5) rotate(30deg) !important; /* Keep rotation consistent during death */ }
-        .arrow.dying .arrow-letter { transform: translate(-50%, -50%) rotate(0deg) !important; /* Keep letter upright during death */ }
+        .arrow.dying { transition: opacity 0.3s ease-out, transform 0.3s ease-out !important; opacity: 0; transform: scale(0.5) rotate(30deg) !important; }
+        .arrow.dying .arrow-letter { transform: translate(-50%, -50%) rotate(0deg) !important; }
         #pause-menu{z-index:var(--z-pause-menu);background:rgba(0,0,0,0.85)}
         #pause-menu-button { position: absolute; top: 8px; right: 15px; background: rgba(74, 59, 42, 0.7); border: 1px solid var(--color-ui-accent); color: var(--color-ui-accent); font-size: clamp(1.5em, 3vw, 2.2em); width: 40px; height: 40px; line-height: 38px; text-align: center; border-radius: 5px; cursor: pointer; z-index: calc(var(--z-ui) + 1); transition: background-color 0.2s; display: none; }
         #pause-menu-button:hover { background: rgba(74, 59, 42, 0.9); }
@@ -127,9 +131,9 @@
         <div id="game-over-screen" class="screen"><h2>Invasion Ended!</h2><div id="final-stats">Final Score: <span id="final-score">0</span><br>Highest Wave: <span id="final-wave">1</span><br>Highest Streak: <span id="final-streak">x1</span><br>Accuracy: <span id="final-accuracy">-%</span></div><button id="play-again-button" class="menu-button">Play Again</button><button id="main-menu-return-button" class="menu-button">Main Menu</button></div>
         <div id="pause-menu" class="screen"><h2>Paused</h2><button id="resume-button" class="menu-button">Resume</button><button id="pause-fullscreen-button" class="menu-button">Toggle Fullscreen</button><button id="pause-quit-button" class="menu-button">Quit to Menu</button></div>
     </div>
-    <div id="how-to-play-overlay" class="overlay"><div class="overlay-content"><span class="overlay-close-button" data-overlay-close="how-to-play-overlay">&times;</span><h2>How to Play</h2><p>Defend the knight from the oncoming horde by typing the words or letters above their heads! Accuracy and speed are key.</p><ul><li>Type the word displayed above an enemy EXACTLY to damage or vanquish them.</li><li>Type the single letter displayed on an arrow to destroy it before it hits the knight.</li><li>Typed letters for enemies/powerups will highlight in green.</li><li>Backspace removes the last typed letter for words. Pressing Enter or Space clears your current input.</li><li>Typing the start of a word locks onto the closest matching target (enemy or power-up). Arrows don't need targeting.</li><li>Enemies with multiple health points will require multiple words.</li><li>Defeated enemies may drop Power-Ups! Type the power-up word (or tap it) to activate its effect. Powerups have timers!</li><li>Consecutive kills build a score Multiplier Streak! Don't miss or let enemies/arrows reach the knight.</li><li>Watch out for powerful Bosses on certain waves!</li><li>Press ESC or click the ☰ button during gameplay to pause.</li><li>Survive as long as you can and set a new High Score!</li></ul><button class="overlay-button" data-overlay-close="how-to-play-overlay">Got It!</button></div></div>
+    <div id="how-to-play-overlay" class="overlay"><div class="overlay-content"><span class="overlay-close-button" data-overlay-close="how-to-play-overlay">&times;</span><h2>How to Play</h2><p>Defend the knight from the oncoming horde by typing the words or letters above their heads! Accuracy and speed are key.</p><ul><li>Type the word displayed above an enemy EXACTLY to damage or vanquish them.</li><li>Look for HP bars above enemies with multiple health points.</li><li>Type the single letter displayed on an arrow to destroy it before it hits the knight.</li><li>Typed letters for enemies/powerups will highlight in green.</li><li>Backspace removes the last typed letter for words. Pressing Enter or Space clears your current input.</li><li>Typing the start of a word locks onto the closest matching target (enemy or power-up). Arrows don't need targeting.</li><li>Defeated enemies may drop Power-Ups! Type the power-up word (or tap it) to activate its effect. Powerups have timers!</li><li>Consecutive kills build a score Multiplier Streak! Don't miss or let enemies/arrows reach the knight.</li><li>Watch out for powerful Bosses on certain waves!</li><li>Press ESC or click the ☰ button during gameplay to pause.</li><li>Survive as long as you can and set a new High Score!</li></ul><button class="overlay-button" data-overlay-close="how-to-play-overlay">Got It!</button></div></div>
     <div id="settings-overlay" class="overlay"><div class="overlay-content"><span class="overlay-close-button" data-overlay-close="settings-overlay">&times;</span><h2>Settings</h2><div class="settings-group"><label for="music-volume">Music Volume</label><input type="range" id="music-volume" min="0" max="1" step="0.05" value="0.3"></div><div class="settings-group"><label for="sfx-volume">Sound Effects Volume</label><input type="range" id="sfx-volume" min="0" max="1" step="0.05" value="0.5"></div><button class="overlay-button" data-overlay-close="settings-overlay">Close</button></div></div>
-    <div style="display: none;"><input type="text" id="mobile-input-hack" autocapitalize="off" autocorrect="off" spellcheck="false"><audio id="audio-bgm" loop></audio><audio id="audio-sfx-coin"></audio><audio id="audio-sfx-enemy-hit"></audio><audio id="audio-sfx-error"></audio><audio id="audio-sfx-game-over"></audio><audio id="audio-sfx-player-die"></audio><audio id="audio-sfx-player-hurt"></audio><audio id="audio-sfx-powerup-spawn"></audio><audio id="audio-sfx-powerup-get"></audio><audio id="audio-sfx-powerup-bomb"></audio><audio id="audio-sfx-powerup-freeze"></audio><audio id="audio-sfx-powerup-heal"></audio><audio id="audio-sfx-enemy-dead-goblin"></audio><audio id="audio-sfx-enemy-dead-knight"></audio><audio id="audio-sfx-enemy-dead-boss"></audio><audio id="audio-sfx-hit"></audio><audio id="audio-sfx-move"></audio><audio id="audio-sfx-select"></audio><audio id="audio-sfx-shoot"></audio><audio id="audio-sfx-start-beep"></audio><audio id="audio-sfx-success"></audio><audio id="audio-sfx-streak"></audio><audio id="audio-sfx-wave-complete"></audio><audio id="audio-sfx-arrow-hit"></audio><audio id="audio-sfx-arrow-miss"></audio><audio id="audio-sfx-arrow-spawn"></audio></div>
+    <div style="display: none;"><input type="text" id="mobile-input-hack" autocapitalize="off" autocorrect="off" spellcheck="false" tabindex="-1"><audio id="audio-bgm" loop></audio><audio id="audio-sfx-coin"></audio><audio id="audio-sfx-enemy-hit"></audio><audio id="audio-sfx-error"></audio><audio id="audio-sfx-game-over"></audio><audio id="audio-sfx-player-die"></audio><audio id="audio-sfx-player-hurt"></audio><audio id="audio-sfx-powerup-spawn"></audio><audio id="audio-sfx-powerup-get"></audio><audio id="audio-sfx-powerup-bomb"></audio><audio id="audio-sfx-powerup-freeze"></audio><audio id="audio-sfx-powerup-heal"></audio><audio id="audio-sfx-enemy-dead-goblin"></audio><audio id="audio-sfx-enemy-dead-knight"></audio><audio id="audio-sfx-enemy-dead-boss"></audio><audio id="audio-sfx-hit"></audio><audio id="audio-sfx-move"></audio><audio id="audio-sfx-select"></audio><audio id="audio-sfx-shoot"></audio><audio id="audio-sfx-start-beep"></audio><audio id="audio-sfx-success"></audio><audio id="audio-sfx-streak"></audio><audio id="audio-sfx-wave-complete"></audio><audio id="audio-sfx-arrow-hit"></audio><audio id="audio-sfx-arrow-miss"></audio><audio id="audio-sfx-arrow-spawn"></audio></div>
 
     <script>
     (() => {
@@ -188,12 +192,12 @@
              recordTyping(correct) { this.totalTyped++; if (correct) this.correctTyped++; }
         }
         class Enemy {
-             constructor(id, type, wave, gameAreaWidth, dom) { this.id = id; this.config = CONFIG.ENEMY_CONFIG[type]; this.dom = dom; if (!this.config) throw new Error(`Invalid enemy type: ${type}`); this.type = type; this.isBoss = this.config.isBoss || false; this.maxHp = Math.max(1, Math.round(this.config.baseHp * (1 + (wave - 1) * CONFIG.WAVE_SCALING.hpIncreaseFactor))); this.hp = this.maxHp; this.speed = this.config.baseSpeed * (1 + (wave - 1) * CONFIG.WAVE_SCALING.speedIncrease); this.scoreValue = this.config.score; const spriteName = this.config.spritePrefixes[Math.floor(Math.random() * this.config.spritePrefixes.length)]; this.spriteUrl = `sprites/${spriteName}.png`; this.deathSound = this.config.deathSound; this.element = document.createElement('div'); this.element.className = `enemy ${this.isBoss ? 'boss' : ''}`; this.element.id = `enemy-${id}`; this.element.style.backgroundImage = `url('${this.spriteUrl}')`; const baseBottom = 10 + (this.isBoss ? 5 : 0); const verticalVariance = 30; const randomBottom = baseBottom + (Math.random() * verticalVariance) - (verticalVariance / 2); this.element.style.bottom = `${Math.max(5, randomBottom)}px`; this.xPosition = gameAreaWidth + Math.random() * 60 + (this.isBoss ? 80 : 30); this.element.style.left = `${this.xPosition}px`; this.wordElement = document.createElement('div'); this.wordElement.className = 'enemy-word'; this.element.appendChild(this.wordElement); this.isDying = false; this.isFrozen = false; this.freezeTimeout = null; this.letterSpans = []; this.word = ''; this.wordLower = ''; }
+             constructor(id, type, wave, gameAreaWidth, dom) { this.id = id; this.config = CONFIG.ENEMY_CONFIG[type]; this.dom = dom; if (!this.config) throw new Error(`Invalid enemy type: ${type}`); this.type = type; this.isBoss = this.config.isBoss || false; this.maxHp = Math.max(1, Math.round(this.config.baseHp * (1 + (wave - 1) * CONFIG.WAVE_SCALING.hpIncreaseFactor))); this.hp = this.maxHp; this.speed = this.config.baseSpeed * (1 + (wave - 1) * CONFIG.WAVE_SCALING.speedIncrease); this.scoreValue = this.config.score; const spriteName = this.config.spritePrefixes[Math.floor(Math.random() * this.config.spritePrefixes.length)]; this.spriteUrl = `sprites/${spriteName}.png`; this.deathSound = this.config.deathSound; this.element = document.createElement('div'); this.element.className = `enemy ${this.isBoss ? 'boss' : ''}`; this.element.id = `enemy-${id}`; this.element.style.backgroundImage = `url('${this.spriteUrl}')`; const baseBottom = 10 + (this.isBoss ? 5 : 0); const verticalVariance = 30; const randomBottom = baseBottom + (Math.random() * verticalVariance) - (verticalVariance / 2); this.element.style.bottom = `${Math.max(5, randomBottom)}px`; this.xPosition = gameAreaWidth + Math.random() * 60 + (this.isBoss ? 80 : 30); this.element.style.left = `${this.xPosition}px`; this.wordElement = document.createElement('div'); this.wordElement.className = 'enemy-word'; this.element.appendChild(this.wordElement); this.hpBarFill = null; if (this.maxHp > 1) { const hpBarContainer = document.createElement('div'); hpBarContainer.className = 'enemy-hp-bar-container'; this.hpBarFill = document.createElement('div'); this.hpBarFill.className = 'enemy-hp-bar-fill'; hpBarContainer.appendChild(this.hpBarFill); this.element.appendChild(hpBarContainer); } this.isDying = false; this.isFrozen = false; this.freezeTimeout = null; this.letterSpans = []; this.word = ''; this.wordLower = ''; }
              setWord(word) { this.word = word; this.wordLower = word.toLowerCase(); if(this.wordElement) { this.wordElement.innerHTML = ''; this.letterSpans = []; word.split('').forEach(char => { const span = document.createElement('span'); span.textContent = char; this.wordElement.appendChild(span); this.letterSpans.push(span); }); } }
              update(deltaTime, knightDefenseLine, game) { if (this.isDying || this.isFrozen || game.state === 'paused') return; const distance = this.speed * (deltaTime / (1000 / 60)); this.xPosition -= distance; if(this.element) this.element.style.left = `${this.xPosition}px`; if (this.xPosition <= knightDefenseLine) { game.handleEnemyReachedKnight(this); } }
              spawn() { if (!this.dom.game.gameArea || !this.element) return; try { this.dom.game.gameArea.appendChild(this.element); requestAnimationFrame(() => { this.element.classList.add('spawned'); }); } catch (e) {} }
-             takeDamage(amount = 1, game) { this.hp -= amount; if (this.hp <= 0) { return true; } else { this.element?.classList.add('hit'); setTimeout(() => this.element?.classList.remove('hit'), 150); game.assignNewWordToEnemy(this); return false; } }
-             die(killedByPlayer, game) { if (this.isDying) return; this.isDying = true; clearTimeout(this.freezeTimeout); this.element?.classList.add('dying'); this.wordElement?.remove(); game.particleManager?.emit('death', this.xPosition + (this.element?.offsetWidth || 0) / 2, (this.element?.offsetTop || 0) + (this.element?.offsetHeight || 0) / 2); if(killedByPlayer) { game.audioManager?.play(this.deathSound); if (Math.random() < CONFIG.POWERUP_CHANCE) { game.spawnPowerUp(this.xPosition + (this.element?.offsetWidth || 0) / 2, (this.element?.offsetTop || 0) + (this.element?.offsetHeight || 0) / 2); } } setTimeout(() => { this.element?.remove(); }, 500); }
+             takeDamage(amount = 1, game) { this.hp -= amount; if (this.hpBarFill) { const hpPercent = Math.max(0, (this.hp / this.maxHp) * 100); this.hpBarFill.style.width = hpPercent + '%'; } if (this.hp <= 0) { return true; } else { this.element?.classList.add('hit'); setTimeout(() => this.element?.classList.remove('hit'), 150); game.assignNewWordToEnemy(this); return false; } }
+             die(killedByPlayer, game) { if (this.isDying) return; this.isDying = true; clearTimeout(this.freezeTimeout); this.element?.classList.add('dying'); this.wordElement?.remove(); this.element.querySelector('.enemy-hp-bar-container')?.remove(); game.particleManager?.emit('death', this.xPosition + (this.element?.offsetWidth || 0) / 2, (this.element?.offsetTop || 0) + (this.element?.offsetHeight || 0) / 2); if(killedByPlayer) { game.audioManager?.play(this.deathSound); if (Math.random() < CONFIG.POWERUP_CHANCE) { game.spawnPowerUp(this.xPosition + (this.element?.offsetWidth || 0) / 2, (this.element?.offsetTop || 0) + (this.element?.offsetHeight || 0) / 2); } } setTimeout(() => { this.element?.remove(); }, 500); }
              freeze(duration) { if(this.isBoss) duration /= 2; this.isFrozen = true; this.element?.style.setProperty('filter', 'brightness(0.7) saturate(0) contrast(1.2)'); this.wordElement?.style.setProperty('border-color', 'var(--color-freeze)'); this.wordElement?.style.setProperty('color', 'var(--color-freeze)'); clearTimeout(this.freezeTimeout); this.freezeTimeout = setTimeout(() => this.unfreeze(), duration); }
              unfreeze() { clearTimeout(this.freezeTimeout); this.isFrozen = false; this.element?.style.removeProperty('filter'); this.wordElement?.style.removeProperty('border-color'); this.wordElement?.style.removeProperty('color'); }
         }
@@ -258,7 +262,6 @@
                 this.element.style.left = `${currentX}px`;
                 this.element.style.top = `${currentY}px`;
                 this.element.style.transform = `rotate(${angle}deg)`;
-                // Apply counter-rotation to the letter
                 this.letterElement.style.transform = `translate(-50%, -50%) rotate(${-angle}deg)`;
 
                 this.lastX = currentX;
@@ -275,7 +278,6 @@
                 this.game.audioManager?.play('arrowHit');
                 this.game.particleManager?.emit('arrow-hit', this.lastX, this.lastY);
                 this.element?.classList.add('dying');
-                // Ensure letter stays upright during death animation (CSS handles this now)
                 setTimeout(() => this.remove(), 300);
             }
 
@@ -302,7 +304,6 @@
                          const overlayId = e.target.dataset.overlayClose || e.target.closest('[data-overlay-close]')?.dataset.overlayClose;
                          if(overlayId) { this.audioManager?.play('select'); this.uiManager?.hideOverlay(overlayId); }
                     };
-                    // Also handle clicking the button inside the overlay
                     const internalButton = btn.closest('.overlay-content')?.querySelector('.overlay-button[data-overlay-close]');
                     if (internalButton && internalButton !== btn) {
                         internalButton.onclick = (e) => {
@@ -326,13 +327,16 @@
                 window.addEventListener('keydown', (e) => this.handleGlobalKeyPress(e));
 
                 if (this.isMobile) {
-                    const focusInput = () => {
-                        if (this.state === 'playing' && this.dom.mobileInput && document.activeElement !== this.dom.mobileInput) {
+                    const focusInput = (e) => {
+                        // Prevent default behavior like text selection or zoom
+                        e.preventDefault();
+                        if (this.state === 'playing' && this.dom.mobileInput) {
                             this.dom.mobileInput.focus();
                         }
                     };
-                    this.dom.game.inputDisplayArea.addEventListener('click', focusInput);
-                    this.dom.game.gameArea.addEventListener('click', focusInput);
+                    // Use touchstart for mobile focus trigger
+                    this.dom.game.inputDisplayArea.addEventListener('touchstart', focusInput, { passive: false });
+                    this.dom.game.gameArea.addEventListener('touchstart', focusInput, { passive: false });
 
                     this.dom.mobileInput.addEventListener('input', (e) => this.handleMobileInput(e));
                      this.dom.mobileInput.addEventListener('keydown', (e) => {
@@ -363,6 +367,7 @@
             handleMobileInput(event) {
                  if (this.state !== 'playing' || !event.target) return;
                  const typedChar = event.target.value.slice(-1).toLowerCase();
+                 // Clear the input immediately after reading the character
                  event.target.value = '';
 
                  if (typedChar && typedChar.match(/[a-z0-9]/i)) {
@@ -389,7 +394,7 @@
                 } else if (key === 'Enter' || key === ' ') {
                      this.clearInputBuffer();
                      this.clearTarget();
-                     if (this.isMobile) setTimeout(() => this.dom.mobileInput.focus(), 0); // Re-focus after clearing
+                     // No need to refocus mobile input here, done in processCurrentInput/tryHitArrow
                 } else if (lowerKey.length === 1 && ALPHABET.includes(lowerKey)) {
                     const arrowHit = this.tryHitArrow(lowerKey);
                     if (!arrowHit) {
@@ -401,9 +406,7 @@
                         } else {
                             this.audioManager?.play('error');
                         }
-                    } else {
-                         if (this.isMobile) setTimeout(() => this.dom.mobileInput.focus(), 0);
-                     }
+                    }
                 } else if (lowerKey.length === 1 && lowerKey.match(/[0-9]/)) {
                      const potentialInput = this.currentInput + lowerKey;
                      const isValidStart = [...this.enemies, ...this.powerups].some(item => item && !item.isDying && item.wordLower.startsWith(potentialInput));
@@ -413,6 +416,11 @@
                      } else {
                          this.audioManager?.play('error');
                      }
+                 }
+                 // Refocus mobile input after processing any valid key press
+                 if (this.isMobile && this.state === 'playing') {
+                     // Use setTimeout to ensure focus happens after current event stack
+                     setTimeout(() => this.dom.mobileInput.focus(), 0);
                  }
             }
             tryHitArrow(letter) {
@@ -440,7 +448,7 @@
                 }
                 return hit;
             }
-            processCurrentInput() { const currentInputLower = this.currentInput; this.uiManager?.updateInputDisplay(currentInputLower, !!this.currentTypingTarget); if (currentInputLower === '') { this.clearTarget(); return; } let targetChanged = false; let bestMatch = null; let minDistance = Infinity; const candidates = [...this.enemies, ...this.powerups].filter(item => item && item.element && !item.isDying && item.wordLower.startsWith(currentInputLower)); candidates.forEach(item => { const itemX = item.element.offsetLeft; if (itemX < minDistance) { minDistance = itemX; bestMatch = item; } }); if (bestMatch) { if (this.currentTypingTarget !== bestMatch) { this.setTarget(bestMatch); targetChanged = true; } if (this.currentTypingTarget) { this.uiManager?.updateLetterHighlight(this.currentTypingTarget, currentInputLower.length); if (currentInputLower === this.currentTypingTarget.wordLower) { this.handleWordCompletion(); } } } else { if (this.currentTypingTarget) { if (!this.currentTypingTarget.wordLower.startsWith(currentInputLower)) { this.clearTarget(); this.audioManager?.play('error'); } else { this.uiManager?.updateLetterHighlight(this.currentTypingTarget, currentInputLower.length); } } else { this.audioManager?.play('error'); this.currentInput = this.currentInput.slice(0,-1); this.uiManager?.updateInputDisplay(this.currentInput, false); } } if (this.isMobile) setTimeout(() => this.dom.mobileInput.focus(), 0); }
+            processCurrentInput() { const currentInputLower = this.currentInput; this.uiManager?.updateInputDisplay(currentInputLower, !!this.currentTypingTarget); if (currentInputLower === '') { this.clearTarget(); return; } let targetChanged = false; let bestMatch = null; let minDistance = Infinity; const candidates = [...this.enemies, ...this.powerups].filter(item => item && item.element && !item.isDying && item.wordLower.startsWith(currentInputLower)); candidates.forEach(item => { const itemX = item.element.offsetLeft; if (itemX < minDistance) { minDistance = itemX; bestMatch = item; } }); if (bestMatch) { if (this.currentTypingTarget !== bestMatch) { this.setTarget(bestMatch); targetChanged = true; } if (this.currentTypingTarget) { this.uiManager?.updateLetterHighlight(this.currentTypingTarget, currentInputLower.length); if (currentInputLower === this.currentTypingTarget.wordLower) { this.handleWordCompletion(); } } } else { if (this.currentTypingTarget) { if (!this.currentTypingTarget.wordLower.startsWith(currentInputLower)) { this.clearTarget(); this.audioManager?.play('error'); } else { this.uiManager?.updateLetterHighlight(this.currentTypingTarget, currentInputLower.length); } } else { this.audioManager?.play('error'); this.currentInput = this.currentInput.slice(0,-1); this.uiManager?.updateInputDisplay(this.currentInput, false); } } }
             handleWordCompletion() { if (!this.currentTypingTarget) return; this.player.recordTyping(true); this.audioManager?.play('shoot'); let target = this.currentTypingTarget; this.clearInputBuffer(); this.clearTarget(); if (target instanceof Enemy) { this.handleEnemyTyped(target); } else if (target instanceof PowerUp) { this.handlePowerUpTyped(target); } }
             handleEnemyTyped(enemy) { if (!enemy || enemy.isDying) return; const killed = enemy.takeDamage(1, this); if (killed) { this.handleEnemyKilled(enemy, true); } else { this.audioManager?.play('enemyHit'); this.particleManager?.emit('hit', enemy.xPosition + (enemy.element?.offsetWidth || 0) / 2, (enemy.element?.offsetTop || 0) + (enemy.element?.offsetHeight || 0) / 2); } }
             handleEnemyKilled(enemy, byPlayerAction) { if (!enemy || enemy.isDying) return; enemy.die(byPlayerAction, this); if (byPlayerAction) { this.player.increaseStreak(); this.player.addScore(enemy.scoreValue); if(this.player.streakMultiplier > 1) { this.audioManager?.play('streak'); this.particleManager?.emit('streak', enemy.xPosition + (enemy.element?.offsetWidth || 0) / 2, (enemy.element?.offsetTop || 0) + (enemy.element?.offsetHeight || 0) / 2); } } this.enemiesKilledThisWave++; this.uiManager?.updateGameUI(this.player, this.wave); const index = this.enemies.findIndex(e => e.id === enemy.id); if (index > -1) this.enemies.splice(index, 1); if (this.enemiesSpawnedThisWave >= this.enemiesToSpawnThisWave && this.enemies.filter(e => !e.isDying).length === 0) { if(this.state === 'playing') this.endWave(); } }
