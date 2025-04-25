@@ -198,6 +198,44 @@ img { max-width: 100%; height: auto; vertical-align: middle; image-rendering: pi
 .grid-cell.valid-attack-target:not(.has-obstacle) { background-color: var(--attack-target-bg); box-shadow: inset 0 0 0 2px var(--attack-target-border), inset 0 0 6px rgba(255, 50, 50, 0.3); z-index: 1; cursor: crosshair !important; }
 .grid-cell.can-be-primary-target:not(.has-obstacle) { background-color: var(--primary-target-bg); box-shadow: inset 0 0 0 3px var(--primary-target-border), inset 0 0 8px var(--primary-target-shadow); z-index: 1; cursor: crosshair !important; }
 .grid-cell.valid-cleave-target:not(.has-obstacle) { background-color: var(--cleave-target-bg); box-shadow: inset 0 0 0 2px var(--cleave-target-border), inset 0 0 5px rgba(255, 165, 0, 0.3); z-index: 1; }
+/* style.css */
+
+/* Add alongside other targeting styles */
+.grid-cell.valid-fireball-target:not(.has-obstacle),
+.unit.valid-fireball-target { /* Apply directly to unit for hover */
+    /* Use similar style to attack target, maybe slightly different color? */
+    background-color: rgba(255, 50, 0, 0.2); /* Orangey-red */
+    box-shadow: inset 0 0 0 2px rgba(255, 80, 0, 0.8);
+    cursor: crosshair !important;
+    z-index: 1; /* Ensure cell bg is visible */
+}
+.unit.valid-fireball-target { /* Style for unit element hover */
+     filter: var(--unit-base-shadow) drop-shadow(0 0 6px rgba(255, 80, 0, 0.9));
+     transform: translate(-50%, -50%) scale(1.1); /* Slight scale on hover */
+     background-color: transparent; /* Override cell bg if unit covers it */
+     box-shadow: none; /* Remove cell shadow if unit covers it */
+}
+
+
+.grid-cell.valid-heal-target:not(.has-obstacle),
+.unit.valid-heal-target { /* Apply directly to unit for hover */
+    /* Use a green glow/outline */
+    background-color: rgba(80, 200, 80, 0.15); /* Light green background */
+    box-shadow: inset 0 0 0 2px var(--heal-target-glow); /* Green border */
+    cursor: help !important;
+    z-index: 1;
+}
+.unit.valid-heal-target { /* Style for unit element hover */
+     filter: var(--unit-base-shadow) drop-shadow(0 0 8px var(--heal-target-glow));
+     transform: translate(-50%, -50%) scale(1.1);
+     background-color: transparent;
+     box-shadow: none;
+}
+
+/* Ensure cursors defined on gameBoard take precedence if needed */
+#game-board.fireball-targeting { cursor: crosshair; }
+#game-board.heal-targeting    { cursor: help; }
+
 .grid-cell.has-obstacle { cursor: not-allowed !important; }
 .grid-cell.has-item { cursor: grab; }
 .grid-cell.frost-aoe-preview:not(.has-obstacle) { background-color: var(--frost-nova-hover-bg) !important; box-shadow: inset 0 0 0 2px var(--frost-nova-hover-border), inset 0 0 6px rgba(150, 200, 255, 0.4); z-index: 2; }
@@ -576,7 +614,7 @@ img { max-width: 100%; height: auto; vertical-align: middle; image-rendering: pi
 .level-dot:not(.locked):hover { transform: translate(-50%, -50%) scale(1.45); border-color: var(--color-gold-light); box-shadow: 0 0 14px 4px var(--color-gold-light), inset 0 0 6px rgba(0,0,0,0.6); z-index: 1; filter: brightness(1.1); }
 .bottom-bar-style { display: flex; gap: 25px; justify-content: center; align-items: center; width: 100%; padding: 18px 30px; box-sizing: border-box; background: linear-gradient(rgba(20, 20, 25, 0.85), rgba(10, 10, 12, 0.98)); flex-shrink: 0; border-top: 2px solid var(--color-iron-medium); box-shadow: 0 -4px 15px rgba(0,0,0,0.65); }
 .bottom-bar-style .secondary-button, .bottom-bar-style .primary-button { margin: 0; }
-.level-select-bottom-bar #level-select-shop-button { order: -1; margin-right: auto; }
+.level-select-bottom-bar #level-select-shop-button { order: -1; }
 
 /* Shop */
 #shop-screen .shop-content { min-height: 100%; min-width: 100%; }

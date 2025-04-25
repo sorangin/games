@@ -1,4 +1,6 @@
-//ui.js
+// ui.js
+
+// --- Variable Declarations (Keep as is) ---
 let gameContainer, gameBoardWrapper, gameBoard, gridContent, uiPanel, levelDisplayElement,
     spellAreaElement, fireballElement, flameWaveElement, frostNovaElement, healElement,
     unitInfo, unitPortraitElement, actionsLeftDisplayElement, unitNameDisplay,
@@ -45,6 +47,8 @@ let troopScreenOrigin = '';
 let levelToStartAfterManage = 0;
 let worldHpBars = new Map();
 let shouldShowTroopsAfterPurchase = false;
+
+// --- Function Definitions ---
 
 function calculateCellSize() {
     if (!gameBoard) return;
@@ -429,8 +433,22 @@ function highlightMovesAndAttacks(unit) {
 }
 
 function highlightFrostNovaArea(centerX, centerY) {
-    clearFrostNovaPreview(); const radiusLevel = getFrostNovaRadiusLevel(); const size = radiusLevel + 2; const radius = Math.floor((size - 1) / 2);
-    for (let dx = -radius; dx <= radius; dx++) { for (let dy = -radius; dy <= radius; dy++) { if (Math.abs(dx) + Math.abs(dy) > radius) continue; const targetX = centerX + dx; const targetY = centerY + dy; if (isCellInBounds(targetX, targetY) && !getObstacleAt(targetX, targetY)?.blocksMove) getCellElement(targetX, targetY)?.classList.add('frost-aoe-preview'); } }
+    clearFrostNovaPreview(); // Clear previous preview first
+
+    const radiusLevel = getFrostNovaRadiusLevel(); // Get current radius level
+    const radius = radiusLevel; // Radius defines half-width/height for the square
+
+    // Iterate through the square area
+    for (let dx = -radius; dx <= radius; dx++) {
+        for (let dy = -radius; dy <= radius; dy++) {
+            const targetX = centerX + dx;
+            const targetY = centerY + dy;
+
+            if (isCellInBounds(targetX, targetY) && !getObstacleAt(targetX, targetY)?.blocksMove) {
+                getCellElement(targetX, targetY)?.classList.add('frost-aoe-preview');
+            }
+        } // end dy loop
+    } // end dx loop
 }
 function clearFrostNovaPreview() { gridContent?.querySelectorAll('.frost-aoe-preview').forEach(c => c.classList.remove('frost-aoe-preview')); }
 
@@ -797,35 +815,31 @@ function centerView(immediate = false) {
     else { gridContent.style.transition = 'transform 0.3s ease-out'; gridContentOffsetX = targetOffsetX; gridContentOffsetY = targetOffsetY; applyZoomAndPan(); setTimeout(() => { if(gridContent) gridContent.style.transition = ''; }, 300); }
 }
 
+// ui.js
+
 function applyMapZoomAndPan(immediate = false) {
     if (!levelSelectMap || !levelSelectMapContainer || !levelSelectDotsLayer) return;
     const containerRect = levelSelectMapContainer.getBoundingClientRect();
-    const containerWidth = containerRect.width;
-    const containerHeight = containerRect.height;
-    if (containerWidth <= 0 || containerHeight <= 0) return;
+    if (containerRect.width <= 0 || containerRect.height <= 0) return;
 
-    const safeMapWidth = mapIntrinsicWidth > 0 ? mapIntrinsicWidth : 1024;
-    const safeMapHeight = mapIntrinsicHeight > 0 ? mapIntrinsicHeight : 768;
-
-    const scaleX = containerWidth / safeMapWidth;
-    const scaleY = containerHeight / safeMapHeight;
+    // Calculate final scale based on the CURRENT global mapZoom
+    const safeMapWidth = Math.max(1, mapIntrinsicWidth || 1024);
+    const safeMapHeight = Math.max(1, mapIntrinsicHeight || 1024);
+    const scaleX = containerRect.width / safeMapWidth;
+    const scaleY = containerRect.height / safeMapHeight;
     const baseScale = Math.min(scaleX, scaleY);
-    const finalScale = baseScale * mapZoom;
+    // Ensure mapZoom is a valid number before calculating finalScale
+    const currentMapZoom = typeof mapZoom === 'number' && !isNaN(mapZoom) ? mapZoom : MIN_MAP_ZOOM;
+    const finalScale = baseScale * currentMapZoom;
 
-    const mapRenderWidth = safeMapWidth * finalScale;
-    const mapRenderHeight = safeMapHeight * finalScale;
+    // mapOffsetX and mapOffsetY are used directly as they are assumed to be pre-clamped by the caller.
+    // Ensure they are valid numbers.
+    const currentMapOffsetX = typeof mapOffsetX === 'number' && !isNaN(mapOffsetX) ? mapOffsetX : 0;
+    const currentMapOffsetY = typeof mapOffsetY === 'number' && !isNaN(mapOffsetY) ? mapOffsetY : 0;
 
-    let minOffsetX, maxOffsetX, minOffsetY, maxOffsetY;
+    const transformValue = `translate(${currentMapOffsetX}px, ${currentMapOffsetY}px) scale(${finalScale})`;
+    console.log(`applyMapZoomAndPan: Applying transform: ${transformValue}, finalScale=${finalScale} immediate=${immediate}`); // Log scale too
 
-    if (mapRenderWidth <= containerWidth) { minOffsetX = maxOffsetX = (containerWidth - mapRenderWidth) / 2; }
-    else { minOffsetX = containerWidth - mapRenderWidth; maxOffsetX = 0; }
-    if (mapRenderHeight <= containerHeight) { minOffsetY = maxOffsetY = (containerHeight - mapRenderHeight) / 2; }
-    else { minOffsetY = containerHeight - mapRenderHeight; maxOffsetY = 0; }
-
-    mapOffsetX = Math.max(minOffsetX, Math.min(maxOffsetX, mapOffsetX));
-    mapOffsetY = Math.max(minOffsetY, Math.min(maxOffsetY, mapOffsetY));
-
-    const transformValue = `translate(${mapOffsetX}px, ${mapOffsetY}px) scale(${finalScale})`;
     const transitionStyle = immediate ? 'none' : 'transform 0.3s ease-out';
 
     levelSelectMap.style.transition = transitionStyle;
@@ -833,37 +847,167 @@ function applyMapZoomAndPan(immediate = false) {
     levelSelectMap.style.transform = transformValue;
     levelSelectDotsLayer.style.transform = transformValue;
 
-    positionLevelDots();
+    // positionLevelDots might need the finalScale, ensure it uses it.
+    positionLevelDots(); // Pass finalScale if needed, or ensure it reads it correctly.
 
     if (!immediate) {
+        // Use a flag or check transition property instead of setTimeout if possible
+        // This avoids potential race conditions if another transition starts.
+        const endTransition = (event) => {
+            if (event.target === levelSelectMap && event.propertyName === 'transform') {
+                levelSelectMap.style.transition = '';
+                levelSelectDotsLayer.style.transition = '';
+                levelSelectMap.removeEventListener('transitionend', endTransition);
+            }
+        };
+        levelSelectMap.addEventListener('transitionend', endTransition);
+        // Fallback timeout in case transitionend doesn't fire reliably
         setTimeout(() => {
-             if(levelSelectMap) levelSelectMap.style.transition = '';
-             if(levelSelectDotsLayer) levelSelectDotsLayer.style.transition = '';
-        }, 300);
+             if(levelSelectMap && levelSelectMap.style.transition !== '') levelSelectMap.style.transition = '';
+             if(levelSelectDotsLayer && levelSelectDotsLayer.style.transition !== '') levelSelectDotsLayer.style.transition = '';
+             levelSelectMap?.removeEventListener('transitionend', endTransition);
+        }, 350); // Slightly longer than transition
     }
 }
 
-function handleMapZoom(event) {
-    event.preventDefault(); if (!levelSelectMap || !levelSelectMapContainer || isAnyOverlayVisible(true)) return;
-    const zoomSpeed = 0.15; const delta = event.deltaY > 0 ? -1 : 1; const oldZoom = mapZoom; mapZoom = Math.max(MIN_MAP_ZOOM, Math.min(MAX_MAP_ZOOM, mapZoom + delta * zoomSpeed));
-    if (mapZoom === oldZoom) return; const rect = levelSelectMapContainer.getBoundingClientRect(); const mouseX = event.clientX - rect.left; const mouseY = event.clientY - rect.top;
-    const safeMapWidth = mapIntrinsicWidth > 0 ? mapIntrinsicWidth : 1024; const safeMapHeight = mapIntrinsicHeight > 0 ? mapIntrinsicHeight : 768; const scaleX = rect.width / safeMapWidth; const scaleY = rect.height / safeMapHeight; const baseScale = Math.min(scaleX, scaleY);
-    const mapOriginX = (mouseX - mapOffsetX) / (baseScale * oldZoom); const mapOriginY = (mouseY - mapOffsetY) / (baseScale * oldZoom);
-    mapOffsetX = mouseX - mapOriginX * baseScale * mapZoom; mapOffsetY = mouseY - mapOriginY * baseScale * mapZoom; applyMapZoomAndPan();
+function handleMapPanStart(event) {
+    console.log("handleMapPanStart: Mousedown detected."); // Log entry
+
+    // Check conditions (button, target, overlay)
+    const clickedDot = event.target.closest('.level-dot');
+
+    // --- MODIFIED CHECK ---
+    // Check if any OTHER overlay is active (excluding level select itself)
+    const anotherOverlayActive = isGameOverScreenVisible() ||
+                                 isMenuOpen() ||
+                                 isLeaderboardOpen() ||
+                                 isShopOpen() ||
+                                 isLevelCompleteOpen() ||
+                                 isChooseTroopsScreenOpen() ||
+                                 isMainMenuOpen(); // Main menu counts as another overlay
+    // --- END MODIFIED CHECK ---
+
+    console.log(`handleMapPanStart: button=${event.button}, clickedDot=${!!clickedDot}, anotherOverlayActive=${anotherOverlayActive}`);
+
+    if (event.button !== 0 || clickedDot || anotherOverlayActive) { // Use the new flag
+        console.log("handleMapPanStart: Panning prevented by initial checks.");
+        isMapPanning = false; // Ensure flag is reset
+        return; // Don't start panning
+    }
+
+    // ... rest of the function remains the same ...
+    event.preventDefault();
+    isMapPanning = true;
+    mapPanStartX = event.clientX;
+    mapPanStartY = event.clientY;
+    mapStartPanX = mapOffsetX;
+    mapStartPanY = mapOffsetY;
+    console.log(`handleMapPanStart: Panning STARTED. isMapPanning=${isMapPanning}, startOffset=(${mapStartPanX}, ${mapStartPanY})`);
+
+    if (levelSelectMapContainer) {
+         levelSelectMapContainer.style.cursor = 'grabbing';
+    }
+    document.addEventListener('mousemove', handleMapPanMove, { passive: false });
+    document.addEventListener('mouseup', handleMapPanEnd, { once: true });
 }
 
-function handleMapPanStart(event) {
-    if (event.button !== 0 || event.target.closest('.level-dot') || isAnyOverlayVisible(true)) { isMapPanning = false; return; }
-    event.preventDefault(); isMapPanning = true; mapPanStartX = event.clientX; mapPanStartY = event.clientY; mapStartPanX = mapOffsetX; mapStartPanY = mapOffsetY; levelSelectMapContainer.style.cursor = 'grabbing';
-    document.addEventListener('mousemove', handleMapPanMove, { passive: false }); document.addEventListener('mouseup', handleMapPanEnd, { once: true });
-}
 
 function handleMapPanMove(event) {
-    if (!isMapPanning || !levelSelectMap) return; event.preventDefault(); mapOffsetX = mapStartPanX + (event.clientX - panStartX); mapOffsetY = mapStartPanY + (event.clientY - mapPanStartY); applyMapZoomAndPan();
+    // Optional debug log:
+    // console.log(`handleMapPanMove: Moving. isMapPanning=${isMapPanning}`);
+
+    // Ensure panning is active and necessary elements exist
+    if (!isMapPanning || !levelSelectMap || !levelSelectMapContainer) {
+        return;
+    }
+    event.preventDefault(); // Prevent text selection or other unwanted drag behaviors
+
+    // Calculate the new raw (unclamped) offsets based on mouse delta
+    const deltaX = event.clientX - mapPanStartX;
+    const deltaY = event.clientY - mapPanStartY;
+    const rawOffsetX = mapStartPanX + deltaX;
+    const rawOffsetY = mapStartPanY + deltaY;
+
+    // --- Clamp the newly calculated offsets (Strict Edge Clamping) ---
+
+    // Get necessary dimensions
+    const containerRect = levelSelectMapContainer.getBoundingClientRect();
+    if (containerRect.width <= 0 || containerRect.height <= 0) {
+        console.error("handleMapPanMove: Invalid container dimensions for clamping.");
+        return; // Cannot clamp without valid container size
+    }
+    const safeMapWidth = Math.max(1, mapIntrinsicWidth || 1024);
+    const safeMapHeight = Math.max(1, mapIntrinsicHeight || 1024);
+
+    // Calculate current scale
+    const scaleX = containerRect.width / safeMapWidth;
+    const scaleY = containerRect.height / safeMapHeight;
+    const baseScale = Math.min(scaleX, scaleY);
+    // Ensure mapZoom is a valid number before calculating finalScale
+    const currentMapZoom = typeof mapZoom === 'number' && !isNaN(mapZoom) ? mapZoom : MIN_MAP_ZOOM;
+    const finalScale = baseScale * currentMapZoom;
+
+    // Calculate rendered dimensions
+    const mapRenderWidth = safeMapWidth * finalScale;
+    const mapRenderHeight = safeMapHeight * finalScale;
+
+    // Declare variables for clamping bounds
+    let minOffsetX, maxOffsetX, minOffsetY, maxOffsetY;
+
+    // Determine horizontal clamping bounds (Strict Edges)
+    if (mapRenderWidth <= containerRect.width) {
+        // Map fits or is smaller: Force centering, NO panning allowed horizontally.
+        minOffsetX = maxOffsetX = (containerRect.width - mapRenderWidth) / 2;
+    } else {
+        // Map is wider: Allow panning exactly from edge to edge.
+        minOffsetX = containerRect.width - mapRenderWidth; // Stops left edge at left container border
+        maxOffsetX = 0;                                   // Stops right edge at right container border
+    }
+
+    // Determine vertical clamping bounds (Strict Edges)
+    if (mapRenderHeight <= containerRect.height) {
+        // Map fits or is smaller: Force centering, NO panning allowed vertically.
+        minOffsetY = maxOffsetY = (containerRect.height - mapRenderHeight) / 2;
+    } else {
+        // Map is taller: Allow panning exactly from edge to edge.
+        minOffsetY = containerRect.height - mapRenderHeight; // Stops top edge at top container border
+        maxOffsetY = 0;                                    // Stops bottom edge at bottom container border
+    }
+
+    // --- DETAILED CLAMPING LOG ---
+    // const prevMapOffsetX = mapOffsetX; // Store previous value for comparison if needed
+    // const prevMapOffsetY = mapOffsetY;
+
+    console.log(`handleMapPanMove: BEFORE CLAMP: rawOffset=(${rawOffsetX.toFixed(1)}, ${rawOffsetY.toFixed(1)}), BoundsX=[${minOffsetX.toFixed(1)}, ${maxOffsetX.toFixed(1)}], BoundsY=[${minOffsetY.toFixed(1)}, ${maxOffsetY.toFixed(1)}]`);
+    // --- END DETAILED CLAMPING LOG ---
+
+    // Apply final clamp using the strict bounds
+    mapOffsetX = Math.max(minOffsetX, Math.min(maxOffsetX, rawOffsetX));
+    mapOffsetY = Math.max(minOffsetY, Math.min(maxOffsetY, rawOffsetY));
+
+    // --- DETAILED CLAMPING LOG ---
+    console.log(`handleMapPanMove: AFTER CLAMP: mapOffset=(${mapOffsetX.toFixed(1)}, ${mapOffsetY.toFixed(1)})`);
+    // --- END DETAILED CLAMPING LOG ---
+
+
+    // Apply the clamped offsets visually
+    applyMapZoomAndPan(); // Use false for immediate parameter (default)
 }
 
+
 function handleMapPanEnd(event) {
-    if (!isMapPanning) return; event.preventDefault(); isMapPanning = false; levelSelectMapContainer.style.cursor = 'grab'; document.removeEventListener('mousemove', handleMapPanMove);
+    console.log(`handleMapPanEnd: Mouseup detected. isMapPanning was ${isMapPanning}`); // Log entry
+    if (!isMapPanning) return;
+    event.preventDefault();
+    isMapPanning = false; // Set flag to false FIRST
+    console.log(`handleMapPanEnd: Panning STOPPED. isMapPanning=${isMapPanning}`);
+
+    if (levelSelectMapContainer) {
+        levelSelectMapContainer.style.cursor = 'grab'; // Reset cursor
+    }
+    // Remove listeners from the document
+    document.removeEventListener('mousemove', handleMapPanMove);
+    // The mouseup listener removes itself due to { once: true }
 }
 
 async function handleCellClick(event) {
@@ -875,8 +1019,6 @@ async function handleCellClick(event) {
      if (currentSpell) { if (currentSpell === 'frostNova' || currentSpell === 'flameWave') { await castSpell(currentSpell, {x, y}); return; } else if (currentSpell === 'fireball' && obstacle?.destructible) { await castSpell(currentSpell, obstacle); return; } playSfx('error'); showFeedback("Select a valid target.", "feedback-error"); setActiveSpell(null); if (selectedUnit) deselectUnit(); return; }
      if (currentTurn === 'player' && selectedUnit) { const isMoveValid = getValidMoves(selectedUnit).some(p => p.x === x && p.y === y); if (isMoveValid) { const unitToMove = selectedUnit; deselectUnit(false); await moveUnit(unitToMove, x, y); } else { deselectUnit(); } } else if (selectedUnit) { deselectUnit(); }
 }
-
-// ui.js
 
 async function handleUnitClick(event, clickedUnit) {
     event.stopPropagation(); // Prevent event bubbling to the cell click handler
@@ -1022,8 +1164,14 @@ async function handleObstacleClick(event, clickedObstacle) {
              originEl = fireballElement;
          }
 
-        if (currentSpell === 'fireball' && clickedObstacle.destructible) {
-            castSuccess = await castSpell(currentSpell, clickedObstacle, originE1);
+         if (currentSpell === 'fireball' && clickedObstacle.destructible) {
+            // Ensure originEl is defined above this block if needed for fireball
+            let originEl = fireballElement; // Define it here if not defined earlier in the function scope
+            if (!originEl) {
+                console.error("Cannot cast fireball on obstacle: Origin element is missing.");
+                playSfx('error'); showFeedback(`Spell origin error.`, "feedback-error"); setActiveSpell(null); return;
+            }
+            castSuccess = await castSpell(currentSpell, clickedObstacle, originEl); // Corrected variable
         }
 
         if (!castSuccess && currentSpell) {
@@ -1106,18 +1254,60 @@ async function handleObstacleClick(event, clickedObstacle) {
     // If no unit selected or not player turn, clicking obstacle does nothing further
 }
 
+// ui.js
+
 function handleCellMouseEnter(event) {
     if (!isGameActive() || isProcessing || isPanning || !gameBoard || isAnyOverlayVisible()) return;
-    const cell = event.currentTarget; const x = parseInt(cell.dataset.x); const y = parseInt(cell.dataset.y); const obstacle = getObstacleAt(x, y);
-    if (obstacle && !obstacle.enterable && !obstacle.destructible) { clearSpellHighlights(); if (selectedUnit?.type === 'champion') clearAttackHoverHighlights(); return; }
-    if (currentSpell === 'frostNova') highlightFrostNovaArea(x, y); else if (currentSpell === 'flameWave') highlightFlameWaveArea(y);
-    const potentialTargetUnit = getUnitAt(x,y); const potentialTargetObstacle = obstacle; const canBePrimaryTarget = cell.classList.contains('can-be-primary-target');
-    if (selectedUnit?.type === 'champion' && canBePrimaryTarget) { let targetPos = potentialTargetUnit || potentialTargetObstacle; if (targetPos) showAttackHoverHighlights(selectedUnit, targetPos); else clearAttackHoverHighlights(); }
-    else if (selectedUnit?.type === 'champion') clearAttackHoverHighlights();
+
+    const cell = event.currentTarget;
+    const x = parseInt(cell.dataset.x);
+    const y = parseInt(cell.dataset.y);
+
+    const unitOnCell = getUnitAt(x, y);
+    const obstacleOnCell = getObstacleAt(x, y);
+
+    clearFireballHighlight();
+    clearHealHighlight();
+    clearFrostNovaPreview(); // Clear frost nova explicitly on entering ANY cell
+    clearFlameWaveHighlight(); // Clear flame wave explicitly on entering ANY cell
+
+
+    if (currentSpell === 'frostNova') {
+        highlightFrostNovaArea(x, y);
+    } else if (currentSpell === 'flameWave') {
+        highlightFlameWaveArea(y);
+    } else if (currentSpell === 'fireball') {
+        if (unitOnCell?.team === 'enemy' && isUnitAliveAndValid(unitOnCell)) {
+            cell.classList.add('valid-fireball-target');
+            if (unitOnCell.element) unitOnCell.element.classList.add('valid-fireball-target');
+        } else if (obstacleOnCell?.destructible && isObstacleIntact(obstacleOnCell)) {
+            cell.classList.add('valid-fireball-target');
+            if (obstacleOnCell.element) obstacleOnCell.element.classList.add('valid-fireball-target');
+        }
+    } else if (currentSpell === 'heal') {
+        if (unitOnCell?.team === 'player' && isUnitAliveAndValid(unitOnCell)) {
+            cell.classList.add('valid-heal-target');
+            if (unitOnCell.element) unitOnCell.element.classList.add('valid-heal-target');
+        }
+    }
+
+
+    const potentialTargetUnit = unitOnCell; // Use already defined variable
+    const potentialTargetObstacle = obstacleOnCell; // Use already defined variable
+    const canBePrimaryTarget = cell.classList.contains('can-be-primary-target');
+
+    if (selectedUnit?.type === 'champion' && canBePrimaryTarget && !currentSpell) {
+        let targetPos = potentialTargetUnit || potentialTargetObstacle;
+        if (targetPos) showAttackHoverHighlights(selectedUnit, targetPos);
+        else clearAttackHoverHighlights();
+    } else if (selectedUnit?.type === 'champion') {
+        clearAttackHoverHighlights();
+    }
 }
 
-function handleCellMouseLeave(event) { if (!isGameActive() || isProcessing || isPanning || isAnyOverlayVisible()) return; if (currentSpell === 'frostNova') clearFrostNovaPreview(); if (currentSpell === 'flameWave') clearFlameWaveHighlight(); if (selectedUnit?.type === 'champion') clearAttackHoverHighlights(); }
-function handleGridMouseLeave() { if (currentSpell === 'flameWave') clearFlameWaveHighlight(); if (currentSpell === 'frostNova') clearFrostNovaPreview(); if (selectedUnit?.type === 'champion') clearAttackHoverHighlights(); }
+function handleCellMouseLeave(event) {
+     if (!isGameActive() || isProcessing || isPanning || isAnyOverlayVisible()) return; if (currentSpell === 'frostNova') if (currentSpell === 'flameWave') if (selectedUnit?.type === 'champion') clearAttackHoverHighlights(); }
+function handleGridMouseLeave() { clearSpellHighlights(); if (selectedUnit?.type === 'champion') clearAttackHoverHighlights(); }
 
 function handleKeyDown(event) {
      if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return;
@@ -1216,7 +1406,7 @@ function handleKeyDown(event) {
 
                      stopMusic(); // Stop game music before showing overlay
                      hideAllOverlays();
-                     
+
                      if (typeof startNextLevel === 'function') {
                         startNextLevel(); // This function should handle incrementing level and calling initGame
                     } else {
@@ -1304,58 +1494,116 @@ function showLevelSelect() {
     levelSelectScreen?.classList.remove('hidden');
     levelSelectScreen?.classList.add('visible');
     gameBoardWrapper?.classList.remove('active');
+
+    console.log("showLevelSelect: Loading game data...");
     loadGameData();
+    console.log(`showLevelSelect: Data loaded. highestLevelUnlocked = ${highestLevelUnlocked}`);
+
     updateLevelSelectScreen();
     stopTooltipUpdater();
     stopMusic();
 
     const img = new Image();
     img.onload = () => {
+        console.log("showLevelSelect: Map image loaded successfully.");
         mapIntrinsicWidth = img.naturalWidth || 1024;
         mapIntrinsicHeight = img.naturalHeight || 768;
+        console.log(`showLevelSelect: Map dimensions set: ${mapIntrinsicWidth}x${mapIntrinsicHeight}`);
         focusMapOnQuadrant();
         startTooltipUpdater();
     };
     img.onerror = () => {
-        console.error("Failed to load map image for focusing.");
+        console.error("!!!!!!!! showLevelSelect: FAILED TO LOAD MAP IMAGE !!!!!!!!!");
         mapIntrinsicWidth = 1024;
         mapIntrinsicHeight = 768;
         mapZoom = 1; mapOffsetX = 0; mapOffsetY = 0;
+        console.log("showLevelSelect: Applying fallback map zoom/pan.");
         applyMapZoomAndPan(true);
         startTooltipUpdater();
     };
+    console.log("showLevelSelect: Starting map image load from:", WORLD_MAP_IMAGE_URL);
     img.src = WORLD_MAP_IMAGE_URL;
 }
 
 function focusMapOnQuadrant(immediate = true) {
-    if (!levelSelectMapContainer) return;
-    const levelIndex = Math.max(0, highestLevelUnlocked - 1);
+    console.log("focusMapOnQuadrant: Starting focus calculation.");
+    if (!levelSelectMapContainer) {
+        console.error("focusMapOnQuadrant: levelSelectMapContainer not found.");
+        return;
+    }
+    // Ensure highestLevelUnlocked is a number
+    const currentHighestLevel = parseInt(highestLevelUnlocked || '1', 10);
+    const levelIndex = Math.max(0, currentHighestLevel - 1);
     const quadrantIndex = Math.floor(levelIndex / LEVELS_PER_QUADRANT) % 4;
+    console.log(`focusMapOnQuadrant: highestLevel=${currentHighestLevel}, levelIndex=${levelIndex}, quadrantIndex=${quadrantIndex}`);
+
     const targetCenter = VISUAL_QUADRANT_CENTERS[quadrantIndex] || { x: 50, y: 50 };
     const targetXPercent = targetCenter.x;
     const targetYPercent = targetCenter.y;
-    let targetZoom = INITIAL_MAP_ZOOM_LEVEL;
+    let targetZoom = INITIAL_MAP_ZOOM_LEVEL; // Use the config value
     targetZoom = Math.max(MIN_MAP_ZOOM, Math.min(MAX_MAP_ZOOM, targetZoom));
+    console.log(`focusMapOnQuadrant: Target Center %: (${targetXPercent}, ${targetYPercent}), Target Zoom: ${targetZoom}`);
 
     const containerRect = levelSelectMapContainer.getBoundingClientRect();
-    if (containerRect.width <= 0 || containerRect.height <= 0) return;
+    if (containerRect.width <= 0 || containerRect.height <= 0) {
+        console.error("focusMapOnQuadrant: Invalid container dimensions.");
+        return;
+    }
+    // Ensure mapIntrinsicWidth/Height are numbers > 0
+    const safeMapWidth = Math.max(1, mapIntrinsicWidth || 1024);
+    const safeMapHeight = Math.max(1, mapIntrinsicHeight || 1024);
+    if (safeMapWidth <= 0 || safeMapHeight <= 0) {
+         console.error("focusMapOnQuadrant: Invalid map intrinsic dimensions.");
+         return;
+    }
 
-    const scaleX = containerRect.width / mapIntrinsicWidth;
-    const scaleY = containerRect.height / mapIntrinsicHeight;
+    const scaleX = containerRect.width / safeMapWidth;
+    const scaleY = containerRect.height / safeMapHeight;
     const baseScale = Math.min(scaleX, scaleY);
     const finalScale = baseScale * targetZoom;
 
-    const targetWorldX = (targetXPercent / 100) * mapIntrinsicWidth;
-    const targetWorldY = (targetYPercent / 100) * mapIntrinsicHeight;
+    const targetWorldX = (targetXPercent / 100) * safeMapWidth;
+    const targetWorldY = (targetYPercent / 100) * safeMapHeight;
 
-    const targetOffsetX = containerRect.width / 2 - targetWorldX * finalScale;
-    const targetOffsetY = containerRect.height / 2 - targetWorldY * finalScale;
+    // Calculate the RAW offsets needed to center the target point
+    let rawOffsetX = containerRect.width / 2 - targetWorldX * finalScale;
+    let rawOffsetY = containerRect.height / 2 - targetWorldY * finalScale;
+    console.log(`focusMapOnQuadrant: RAW Calculated offsetX=${rawOffsetX.toFixed(1)}, offsetY=${rawOffsetY.toFixed(1)}, finalScale=${finalScale.toFixed(3)}`);
 
-    mapZoom = targetZoom;
-    mapOffsetX = targetOffsetX;
-    mapOffsetY = targetOffsetY;
+    // --- Perform Clamping Calculation Locally (Strict Edges) ---
+    const mapRenderWidth = safeMapWidth * finalScale;
+    const mapRenderHeight = safeMapHeight * finalScale;
+    let minOffsetX, maxOffsetX, minOffsetY, maxOffsetY;
 
-    applyMapZoomAndPan(immediate);
+    // Determine horizontal clamping bounds (Strict Edges)
+    if (mapRenderWidth <= containerRect.width) {
+        minOffsetX = maxOffsetX = (containerRect.width - mapRenderWidth) / 2;
+    } else {
+        minOffsetX = containerRect.width - mapRenderWidth;
+        maxOffsetX = 0;
+    }
+
+    // Determine vertical clamping bounds (Strict Edges)
+    if (mapRenderHeight <= containerRect.height) {
+        minOffsetY = maxOffsetY = (containerRect.height - mapRenderHeight) / 2;
+    } else {
+        minOffsetY = containerRect.height - mapRenderHeight;
+        maxOffsetY = 0;
+    }
+
+    // Calculate the final, clamped offsets
+    const finalOffsetX = Math.max(minOffsetX, Math.min(maxOffsetX, rawOffsetX));
+    const finalOffsetY = Math.max(minOffsetY, Math.min(maxOffsetY, rawOffsetY));
+    console.log(`focusMapOnQuadrant: Clamping bounds: X[${minOffsetX.toFixed(1)}, ${maxOffsetX.toFixed(1)}], Y[${minOffsetY.toFixed(1)}, ${maxOffsetY.toFixed(1)}]`);
+    console.log(`focusMapOnQuadrant: FINAL Clamped offsetX=${finalOffsetX.toFixed(1)}, offsetY=${finalOffsetY.toFixed(1)}`);
+
+    // --- Set the GLOBAL variables to the final clamped values ---
+    mapZoom = targetZoom; // Set the target zoom
+    mapOffsetX = finalOffsetX; // Set the clamped offset X
+    mapOffsetY = finalOffsetY; // Set the clamped offset Y
+
+    // --- Apply using the now-set global variables ---
+    applyMapZoomAndPan(immediate); // Apply the calculated values
 }
 
 
@@ -1420,7 +1668,11 @@ function handleLevelDotClick(e) {
         if (!isNaN(lvl)) {
             playSfx('levelSelect');
             hideLevelSelect();
-            showChooseTroopsScreen(lvl, 'levelSelect');
+            initGame(lvl);
+        } else {
+            // Log an error if the level number couldn't be parsed (shouldn't normally happen)
+            console.error("Invalid level number found on dot:", dot.dataset.level);
+            playSfx('error'); // Play an error sound
         }
     }
 }
@@ -1573,27 +1825,118 @@ function handleShopPurchase(event) {
     }
 }
 
-function setActiveSpell(spellName) {
-    if (!isGameActive() || isProcessing || currentTurn !== 'player') { currentSpell = null; updateSpellUI(); clearSpellHighlights(); gameBoard?.classList.remove('fireball-targeting', 'flame-wave-targeting', 'frost-nova-targeting', 'heal-targeting'); return; }
-    if (currentSpell === spellName) { currentSpell = null; playSfx('error'); }
-    else {
-        const unlockLevels = {
-            fireball: FIREBALL_UNLOCK_LEVEL,
-            flameWave: FLAME_WAVE_UNLOCK_LEVEL,
-            frostNova: FROST_NOVA_UNLOCK_LEVEL,
-            heal: HEAL_UNLOCK_LEVEL
-        };
-        const requiredLevel = unlockLevels[spellName];
-        const isUnlocked = (requiredLevel !== undefined && currentLevel >= requiredLevel) || unlimitedSpellsCheat;
-        const isSpellReady = (spellUses[spellName] === true || unlimitedSpellsCheat);
+// ui.js
 
-        if (spellName && isUnlocked && isSpellReady) { currentSpell = spellName; playSfx('select'); if (selectedUnit) deselectUnit(false); }
-        else { currentSpell = null; if (!isUnlocked && requiredLevel !== undefined) showFeedback(`Spell locked (Lvl ${requiredLevel})`, "feedback-error"); }
+/**
+ * Sets or cancels the active spell based on user input (clicking icon or pressing Esc).
+ * Updates the UI (spell icons, board cursor/class) accordingly.
+ * Clears any existing spell-related highlights.
+ * Provides feedback only if the spell selection fails.
+ * @param {string | null} spellName - The name of the spell to activate, or null to cancel.
+ */
+function setActiveSpell(spellName) {
+    // --- Initial Checks ---
+    // Don't allow spell changes if not player turn, game not active, or processing an action
+    if (!isGameActive() || isProcessing || currentTurn !== 'player') {
+        // If a spell was somehow active during an invalid state, clear it
+        if (currentSpell) {
+            currentSpell = null;
+            clearSpellHighlights();
+            updateSpellUI();
+            gameBoard?.classList.remove('fireball-targeting', 'flame-wave-targeting', 'frost-nova-targeting', 'heal-targeting');
+        }
+        return; // Exit early
     }
-    updateSpellUI(); clearSpellHighlights(); gameBoard?.classList.remove('fireball-targeting', 'flame-wave-targeting', 'frost-nova-targeting', 'heal-targeting'); if (currentSpell) gameBoard?.classList.add(`${currentSpell}-targeting`);
+
+    let newSpell = null;        // The spell state to apply at the end
+    let feedbackMessage = null; // Store potential error message
+
+    // --- Determine New Spell State ---
+    if (spellName) { // Attempting to select or toggle a specific spell
+        if (currentSpell === spellName) {
+            // Clicking the already active spell: Toggle OFF
+            newSpell = null;
+            playSfx('error'); // Sound for cancellation/toggle off
+        } else {
+            // Clicking a new spell icon: Validate it
+            const unlockLevels = {
+                fireball: FIREBALL_UNLOCK_LEVEL,
+                flameWave: FLAME_WAVE_UNLOCK_LEVEL,
+                frostNova: FROST_NOVA_UNLOCK_LEVEL,
+                heal: HEAL_UNLOCK_LEVEL
+            };
+            const requiredLevel = unlockLevels[spellName];
+            const isUnlocked = (requiredLevel !== undefined && currentLevel >= requiredLevel) || unlimitedSpellsCheat;
+            const isSpellReady = (spellUses[spellName] === true || unlimitedSpellsCheat);
+
+            if (isUnlocked && isSpellReady) {
+                // Valid selection: Set as the new spell
+                newSpell = spellName;
+                playSfx('select');
+                // Deselect any active unit when selecting a spell
+                if (selectedUnit) deselectUnit(false);
+            } else {
+                // Invalid selection: Keep spell null, prepare feedback
+                newSpell = null;
+                playSfx('error');
+                if (!isUnlocked && requiredLevel !== undefined) {
+                    feedbackMessage = `Spell locked (Lvl ${requiredLevel})`;
+                } else if (!isSpellReady) {
+                    feedbackMessage = "Spell already used.";
+                } else {
+                    feedbackMessage = "Cannot select spell."; // Should be rare
+                }
+            }
+        }
+    } else {
+        // Called with null (e.g., pressing Esc): Cancel current spell
+        if (currentSpell) playSfx('error'); // Play sound only if cancelling an active spell
+        newSpell = null;
+    }
+
+    // --- Apply Changes ---
+
+    // 1. Clear any visual highlights from the previous state *before* updating
+    if (typeof clearSpellHighlights === 'function') {
+        clearSpellHighlights();
+    }
+    // Also clear attack highlights if switching from unit selection
+    if (selectedUnit?.type === 'champion') clearAttackHoverHighlights();
+
+
+    // 2. Update the global currentSpell variable
+    currentSpell = newSpell;
+
+    // 3. Update Spell Icon UI (highlights the selected/dims others)
+    if(typeof updateSpellUI === 'function') {
+        updateSpellUI();
+    }
+
+    // 4. Update Game Board Cursor/Class
+    gameBoard?.classList.remove('fireball-targeting', 'flame-wave-targeting', 'frost-nova-targeting', 'heal-targeting');
+    if (currentSpell) {
+        gameBoard?.classList.add(`${currentSpell}-targeting`);
+    }
+
+    // 5. Show feedback message ONLY if an error occurred during selection
+    if (feedbackMessage && typeof showFeedback === 'function') {
+        showFeedback(feedbackMessage, "feedback-error");
+    }
 }
 
-function clearSpellHighlights() { clearFrostNovaPreview(); clearFlameWaveHighlight(); }
+function clearFireballHighlight() {
+    gridContent?.querySelectorAll('.valid-fireball-target').forEach(el => el.classList.remove('valid-fireball-target'));
+    units.forEach(u => u.element?.classList.remove('valid-fireball-target'));
+}
+function clearHealHighlight() {
+    gridContent?.querySelectorAll('.valid-heal-target').forEach(el => el.classList.remove('valid-heal-target'));
+    units.forEach(u => u.element?.classList.remove('valid-heal-target'));
+}
+
+
+function clearSpellHighlights() { clearFrostNovaPreview();
+    clearFlameWaveHighlight(); clearFireballHighlight();
+    clearHealHighlight();}
 
 function toggleMute() { isMuted = !isMuted; bgMusic.muted = isMuted; Object.values(sfx).forEach(sound => { if (sound) sound.muted = isMuted; }); updateMuteButtonVisual(); if (!isMuted) { initializeAudio(); startMusicIfNotPlaying(); } else { stopMusic(); } }
 function updateMuteButtonVisual() { if(muteButton) muteButton.querySelector('span').textContent = isMuted ? '🔇' : '🔊'; }
@@ -1734,7 +2077,9 @@ function handleConfirmTroops() {
  function updateWorldHpBars() { if (!gameSettings.showHpBars) return; units.forEach(unit => { if (isUnitAliveAndValid(unit)) { updateWorldHpBar(unit); updateWorldHpBarPosition(unit); } else { removeWorldHpBar(unit.id); } }); worldHpBars.forEach((bar, unitId) => { if (!units.find(u => u.id === unitId)) removeWorldHpBar(unitId); }); }
  function updateHpBarSettingUI(isChecked) { if(toggleHpBarsSetting) toggleHpBarsSetting.checked = isChecked; }
 
+// --- Event Listener Setup ---
 document.addEventListener('DOMContentLoaded', () => {
+    // Get Element References (Keep as is)
     gameContainer = document.getElementById('game-container'); gameBoardWrapper = document.getElementById('game-board-wrapper'); gameBoard = document.getElementById('game-board'); defaultViewButton = document.getElementById('default-view-button'); gridContent = document.getElementById('grid-content'); uiPanel = document.getElementById('ui-panel'); levelDisplayElement = document.getElementById('level-display'); spellAreaElement = document.getElementById('spell-area'); fireballElement = document.getElementById('fireball-spell'); flameWaveElement = document.getElementById('flame-wave-spell'); frostNovaElement = document.getElementById('frost-nova-spell'); healElement = document.getElementById('heal-spell'); unitInfo = document.getElementById('unit-info'); unitPortraitElement = document.getElementById('unit-portrait'); actionsLeftDisplayElement = document.getElementById('actions-left-display'); unitNameDisplay = document.getElementById('unit-name'); unitAtkDisplay = document.getElementById('unit-atk'); unitMovDisplay = document.getElementById('unit-mov'); unitRngDisplay = document.getElementById('unit-rng'); unitStatusDisplay = document.getElementById('unit-status'); unitHpBarContainer = unitInfo?.querySelector('.unit-hp-bar-container'); unitHpBarElement = unitHpBarContainer?.querySelector('.unit-hp-bar'); boardFeedbackArea = document.getElementById('board-feedback-area'); endTurnButton = document.getElementById('end-turn-button');
     mainMenu = document.getElementById('main-menu'); startGameButton = document.getElementById('start-game-button'); leaderboardMenuButton = document.getElementById('leaderboard-menu-button');
     gameOverScreen = document.getElementById('game-over-screen'); restartButton = document.getElementById('restart-button'); gameOverTitle = document.getElementById('game-over-title'); gameOverMessage = document.getElementById('game-over-message'); gameOverToTitleButton = document.getElementById('game-over-to-title-button'); tooltipElement = document.getElementById('tooltip');
@@ -1747,6 +2092,7 @@ document.addEventListener('DOMContentLoaded', () => {
     chooseTroopsScreen = document.getElementById('choose-troops-screen'); chooseTroopsTitle = document.getElementById('choose-troops-title'); currentTroopsList = document.getElementById('current-troops-list'); availableTroopsList = document.getElementById('available-troops-list'); currentRosterCountElement = document.getElementById('current-roster-count'); chooseTroopsFeedback = document.getElementById('choose-troops-feedback'); confirmTroopsButton = document.getElementById('confirm-troops-button'); troopsBackButton = document.getElementById('troops-back-button'); // If you add a dedicated back button
     unitHpBarsOverlay = document.getElementById('unit-hp-bars-overlay');
 
+    // Attach Event Listeners (Keep most as is)
     window.addEventListener('resize', handleResize, { passive: true }); window.addEventListener('keydown', handleKeyDown); document.addEventListener('mousemove', trackMousePosition); document.addEventListener('fullscreenchange', updateFullscreenButton); document.addEventListener('webkitfullscreenchange', updateFullscreenButton); document.addEventListener('mozfullscreenchange', updateFullscreenButton); document.addEventListener('MSFullscreenChange', updateFullscreenButton);
     gameBoard?.addEventListener('mousedown', handlePanStart); gameBoard?.addEventListener('wheel', handleZoom, { passive: false }); gridContent?.addEventListener('mouseleave', handleGridMouseLeave); defaultViewButton?.addEventListener('click', () => centerView(false));
     startGameButton?.addEventListener('click', () => { if (!isProcessing) { if (initializeAudio()) { hideMainMenu(); showLevelSelect(); } else { hideMainMenu(); showLevelSelect(); } } });
@@ -1758,13 +2104,14 @@ document.addEventListener('DOMContentLoaded', () => {
     quitToMainMenuButton?.addEventListener('click', () => { playSfx('menuClose'); hideMenu(); showMainMenu(); }); closeMenuButton?.addEventListener('click', hideMenu);
     toggleHpBarsSetting?.addEventListener('change', (e) => { updateSetting('showHpBars', e.target.checked); });
     closeLeaderboardButton?.addEventListener('click', () => { hideLeaderboard(); showMainMenu(); }); backToMainMenuButton?.addEventListener('click', showMainMenu); levelSelectTroopsButton?.addEventListener('click', () => { if (!isLevelSelectOpen()) return; hideLevelSelect(); showChooseTroopsScreen(0, 'levelSelect'); }); levelSelectShopButton?.addEventListener('click', () => { if (!isLevelSelectOpen()) return; hideLevelSelect(); showShop('levelSelect', false); });
-    levelSelectMapContainer?.addEventListener('mousedown', handleMapPanStart); levelSelectMapContainer?.addEventListener('wheel', handleMapZoom, { passive: false });
+    levelSelectMapContainer?.addEventListener('mousedown', handleMapPanStart); // Make sure this uses the function added above
     levelCompleteShopButton?.addEventListener('click', () => { hideLevelComplete(); showShop('levelComplete', true); }); nextLevelButton?.addEventListener('click', () => { hideLevelComplete(); proceedToNextLevelOrLocation(); });
     shopExitButton?.addEventListener('click', () => { hideShop(); proceedAfterShopMaybe(); }); shopTroopsButton?.addEventListener('click', () => { if (!isShopOpen()) return; hideShop(); showChooseTroopsScreen(shopIsBetweenLevels ? 0 : currentLevel, 'shop'); }); shopItemsContainer?.addEventListener('click', handleShopPurchase);
     currentTroopsList?.addEventListener('click', handleTroopCardClick); availableTroopsList?.addEventListener('click', handleTroopCardClick); confirmTroopsButton?.addEventListener('click', handleConfirmTroops);
     fireballElement?.addEventListener('click', () => setActiveSpell('fireball')); flameWaveElement?.addEventListener('click', () => setActiveSpell('flameWave')); frostNovaElement?.addEventListener('click', () => setActiveSpell('frostNova')); healElement?.addEventListener('click', () => setActiveSpell('heal'));
     bgMusic.addEventListener('ended', selectAndLoadMusic);
 
+    // Initial Setup (Keep as is)
     loadGameData(); showMainMenu(); updateMuteButtonVisual(); updateFullscreenButton(); requestAnimationFrame(() => { try { calculateCellSize(); } catch (e) {console.error("Initial RAF Error:", e);} });
     const mapPreload = new Image(); mapPreload.onload = () => { mapIntrinsicWidth = mapPreload.naturalWidth || 1024; mapIntrinsicHeight = mapPreload.naturalHeight || 768; }; mapPreload.onerror = () => { console.warn("Map preload failed."); mapIntrinsicWidth=1024; mapIntrinsicHeight=768; }; mapPreload.src = WORLD_MAP_IMAGE_URL;
     shopItemsContainer?.querySelectorAll('.shop-item[data-spell-name]').forEach(item => { const h4 = item.querySelector('h4'); if (h4) item.dataset.baseTitle = h4.textContent.split('[')[0].trim(); });

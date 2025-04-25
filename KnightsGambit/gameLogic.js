@@ -1294,7 +1294,7 @@ case 'flameWave':
              case 'frostNova':
                  const centerX = target.x; const centerY = target.y; playSfx('frostNovaCast'); const radiusLevel = getFrostNovaRadiusLevel(); const size = radiusLevel + 2; const radius = Math.floor((size - 1) / 2); const freezeDuration = FROST_NOVA_BASE_DURATION; let unitsFrozenCount = 0;
                  if (typeof animateFrostNova === 'function') animateFrostNova(centerX, centerY, radiusLevel); await new Promise(r => setTimeout(r, 50));
-                 for (let dx = -radius; dx <= radius; dx++) { for (let dy = -radius; dy <= radius; dy++) { if (Math.abs(dx) + Math.abs(dy) > radius) continue; const targetX = centerX + dx; const targetY = centerY + dy; if (!isCellInBounds(targetX, targetY) || getObstacleAt(targetX, targetY)?.blocksMove) continue; const unit = getUnitAt(targetX, targetY); if (unit?.team === 'enemy' && isUnitAliveAndValid(unit) && !unit.isFrozen) { unit.isFrozen = true; unit.frozenTurnsLeft = freezeDuration; unitsFrozenCount++; if (typeof showFreezePopup === 'function') showFreezePopup(unit.x, unit.y); if (typeof updateUnitVisualState === 'function') updateUnitVisualState(unit); if (typeof updateUnitInfoDisplay === 'function') updateUnitInfoDisplay(unit); } } }
+                 for (let dx = -radius; dx <= radius; dx++) { for (let dy = -radius; dy <= radius; dy++) { const targetX = centerX + dx; const targetY = centerY + dy; if (!isCellInBounds(targetX, targetY)){ continue; } const unit = getUnitAt(targetX, targetY); if (unit?.team === 'enemy' && isUnitAliveAndValid(unit) && !unit.isFrozen) { unit.isFrozen = true; unit.frozenTurnsLeft = freezeDuration; unitsFrozenCount++; if (typeof showFreezePopup === 'function') showFreezePopup(unit.x, unit.y); if (typeof updateUnitVisualState === 'function') updateUnitVisualState(unit); if (typeof updateUnitInfoDisplay === 'function') updateUnitInfoDisplay(unit); } } }
                  if (unitsFrozenCount > 0) playSfx('frostNovaHit'); success = true; break;
             case 'heal':
                  if(target?.team === 'player' && isUnitAliveAndValid(target)) {
@@ -1304,7 +1304,15 @@ case 'flameWave':
                  } else { playSfx('error'); showFeedback("Invalid Heal target.", "feedback-error"); } break;
         }
     } catch (e) { console.error(`Error casting spell ${spellName}:`, e); }
-    finally { if (success) spellsUsedThisLevel = true; await Promise.all(deathPromises); isProcessing = false; if (typeof updateTurnDisplay === 'function') updateTurnDisplay(); checkWinLossConditions();}
+    finally { if (success) spellsUsedThisLevel = true; await Promise.all(deathPromises); isProcessing = false; if (typeof updateTurnDisplay === 'function') updateTurnDisplay(); checkWinLossConditions();
+        if (typeof clearSpellHighlights === 'function') {
+            clearSpellHighlights();
+        }
+
+        isProcessing = false;
+        if (typeof updateTurnDisplay === 'function') updateTurnDisplay();
+        checkWinLossConditions();
+    }
     return success;
 }
 
@@ -1861,4 +1869,3 @@ window.onerror = function (message, source, lineno, colno, error) {
   if (typeof updateTurnDisplay === 'function') updateTurnDisplay();
   return false;
 };
-//done
