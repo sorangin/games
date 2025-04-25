@@ -40,7 +40,7 @@ let mapZoom = 1; let mapOffsetX = 0; let mapOffsetY = 0;
 const MIN_MAP_ZOOM = 1; const MAX_MAP_ZOOM = 5;
 let isMapPanning = false; let mapPanStartX = 0; let mapPanStartY = 0;
 let mapStartPanX = 0; let mapStartPanY = 0;
-let mapIntrinsicWidth = 1024; let mapIntrinsicHeight = 768;
+let mapIntrinsicWidth = 1024; let mapIntrinsicHeight = 1024;
 
 let currentShopOrigin = '';
 let troopScreenOrigin = '';
@@ -1080,51 +1080,50 @@ function applyMapZoomAndPan(immediate = false) {
     const containerRect = levelSelectMapContainer.getBoundingClientRect();
     if (containerRect.width <= 0 || containerRect.height <= 0) return;
 
-    // Calculate final scale based on the CURRENT global mapZoom
-    const safeMapWidth = Math.max(1, mapIntrinsicWidth || 1024);
-    const safeMapHeight = Math.max(1, mapIntrinsicHeight || 1024);
-    const scaleX = containerRect.width / safeMapWidth;
-    const scaleY = containerRect.height / safeMapHeight;
-    const baseScale = Math.min(scaleX, scaleY);
-    // Ensure mapZoom is a valid number before calculating finalScale
-    const currentMapZoom = typeof mapZoom === 'number' && !isNaN(mapZoom) ? mapZoom : MIN_MAP_ZOOM;
+    // Calculate scale using 'contain' method
+    const baseScale = calculateMapScale(containerRect.width, containerRect.height, mapIntrinsicWidth, mapIntrinsicHeight);
+    const currentMapZoom = typeof mapZoom === 'number' && !isNaN(mapZoom)
+                         ? Math.max(MIN_MAP_ZOOM, Math.min(MAX_MAP_ZOOM, mapZoom))
+                         : MIN_MAP_ZOOM;
     const finalScale = baseScale * currentMapZoom;
 
-    // mapOffsetX and mapOffsetY are used directly as they are assumed to be pre-clamped by the caller.
-    // Ensure they are valid numbers.
+    // Use GLOBAL clamped offsets
     const currentMapOffsetX = typeof mapOffsetX === 'number' && !isNaN(mapOffsetX) ? mapOffsetX : 0;
     const currentMapOffsetY = typeof mapOffsetY === 'number' && !isNaN(mapOffsetY) ? mapOffsetY : 0;
 
+    // Apply transform with top-left origin
     const transformValue = `translate(${currentMapOffsetX}px, ${currentMapOffsetY}px) scale(${finalScale})`;
-    console.log(`applyMapZoomAndPan: Applying transform: ${transformValue}, finalScale=${finalScale} immediate=${immediate}`); // Log scale too
+    console.log(`Applying Transform (TL): ${transformValue} (immediate=${immediate})`);
 
     const transitionStyle = immediate ? 'none' : 'transform 0.3s ease-out';
+
+    // Ensure origin is set correctly
+    levelSelectMap.style.transformOrigin = 'top left';
+    levelSelectDotsLayer.style.transformOrigin = 'top left';
 
     levelSelectMap.style.transition = transitionStyle;
     levelSelectDotsLayer.style.transition = transitionStyle;
     levelSelectMap.style.transform = transformValue;
     levelSelectDotsLayer.style.transform = transformValue;
 
-    // positionLevelDots might need the finalScale, ensure it uses it.
-    positionLevelDots(); // Pass finalScale if needed, or ensure it reads it correctly.
+    // Position dots (should still work with percentage)
+    positionLevelDots();
 
+    // Cleanup transition style (same as before)
     if (!immediate) {
-        // Use a flag or check transition property instead of setTimeout if possible
-        // This avoids potential race conditions if another transition starts.
-        const endTransition = (event) => {
+        const clearTransition = (event) => {
             if (event.target === levelSelectMap && event.propertyName === 'transform') {
                 levelSelectMap.style.transition = '';
                 levelSelectDotsLayer.style.transition = '';
-                levelSelectMap.removeEventListener('transitionend', endTransition);
+                levelSelectMap.removeEventListener('transitionend', clearTransition);
             }
         };
-        levelSelectMap.addEventListener('transitionend', endTransition);
-        // Fallback timeout in case transitionend doesn't fire reliably
+        levelSelectMap.addEventListener('transitionend', clearTransition);
         setTimeout(() => {
-             if(levelSelectMap && levelSelectMap.style.transition !== '') levelSelectMap.style.transition = '';
-             if(levelSelectDotsLayer && levelSelectDotsLayer.style.transition !== '') levelSelectDotsLayer.style.transition = '';
-             levelSelectMap?.removeEventListener('transitionend', endTransition);
-        }, 350); // Slightly longer than transition
+            if (levelSelectMap && levelSelectMap.style.transition !== 'none') levelSelectMap.style.transition = '';
+            if (levelSelectDotsLayer && levelSelectDotsLayer.style.transition !== 'none') levelSelectDotsLayer.style.transition = '';
+            levelSelectMap?.removeEventListener('transitionend', clearTransition);
+        }, 350);
     }
 }
 
@@ -1171,87 +1170,79 @@ function handleMapPanStart(event) {
 
 
 function handleMapPanMove(event) {
-    // Optional debug log:
-    // console.log(`handleMapPanMove: Moving. isMapPanning=${isMapPanning}`);
+    if (!isMapPanning || !levelSelectMap || !levelSelectMapContainer) { /* ... error handling ... */ return; }
+    event.preventDefault();
+    const deltaX = event.clientX - mapPanStartX; const deltaY = event.clientY - mapPanStartY;
+    const rawOffsetX = mapStartPanX + deltaX; const rawOffsetY = mapStartPanY + deltaY;
+    // Use the revised clampMapOffsets
+    const clampedOffsets = clampMapOffsets(rawOffsetX, rawOffsetY);
+    mapOffsetX = clampedOffsets.x; mapOffsetY = clampedOffsets.y;
+    applyMapZoomAndPan(true);
+}
 
-    // Ensure panning is active and necessary elements exist
-    if (!isMapPanning || !levelSelectMap || !levelSelectMapContainer) {
-        return;
+function calculateMapScale(containerWidth, containerHeight, intrinsicWidth, intrinsicHeight) {
+    const safeMapWidth = Math.max(1, intrinsicWidth || 1024);
+    const safeMapHeight = Math.max(1, intrinsicHeight || 1024);
+    const scaleX = containerWidth / safeMapWidth;
+    const scaleY = containerHeight / safeMapHeight;
+    // 'contain' uses the smaller scale factor
+    return Math.min(scaleX, scaleY);
+}
+
+function clampMapOffsets(rawOffsetX, rawOffsetY) {
+    // console.log(`clampMapOffsets TL called with raw: (${rawOffsetX.toFixed(1)}, ${rawOffsetY.toFixed(1)})`); // Entry log
+
+    if (!levelSelectMapContainer || !levelSelectMap) {
+        console.error("Clamping ERROR: Missing map container or map elements.");
+        return { x: 0, y: 0 };
     }
-    event.preventDefault(); // Prevent text selection or other unwanted drag behaviors
 
-    // Calculate the new raw (unclamped) offsets based on mouse delta
-    const deltaX = event.clientX - mapPanStartX;
-    const deltaY = event.clientY - mapPanStartY;
-    const rawOffsetX = mapStartPanX + deltaX;
-    const rawOffsetY = mapStartPanY + deltaY;
-
-    // --- Clamp the newly calculated offsets (Strict Edge Clamping) ---
-
-    // Get necessary dimensions
     const containerRect = levelSelectMapContainer.getBoundingClientRect();
     if (containerRect.width <= 0 || containerRect.height <= 0) {
-        console.error("handleMapPanMove: Invalid container dimensions for clamping.");
-        return; // Cannot clamp without valid container size
+        console.error("Cannot clamp: Invalid container dimensions.");
+        return { x: mapOffsetX, y: mapOffsetY };
     }
+
     const safeMapWidth = Math.max(1, mapIntrinsicWidth || 1024);
     const safeMapHeight = Math.max(1, mapIntrinsicHeight || 1024);
 
-    // Calculate current scale
-    const scaleX = containerRect.width / safeMapWidth;
-    const scaleY = containerRect.height / safeMapHeight;
-    const baseScale = Math.min(scaleX, scaleY);
-    // Ensure mapZoom is a valid number before calculating finalScale
-    const currentMapZoom = typeof mapZoom === 'number' && !isNaN(mapZoom) ? mapZoom : MIN_MAP_ZOOM;
+    // Calculate current final scale (using GLOBAL mapZoom and 'contain' base scale)
+    const baseScale = calculateMapScale(containerRect.width, containerRect.height, safeMapWidth, safeMapHeight);
+    const currentMapZoom = typeof mapZoom === 'number' && !isNaN(mapZoom) && mapZoom >= MIN_MAP_ZOOM ? mapZoom : MIN_MAP_ZOOM;
     const finalScale = baseScale * currentMapZoom;
 
-    // Calculate rendered dimensions
+    if (finalScale <= 0 || isNaN(finalScale)) {
+        console.error(`Clamping ERROR: Invalid finalScale calculated: ${finalScale}`);
+        return { x: mapOffsetX, y: mapOffsetY };
+    }
+
+    // Calculate rendered map dimensions based on the actual map image size and scale
     const mapRenderWidth = safeMapWidth * finalScale;
     const mapRenderHeight = safeMapHeight * finalScale;
 
-    // Declare variables for clamping bounds
-    let minOffsetX, maxOffsetX, minOffsetY, maxOffsetY;
+    // *** Bounds calculation for top-left origin ***
+    // Max offset is usually 0 (top-left aligns with container top-left)
+    // However, if the map is smaller than the container, we want to center it.
+    const maxOffsetX = Math.max(0, (containerRect.width - mapRenderWidth) / 2);
+    const maxOffsetY = Math.max(0, (containerRect.height - mapRenderHeight) / 2);
 
-    // Determine horizontal clamping bounds (Strict Edges)
-    if (mapRenderWidth <= containerRect.width) {
-        // Map fits or is smaller: Force centering, NO panning allowed horizontally.
-        minOffsetX = maxOffsetX = (containerRect.width - mapRenderWidth) / 2;
-    } else {
-        // Map is wider: Allow panning exactly from edge to edge.
-        minOffsetX = containerRect.width - mapRenderWidth; // Stops left edge at left container border
-        maxOffsetX = 0;                                   // Stops right edge at right container border
-    }
-
-    // Determine vertical clamping bounds (Strict Edges)
-    if (mapRenderHeight <= containerRect.height) {
-        // Map fits or is smaller: Force centering, NO panning allowed vertically.
-        minOffsetY = maxOffsetY = (containerRect.height - mapRenderHeight) / 2;
-    } else {
-        // Map is taller: Allow panning exactly from edge to edge.
-        minOffsetY = containerRect.height - mapRenderHeight; // Stops top edge at top container border
-        maxOffsetY = 0;                                    // Stops bottom edge at bottom container border
-    }
-
-    // --- DETAILED CLAMPING LOG ---
-    // const prevMapOffsetX = mapOffsetX; // Store previous value for comparison if needed
-    // const prevMapOffsetY = mapOffsetY;
-
-    console.log(`handleMapPanMove: BEFORE CLAMP: rawOffset=(${rawOffsetX.toFixed(1)}, ${rawOffsetY.toFixed(1)}), BoundsX=[${minOffsetX.toFixed(1)}, ${maxOffsetX.toFixed(1)}], BoundsY=[${minOffsetY.toFixed(1)}, ${maxOffsetY.toFixed(1)}]`);
-    // --- END DETAILED CLAMPING LOG ---
-
-    // Apply final clamp using the strict bounds
-    mapOffsetX = Math.max(minOffsetX, Math.min(maxOffsetX, rawOffsetX));
-    mapOffsetY = Math.max(minOffsetY, Math.min(maxOffsetY, rawOffsetY));
-
-    // --- DETAILED CLAMPING LOG ---
-    console.log(`handleMapPanMove: AFTER CLAMP: mapOffset=(${mapOffsetX.toFixed(1)}, ${mapOffsetY.toFixed(1)})`);
-    // --- END DETAILED CLAMPING LOG ---
+    // Min offset is container dimension minus rendered dimension (stops bottom-right edge)
+    // OR the centering offset if map is smaller.
+    const minOffsetX = Math.min(maxOffsetX, containerRect.width - mapRenderWidth - maxOffsetX); // Should be <= maxOffsetX
+    const minOffsetY = Math.min(maxOffsetY, containerRect.height - mapRenderHeight - maxOffsetY); // Should be <= maxOffsetY
 
 
-    // Apply the clamped offsets visually
-    applyMapZoomAndPan(); // Use false for immediate parameter (default)
+    // Apply the clamp
+    const clampedX = Math.max(minOffsetX, Math.min(maxOffsetX, rawOffsetX));
+    const clampedY = Math.max(minOffsetY, Math.min(maxOffsetY, rawOffsetY));
+
+    console.log(`Clamping (TL): Zoom=${currentMapZoom.toFixed(2)}, Scale=${finalScale.toFixed(3)} | ` +
+                `RenderWH=(${mapRenderWidth.toFixed(0)}, ${mapRenderHeight.toFixed(0)}), ContWH=(${containerRect.width.toFixed(0)}, ${containerRect.height.toFixed(0)}) | ` +
+                `BoundsX=[${minOffsetX.toFixed(1)}, ${maxOffsetX.toFixed(1)}], BoundsY=[${minOffsetY.toFixed(1)}, ${maxOffsetY.toFixed(1)}] | ` +
+                `Raw(${rawOffsetX.toFixed(1)}, ${rawOffsetY.toFixed(1)}) -> Clamped(${clampedX.toFixed(1)}, ${clampedY.toFixed(1)})`);
+
+    return { x: clampedX, y: clampedY };
 }
-
 
 function handleMapPanEnd(event) {
     console.log(`handleMapPanEnd: Mouseup detected. isMapPanning was ${isMapPanning}`); // Log entry
@@ -1765,7 +1756,7 @@ function showLevelSelect() {
     img.onload = () => {
         console.log("showLevelSelect: Map image loaded successfully.");
         mapIntrinsicWidth = img.naturalWidth || 1024;
-        mapIntrinsicHeight = img.naturalHeight || 768;
+        mapIntrinsicHeight = img.naturalHeight || 1024;
         console.log(`showLevelSelect: Map dimensions set: ${mapIntrinsicWidth}x${mapIntrinsicHeight}`);
         focusMapOnQuadrant();
         startTooltipUpdater();
@@ -1773,7 +1764,7 @@ function showLevelSelect() {
     img.onerror = () => {
         console.error("!!!!!!!! showLevelSelect: FAILED TO LOAD MAP IMAGE !!!!!!!!!");
         mapIntrinsicWidth = 1024;
-        mapIntrinsicHeight = 768;
+        mapIntrinsicHeight = 1024;
         mapZoom = 1; mapOffsetX = 0; mapOffsetY = 0;
         console.log("showLevelSelect: Applying fallback map zoom/pan.");
         applyMapZoomAndPan(true);
@@ -1784,84 +1775,55 @@ function showLevelSelect() {
 }
 
 function focusMapOnQuadrant(immediate = true) {
-    console.log("focusMapOnQuadrant: Starting focus calculation.");
-    if (!levelSelectMapContainer) {
-        console.error("focusMapOnQuadrant: levelSelectMapContainer not found.");
-        return;
-    }
-    // Ensure highestLevelUnlocked is a number
+    console.log("focusMapOnQuadrant (TL): Starting focus calculation.");
+    if (!levelSelectMapContainer) { console.error("focusMapOnQuadrant: levelSelectMapContainer not found."); return; }
+
     const currentHighestLevel = parseInt(highestLevelUnlocked || '1', 10);
     const levelIndex = Math.max(0, currentHighestLevel - 1);
     const quadrantIndex = Math.floor(levelIndex / LEVELS_PER_QUADRANT) % 4;
     console.log(`focusMapOnQuadrant: highestLevel=${currentHighestLevel}, levelIndex=${levelIndex}, quadrantIndex=${quadrantIndex}`);
 
     const targetCenter = VISUAL_QUADRANT_CENTERS[quadrantIndex] || { x: 50, y: 50 };
-    const targetXPercent = targetCenter.x;
-    const targetYPercent = targetCenter.y;
-    let targetZoom = INITIAL_MAP_ZOOM_LEVEL; // Use the config value
+    const targetXPercent = targetCenter.x; const targetYPercent = targetCenter.y;
+
+    let targetZoom = INITIAL_MAP_ZOOM_LEVEL;
     targetZoom = Math.max(MIN_MAP_ZOOM, Math.min(MAX_MAP_ZOOM, targetZoom));
     console.log(`focusMapOnQuadrant: Target Center %: (${targetXPercent}, ${targetYPercent}), Target Zoom: ${targetZoom}`);
 
     const containerRect = levelSelectMapContainer.getBoundingClientRect();
-    if (containerRect.width <= 0 || containerRect.height <= 0) {
-        console.error("focusMapOnQuadrant: Invalid container dimensions.");
-        return;
-    }
-    // Ensure mapIntrinsicWidth/Height are numbers > 0
-    const safeMapWidth = Math.max(1, mapIntrinsicWidth || 1024);
-    const safeMapHeight = Math.max(1, mapIntrinsicHeight || 1024);
-    if (safeMapWidth <= 0 || safeMapHeight <= 0) {
-         console.error("focusMapOnQuadrant: Invalid map intrinsic dimensions.");
-         return;
-    }
+    if (containerRect.width <= 0 || containerRect.height <= 0) { console.error("focusMapOnQuadrant: Invalid container dimensions."); return; }
+    const safeMapWidth = Math.max(1, mapIntrinsicWidth || 1024); const safeMapHeight = Math.max(1, mapIntrinsicHeight || 1024);
+    if (safeMapWidth <= 0 || safeMapHeight <= 0) { console.error("focusMapOnQuadrant: Invalid map intrinsic dimensions."); return; }
 
-    const scaleX = containerRect.width / safeMapWidth;
-    const scaleY = containerRect.height / safeMapHeight;
-    const baseScale = Math.min(scaleX, scaleY);
+    // Use 'contain' scale calculation
+    const baseScale = calculateMapScale(containerRect.width, containerRect.height, safeMapWidth, safeMapHeight);
     const finalScale = baseScale * targetZoom;
 
+    // Target world coordinates (relative to map's top-left)
     const targetWorldX = (targetXPercent / 100) * safeMapWidth;
     const targetWorldY = (targetYPercent / 100) * safeMapHeight;
 
-    // Calculate the RAW offsets needed to center the target point
+    // Calculate the raw offset needed to place the targetWorldX/Y at the *center* of the container
+    // Offset = ContainerCenter - TargetPointScaled
     let rawOffsetX = containerRect.width / 2 - targetWorldX * finalScale;
     let rawOffsetY = containerRect.height / 2 - targetWorldY * finalScale;
-    console.log(`focusMapOnQuadrant: RAW Calculated offsetX=${rawOffsetX.toFixed(1)}, offsetY=${rawOffsetY.toFixed(1)}, finalScale=${finalScale.toFixed(3)}`);
+    console.log(`focusMapOnQuadrant (TL): RAW Calculated offsetX=${rawOffsetX.toFixed(1)}, offsetY=${rawOffsetY.toFixed(1)}, finalScale=${finalScale.toFixed(3)}`);
 
-    // --- Perform Clamping Calculation Locally (Strict Edges) ---
-    const mapRenderWidth = safeMapWidth * finalScale;
-    const mapRenderHeight = safeMapHeight * finalScale;
-    let minOffsetX, maxOffsetX, minOffsetY, maxOffsetY;
+    // Clamp the calculated offsets using the revised clamp function
+    const originalMapZoom = mapZoom;
+    mapZoom = targetZoom; // Temporarily set zoom for clamping
+    const clampedOffsets = clampMapOffsets(rawOffsetX, rawOffsetY);
+    mapZoom = originalMapZoom; // Restore zoom
 
-    // Determine horizontal clamping bounds (Strict Edges)
-    if (mapRenderWidth <= containerRect.width) {
-        minOffsetX = maxOffsetX = (containerRect.width - mapRenderWidth) / 2;
-    } else {
-        minOffsetX = containerRect.width - mapRenderWidth;
-        maxOffsetX = 0;
-    }
+    console.log(`focusMapOnQuadrant (TL): FINAL Clamped offsetX=${clampedOffsets.x.toFixed(1)}, offsetY=${clampedOffsets.y.toFixed(1)}`);
 
-    // Determine vertical clamping bounds (Strict Edges)
-    if (mapRenderHeight <= containerRect.height) {
-        minOffsetY = maxOffsetY = (containerRect.height - mapRenderHeight) / 2;
-    } else {
-        minOffsetY = containerRect.height - mapRenderHeight;
-        maxOffsetY = 0;
-    }
+    // Set the GLOBAL state
+    mapZoom = targetZoom;
+    mapOffsetX = clampedOffsets.x;
+    mapOffsetY = clampedOffsets.y;
 
-    // Calculate the final, clamped offsets
-    const finalOffsetX = Math.max(minOffsetX, Math.min(maxOffsetX, rawOffsetX));
-    const finalOffsetY = Math.max(minOffsetY, Math.min(maxOffsetY, rawOffsetY));
-    console.log(`focusMapOnQuadrant: Clamping bounds: X[${minOffsetX.toFixed(1)}, ${maxOffsetX.toFixed(1)}], Y[${minOffsetY.toFixed(1)}, ${maxOffsetY.toFixed(1)}]`);
-    console.log(`focusMapOnQuadrant: FINAL Clamped offsetX=${finalOffsetX.toFixed(1)}, offsetY=${finalOffsetY.toFixed(1)}`);
-
-    // --- Set the GLOBAL variables to the final clamped values ---
-    mapZoom = targetZoom; // Set the target zoom
-    mapOffsetX = finalOffsetX; // Set the clamped offset X
-    mapOffsetY = finalOffsetY; // Set the clamped offset Y
-
-    // --- Apply using the now-set global variables ---
-    applyMapZoomAndPan(immediate); // Apply the calculated values
+    // Apply the transform
+    applyMapZoomAndPan(immediate);
 }
 
 
@@ -2371,6 +2333,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial Setup (Keep as is)
     loadGameData(); showMainMenu(); updateMuteButtonVisual(); updateFullscreenButton(); requestAnimationFrame(() => { try { calculateCellSize(); } catch (e) {console.error("Initial RAF Error:", e);} });
-    const mapPreload = new Image(); mapPreload.onload = () => { mapIntrinsicWidth = mapPreload.naturalWidth || 1024; mapIntrinsicHeight = mapPreload.naturalHeight || 768; }; mapPreload.onerror = () => { console.warn("Map preload failed."); mapIntrinsicWidth=1024; mapIntrinsicHeight=768; }; mapPreload.src = WORLD_MAP_IMAGE_URL;
+    const mapPreload = new Image(); mapPreload.onload = () => { mapIntrinsicWidth = mapPreload.naturalWidth || 1024; mapIntrinsicHeight = mapPreload.naturalHeight || 1024; }; mapPreload.onerror = () => { console.warn("Map preload failed."); mapIntrinsicWidth=1024; mapIntrinsicHeight=1024; }; mapPreload.src = WORLD_MAP_IMAGE_URL;
     shopItemsContainer?.querySelectorAll('.shop-item[data-spell-name]').forEach(item => { const h4 = item.querySelector('h4'); if (h4) item.dataset.baseTitle = h4.textContent.split('[')[0].trim(); });
 });

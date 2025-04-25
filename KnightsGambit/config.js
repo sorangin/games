@@ -79,41 +79,41 @@ const FROST_NOVA_BASE_RADIUS_LEVEL = 1;
 const HEAL_BASE_AMOUNT = 3;
 
 const RECRUIT_COSTS = {
-    knight: 100,
-    archer: 150,
-    champion: 200,
+    knight: 50,
+    archer: 80,
+    champion: 120,
 };
 
 const UNIT_UPGRADE_COSTS = {
-    knight_hp: 100,
-    knight_atk: 100,
-    archer_hp: 100,
-    archer_atk: 100,
-    champion_hp: 150,
-    champion_atk: 150,
+    knight_hp: 50,
+    knight_atk: 50,
+    archer_hp: 50,
+    archer_atk: 80,
+    champion_hp: 100,
+    champion_atk: 100,
 };
 
 const SPELL_UPGRADE_CONFIG = {
     fireball: {
-        baseCost: 100, costIncrease: 20, effectIncrease: 1,
+        baseCost: 80, costIncrease: 10, effectIncrease: 1,
         requiredLevel: 6, maxLevel: 99, stat: 'damage'
     },
     flameWave: {
-        baseCost: 150, costIncrease: 50, effectIncrease: 1,
+        baseCost: 100, costIncrease: 30, effectIncrease: 1,
         requiredLevel: 10, maxLevel: 99, stat: 'damage'
     },
     frostNova: {
-        baseCost: 100, costIncrease: 30, effectIncrease: 1,
+        baseCost: 80, costIncrease: 20, effectIncrease: 1,
         requiredLevel: 14, maxLevel: 4, stat: 'radiusLevel'
     },
     heal: {
-        baseCost: 100, costIncrease: 20, effectIncrease: 2,
+        baseCost: 80, costIncrease: 10, effectIncrease: 2,
         requiredLevel: 18, maxLevel: 99, stat: 'amount'
     }
 };
 
 const PASSIVE_UPGRADE_COSTS = {
-    gold_magnet: 100,
+    gold_magnet: 40,
 };
 
 const ARROW_FLY_DURATION_MS = 300;
@@ -213,8 +213,8 @@ const VISUAL_QUADRANT_CENTERS = [
     { x: 27, y: 73 }, // Desert (Bottom-Left)
     { x: 73, y: 73 }  // Snow (Bottom-Right)
 ];
-const LEVEL_DOT_SPREAD_FACTOR_UI = 12;
-const INITIAL_MAP_ZOOM_LEVEL = 2.8;
+const LEVEL_DOT_SPREAD_FACTOR_UI = 25;
+const INITIAL_MAP_ZOOM_LEVEL = 2.6;
 
 const LEVEL_COMPLETE_BONUS_GOLD = {
     noSpells: 10,
