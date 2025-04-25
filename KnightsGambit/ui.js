@@ -25,7 +25,7 @@ let gameContainer, gameBoardWrapper, gameBoard, gridContent, uiPanel, levelDispl
 let currentCellSize = 30;
 let gridContentOffsetX = 0; let gridContentOffsetY = 0;
 let currentZoom = 1;
-const MIN_ZOOM = 0.5; const MAX_ZOOM = 3.0;
+const MAX_ZOOM = 3.0;
 let isPanning = false; let panStartX = 0; let panStartY = 0;
 let gridStartPanX = 0; let gridStartPanY = 0;
 let resizeTimeout = null;
@@ -212,8 +212,12 @@ function updateObstaclePosition(obstacle) {
 
 function updateItemPosition(item) {
     if (!item?.element) return;
-    item.element.style.setProperty('--item-x', item.x + 1); item.element.style.setProperty('--item-y', item.y + 1);
+    // Update the CSS variables used by the CSS for left/top positioning
+    item.element.style.setProperty('--item-grid-x', item.x);
+    item.element.style.setProperty('--item-grid-y', item.y);
+    // Update the stacking index variable
     item.element.style.setProperty('--stackIndex', item.stackIndex || 0);
+    // CSS transform handles the rest (centering, stacking)
 }
 
 function updateCellObstacleStatus(x, y) {
@@ -726,7 +730,95 @@ async function handleObstacleDestroyAnimation(obstacle) {
 }
 
 async function animateItemDrop(itemsToAnimate, targetX, targetY) {
-   return Promise.all(itemsToAnimate.map((item, index) => { return new Promise(resolve => { if (!item) { resolve(); return; } if (!item.element) renderItem(item, gridContent); if (!item.element || !gridContent) { console.warn("Failed item anim:", item); resolve(); return; } const el = item.element; const startX = (targetX + 0.5) * currentCellSize; const startY = (targetY + 0.5) * currentCellSize - 20; const endX = (targetX + 0.5) * currentCellSize; const endY = (targetY + 0.5) * currentCellSize; el.style.setProperty('--stackIndex', item.stackIndex || 0); el.style.left = `${startX}px`; el.style.top = `${startY}px`; el.style.opacity = '0'; el.style.transform = `translate(calc(-50% + var(--stackIndex) * var(--stack-offset-x)), calc(-50% + var(--stackIndex) * var(--stack-offset-y))) scale(0.5)`; el.style.transition = `opacity 0.2s ease-out ${index * 50}ms, top ${ITEM_DROP_ANIMATION_DURATION_MS}ms cubic-bezier(0.68, -0.55, 0.27, 1.55) ${index * 50}ms, transform ${ITEM_DROP_ANIMATION_DURATION_MS}ms cubic-bezier(0.68, -0.55, 0.27, 1.55) ${index * 50}ms`; requestAnimationFrame(() => { el.style.opacity = '1'; el.style.top = `${endY}px`; el.style.transform = `translate(calc(-50% + var(--stackIndex) * var(--stack-offset-x)), calc(-50% + var(--stackIndex) * var(--stack-offset-y))) scale(1)`; updateCellItemStatus(item.x, item.y); setTimeout(resolve, ITEM_DROP_ANIMATION_DURATION_MS + index * 50); }); }); }));
+    // Use Promise.all to wait for all individual item animations to finish
+    return Promise.all(itemsToAnimate.map((item, index) => {
+        // Create a new promise for each item's animation
+        return new Promise(resolve => {
+            // --- Basic Validation ---
+            if (!item) {
+                console.warn("animateItemDrop: Received null/undefined item in array.");
+                resolve(); // Resolve immediately for invalid items
+                return;
+            }
+
+            // Ensure the item has an element. If not, render it first.
+            // This handles cases where items are created but not yet in the DOM.
+            if (!item.element) {
+                renderItem(item, gridContent); // Assumes gridContent is the correct parent
+            }
+
+            // Double-check element existence after potential rendering
+            if (!item.element || !gridContent) {
+                console.warn("animateItemDrop: Failed to get/create element for item:", item);
+                resolve(); // Resolve if element still cannot be obtained
+                return;
+            }
+
+            const el = item.element;
+
+            // --- Calculate Final Position ---
+            // Use the item's *actual* grid coordinates (item.x, item.y)
+            // which might be different from targetX/Y if items scatter slightly.
+            // Position the element's anchor point (left/top) at the center of its target grid cell.
+            const finalXCoord = (item.x + 0.5) * currentCellSize;
+            const finalYCoord = (item.y + 0.5) * currentCellSize;
+
+            // --- Set Final Position Styles & Stack Index ---
+            // These are set immediately; the animation works by transitioning the transform.
+            el.style.left = `${finalXCoord}px`;
+            el.style.top = `${finalYCoord}px`;
+            // Ensure stack index is applied as a CSS variable for the transform
+            el.style.setProperty('--stackIndex', item.stackIndex || 0);
+
+            // --- Define Animation States ---
+            // Initial state: Higher up, smaller scale, centered + stacked offset
+            const startTransform = `translate(
+                calc(-50% + var(--stackIndex, 0) * var(--stack-offset-x)),
+                calc(-50% + var(--stackIndex, 0) * var(--stack-offset-y) - 20px) /* Start 20px higher */
+            ) scale(0.5)`; // Start at half size
+
+            // Final state: Normal position (centered + stacked offset), full scale
+            const endTransform = `translate(
+                calc(-50% + var(--stackIndex, 0) * var(--stack-offset-x)),
+                calc(-50% + var(--stackIndex, 0) * var(--stack-offset-y))
+            ) scale(1)`; // End at full size
+
+            // --- Apply Initial State & Transition ---
+            el.style.opacity = '0'; // Start invisible
+            el.style.transform = startTransform; // Apply starting transform
+
+            const delay = index * 50; // Stagger animation start for multiple items
+            const duration = ITEM_DROP_ANIMATION_DURATION_MS; // Get duration from config/constant
+            // Define the CSS transition properties
+            el.style.transition = `opacity 0.2s ease-out ${delay}ms, transform ${duration}ms cubic-bezier(0.68, -0.55, 0.27, 1.55) ${delay}ms`;
+            // cubic-bezier for a bounce effect
+
+            // --- Trigger Animation ---
+            // Use requestAnimationFrame to ensure the initial styles are applied
+            // before setting the final styles, triggering the transition.
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    // Apply final animation state (triggers the transition)
+                    el.style.opacity = '1';
+                    el.style.transform = endTransform;
+
+                    // Update the cell's visual state to indicate an item is present
+                    updateCellItemStatus(item.x, item.y);
+
+                    // --- Animation Cleanup ---
+                    // Set a timeout to resolve the promise after the animation finishes
+                    setTimeout(() => {
+                        // Optional: Remove the explicit transition style property
+                        // so it doesn't interfere with other transitions (like hover)
+                        // if (el) { // Check if element still exists
+                        //     el.style.transition = '';
+                        // }
+                        resolve(); // Signal that this item's animation is done
+                    }, duration + delay); // Wait for full duration + stagger delay
+                });
+            });
+        }); // End of Promise for single item
+    })); // End of Promise.all for all items
 }
 
 async function animateItemPickup(itemsToAnimate) {
@@ -756,6 +848,42 @@ function updateVisualItemState(item) {
     if (!item?.element) return; if (item.type === 'chest' && item.opened) { item.element.classList.add('opened'); item.element.style.pointerEvents = 'none'; item.element.style.cursor = 'default'; } updateCellItemStatus(item.x, item.y);
 }
 
+function calculateMinZoomToFit() {
+    // Basic validation
+    if (!gameBoard || !gridContent) {
+        console.warn("calculateMinZoomToFit: Missing gameBoard or gridContent.");
+        return 0.1; // Return a small default safe value
+    }
+
+    const boardWidth = gameBoard.clientWidth;
+    const boardHeight = gameBoard.clientHeight;
+    // Ensure cell size is current, although it should be set by layout updates
+    const currentGridCellSize = currentCellSize || 30;
+
+    // Validate dimensions
+    if (boardWidth <= 0 || boardHeight <= 0 || currentGridCellSize <= 0 || currentGridCols <= 0 || currentGridRows <= 0) {
+        console.warn("calculateMinZoomToFit: Invalid dimensions.");
+        return 0.1; // Return a small default safe value
+    }
+
+    const gridWidth = currentGridCols * currentGridCellSize;
+    const gridHeight = currentGridRows * currentGridCellSize;
+    if (gridWidth <= 0 || gridHeight <= 0) {
+        console.warn("calculateMinZoomToFit: Invalid grid dimensions.");
+        return 0.1; // Return a small default safe value
+    }
+
+    // Calculate the zoom level needed to fit both width and height
+    const zoomToFitWidth = boardWidth / gridWidth;
+    const zoomToFitHeight = boardHeight / gridHeight;
+    const targetZoomFit = Math.min(zoomToFitWidth, zoomToFitHeight);
+
+    // We still need *some* absolute minimum floor to prevent zooming infinitely small if something goes wrong.
+    // Also respect the overall MAX_ZOOM.
+    const absoluteMinFloor = 0.1; // Prevent zooming smaller than this ever
+    return Math.max(absoluteMinFloor, Math.min(MAX_ZOOM, targetZoomFit));
+}
+
 function applyZoomAndPan() {
     if (!gridContent) return; clampPan();
     const transformValue = `translate(${gridContentOffsetX}px, ${gridContentOffsetY}px) scale(${currentZoom})`;
@@ -768,10 +896,42 @@ function applyZoomAndPan() {
 }
 
 function handleZoom(event) {
-    event.preventDefault(); if (!gameBoard || isAnyOverlayVisible()) return;
-    const zoomSpeed = 0.1; const delta = event.deltaY > 0 ? -1 : 1; const oldZoom = currentZoom; currentZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, currentZoom + delta * zoomSpeed));
-    const rect = gameBoard.getBoundingClientRect(); const mouseX = event.clientX - rect.left; const mouseY = event.clientY - rect.top;
-    gridContentOffsetX = mouseX - (mouseX - gridContentOffsetX) * (currentZoom / oldZoom); gridContentOffsetY = mouseY - (mouseY - gridContentOffsetY) * (currentZoom / oldZoom);
+    event.preventDefault();
+    if (!gameBoard || isAnyOverlayVisible()) return;
+
+    const zoomSpeed = 0.1;
+    const delta = event.deltaY > 0 ? -1 : 1; // -1 zoom out, 1 zoom in
+    const oldZoom = currentZoom;
+
+    // --- Calculate Dynamic Minimum Zoom ---
+    const dynamicMinZoom = calculateMinZoomToFit();
+    // --- End Calculate Dynamic Minimum Zoom ---
+
+    // Calculate new zoom, clamping between dynamic min and fixed max
+    currentZoom = Math.max(dynamicMinZoom, Math.min(MAX_ZOOM, currentZoom + delta * zoomSpeed));
+
+    // If zoom didn't actually change, exit
+    if (currentZoom === oldZoom) {
+        return;
+    }
+
+    // Recalculate offsets based on mouse position to keep it stationary
+    const rect = gameBoard.getBoundingClientRect();
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+
+    // Prevent division by zero if oldZoom was somehow invalid
+    if (oldZoom <= 0) {
+         console.error("handleZoom: Invalid oldZoom value.");
+         // Optionally reset view here
+         centerView(true);
+         return;
+    }
+
+    gridContentOffsetX = mouseX - (mouseX - gridContentOffsetX) * (currentZoom / oldZoom);
+    gridContentOffsetY = mouseY - (mouseY - gridContentOffsetY) * (currentZoom / oldZoom);
+
+    // Apply the new zoom and recalculated offsets (applyZoomAndPan handles clamping offsets)
     applyZoomAndPan();
 }
 
@@ -797,25 +957,123 @@ function clampPan() {
 }
 
 function isDefaultView() {
-    if (!gameBoard || !gridContent) return true; const boardWidth = gameBoard.clientWidth; const boardHeight = gameBoard.clientHeight; if (boardWidth <= 0 || boardHeight <= 0 || currentCellSize <= 0 || currentGridCols <= 0 || currentGridRows <= 0) return true;
-    const gridWidth = currentGridCols * currentCellSize; const gridHeight = currentGridRows * currentCellSize; if (gridWidth <= 0 || gridHeight <= 0) return true;
-    const defaultZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, boardWidth / gridWidth, boardHeight / gridHeight)); const defaultOffsetX = (boardWidth - gridWidth * defaultZoom) / 2; const defaultOffsetY = (boardHeight - gridHeight * defaultZoom) / 2;
-    const zoomThreshold = 0.01; const offsetThreshold = 2;
-    return Math.abs(currentZoom - defaultZoom) < zoomThreshold && Math.abs(gridContentOffsetX - defaultOffsetX) < offsetThreshold && Math.abs(gridContentOffsetY - defaultOffsetY) < offsetThreshold;
+    // Basic validation
+    if (!gameBoard || !gridContent) {
+        // If elements are missing, arguably it's not the default view,
+        // but returning true might hide the button unnecessarily. Let's assume false.
+        return false;
+    }
+    const boardWidth = gameBoard.clientWidth;
+    const boardHeight = gameBoard.clientHeight;
+    // Add check for cell size validity
+    if (boardWidth <= 0 || boardHeight <= 0 || currentCellSize <= 0 || currentGridCols <= 0 || currentGridRows <= 0) {
+        // If dimensions are invalid, cannot determine default view accurately.
+        // Returning false ensures the reset button is visible.
+        console.warn("isDefaultView: Invalid dimensions for calculation.");
+        return false;
+    }
+
+    // --- Calculate the Dynamic "Default" (Fit-to-Screen) Zoom ---
+    const defaultZoom = calculateMinZoomToFit(); // Use the helper function
+    // --- End Calculate Zoom ---
+
+    // --- Calculate the Offsets for the Default Zoom ---
+    const gridWidth = currentGridCols * currentCellSize;
+    const gridHeight = currentGridRows * currentCellSize;
+    // Ensure grid dimensions are valid before calculating offsets
+    if (gridWidth <= 0 || gridHeight <= 0) {
+         console.warn("isDefaultView: Invalid grid dimensions for offset calculation.");
+         return false;
+    }
+    const defaultOffsetX = (boardWidth - gridWidth * defaultZoom) / 2;
+    const defaultOffsetY = (boardHeight - gridHeight * defaultZoom) / 2;
+    // --- End Calculate Offsets ---
+
+
+    // --- Compare Current State to Default State ---
+    const zoomThreshold = 0.01; // Tolerance for floating point comparisons
+    const offsetThreshold = 2;  // Tolerance for pixel offset comparisons
+
+    const isZoomDefault = Math.abs(currentZoom - defaultZoom) < zoomThreshold;
+    const isOffsetXDefault = Math.abs(gridContentOffsetX - defaultOffsetX) < offsetThreshold;
+    const isOffsetYDefault = Math.abs(gridContentOffsetY - defaultOffsetY) < offsetThreshold;
+
+    // Return true only if all three components are within the threshold of the default state
+    return isZoomDefault && isOffsetXDefault && isOffsetYDefault;
 }
 
 function updateDefaultViewButtonVisibility() { if(defaultViewButton) defaultViewButton.classList.toggle('hidden', isDefaultView()); }
 
-function centerView(immediate = false) {
-    if (!gameBoard || !gridContent) return; calculateCellSize(); const boardWidth = gameBoard.clientWidth; const boardHeight = gameBoard.clientHeight; if (boardWidth <= 0 || boardHeight <= 0 || currentCellSize <= 0) { console.warn("Cannot center: Invalid dimensions."); return; }
-    const gridWidth = currentGridCols * currentCellSize; const gridHeight = currentGridRows * currentCellSize; if (gridWidth <= 0 || gridHeight <= 0) { console.warn("Cannot center: Invalid grid dimensions."); return; }
-    const zoomToFitWidth = boardWidth / gridWidth; const zoomToFitHeight = boardHeight / gridHeight; const targetZoomFit = Math.min(zoomToFitWidth, zoomToFitHeight); currentZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, targetZoomFit));
-    const targetOffsetX = (boardWidth - (gridWidth * currentZoom)) / 2; const targetOffsetY = (boardHeight - (gridHeight * currentZoom)) / 2;
-    if (immediate) { const originalTransition = gridContent.style.transition; gridContent.style.transition = 'none'; gridContentOffsetX = targetOffsetX; gridContentOffsetY = targetOffsetY; applyZoomAndPan(); requestAnimationFrame(() => { if(gridContent) gridContent.style.transition = originalTransition; }); }
-    else { gridContent.style.transition = 'transform 0.3s ease-out'; gridContentOffsetX = targetOffsetX; gridContentOffsetY = targetOffsetY; applyZoomAndPan(); setTimeout(() => { if(gridContent) gridContent.style.transition = ''; }, 300); }
-}
+function centerView(immediate = false) { // Removed forceMinZoom parameter
+    // Basic validation
+    if (!gameBoard || !gridContent) {
+        console.warn("Cannot centerView: Missing gameBoard or gridContent.");
+        return;
+    }
 
-// ui.js
+    // Ensure cell size is calculated
+    calculateCellSize();
+
+    const boardWidth = gameBoard.clientWidth;
+    const boardHeight = gameBoard.clientHeight;
+    // Validate dimensions
+    if (boardWidth <= 0 || boardHeight <= 0 || currentCellSize <= 0) {
+        console.warn("Cannot centerView: Invalid dimensions.");
+        return;
+    }
+
+    const gridWidth = currentGridCols * currentCellSize;
+    const gridHeight = currentGridRows * currentCellSize;
+    if (gridWidth <= 0 || gridHeight <= 0) {
+        console.warn("Cannot centerView: Invalid grid dimensions.");
+        return;
+    }
+
+    // --- Determine Target Zoom (Always the minimum zoom to fit) ---
+    const targetZoom = calculateMinZoomToFit(); // Use the helper function
+    console.log(`centerView: Setting zoom to fit: ${targetZoom}`);
+    // --- End Determine Target Zoom ---
+
+    // --- Calculate Target Offsets (to center the grid AT THE TARGET ZOOM) ---
+    const targetOffsetX = (boardWidth - (gridWidth * targetZoom)) / 2;
+    const targetOffsetY = (boardHeight - (gridHeight * targetZoom)) / 2;
+    console.log(`centerView: Target offsets: X=${targetOffsetX.toFixed(1)}, Y=${targetOffsetY.toFixed(1)}`);
+    // --- End Calculate Target Offsets ---
+
+    // --- Apply Transform ---
+    // Store the current zoom globally
+    currentZoom = targetZoom;
+
+    // Apply transform (keep immediate/smooth logic)
+    if (immediate) {
+        const originalTransition = gridContent.style.transition;
+        gridContent.style.transition = 'none';
+        if (unitHpBarsOverlay) unitHpBarsOverlay.style.transition = 'none';
+
+        gridContentOffsetX = targetOffsetX;
+        gridContentOffsetY = targetOffsetY;
+        applyZoomAndPan();
+
+        requestAnimationFrame(() => {
+            if (gridContent) gridContent.style.transition = originalTransition;
+            if (unitHpBarsOverlay) unitHpBarsOverlay.style.transition = originalTransition;
+        });
+    } else {
+        const transitionStyle = 'transform 0.3s ease-out';
+        gridContent.style.transition = transitionStyle;
+        if (unitHpBarsOverlay) unitHpBarsOverlay.style.transition = transitionStyle;
+
+        gridContentOffsetX = targetOffsetX;
+        gridContentOffsetY = targetOffsetY;
+        applyZoomAndPan();
+
+        setTimeout(() => {
+            if (gridContent) gridContent.style.transition = '';
+            if (unitHpBarsOverlay) unitHpBarsOverlay.style.transition = '';
+        }, 300);
+    }
+    // --- End Apply Transform ---
+}
 
 function applyMapZoomAndPan(immediate = false) {
     if (!levelSelectMap || !levelSelectMapContainer || !levelSelectDotsLayer) return;

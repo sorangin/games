@@ -868,66 +868,168 @@ async function moveUnit(unit, targetX, targetY) {
 
 
 function checkForItemPickup(unit, x, y) {
-    if (!unit || unit.team !== 'player' || !isUnitAliveAndValid(unit)) return;
+    // Initial validation: Ensure it's a valid player unit and coordinates
+    if (!unit || unit.team !== 'player' || !isUnitAliveAndValid(unit) || !isCellInBounds(x, y)) {
+        return;
+    }
+
+    // Find all uncollected items on the target cell
     const itemsOnCell = items.filter(item => !item.collected && item.x === x && item.y === y);
-    if (itemsOnCell.length === 0) return;
+    if (itemsOnCell.length === 0) {
+        return; // No items to pick up
+    }
 
-    let goldFromThisPickup = 0; let gemsCollectedThisCheck = 0; let potionsCollectedThisCheck = 0; let chestOpenedThisCheck = false;
+    // --- Initialize variables for this pickup event ---
+    let goldFromThisPickup = 0;
+    let chestOpenedThisCheck = false;
     let itemsToAnimateRemoval = [];
+    // Use an object to track the count/value of distinct items collected in this single event
+    let collectedCounts = {
+        gold: 0,
+        shiny_gem: 0,
+        health_potion: 0
+        // Add other collectible types here if needed
+    };
+    let healAppliedTotal = 0; // Track total healing applied from potions this pickup
 
+    // --- Process each item on the cell ---
     itemsOnCell.forEach(item => {
         const itemData = ITEM_DATA[item.type];
-        if (!itemData || item.collected) return;
-        item.collected = true; itemsToAnimateRemoval.push(item);
+        if (!itemData || item.collected) return; // Skip if already collected or data missing
+
+        item.collected = true; // Mark as collected FIRST
+        itemsToAnimateRemoval.push(item); // Add to list for visual removal
+
         switch (itemData.pickupAction) {
             case 'addGold':
-                 const value = item.value || itemData.value || 0; goldFromThisPickup += value;
-                 if (item.type === 'shiny_gem') gemsCollectedThisCheck++; break;
+                const goldValue = item.value || itemData.value || 0;
+                goldFromThisPickup += goldValue;
+                // Don't count gem value directly as 'gold coins', just add to total gold
+                if (item.type === 'shiny_gem') {
+                    collectedCounts.shiny_gem++; // Count the gem itself
+                } else if (item.type === 'gold') {
+                     collectedCounts.gold += goldValue; // Count actual gold coins/value
+                }
+                break;
+
             case 'healUnit':
-                 const healAmount = itemData.value || 0;
-                 if (healAmount > 0 && unit.hp < unit.maxHp) {
-                     const healed = Math.min(healAmount, unit.maxHp - unit.hp); unit.hp += healed; potionsCollectedThisCheck++;
-                     if (typeof showHealPopup === 'function') showHealPopup(unit.x, unit.y, healed);
-                     if (typeof updateUnitInfoDisplay === 'function') updateUnitInfoDisplay(unit);
-                     if (typeof updateWorldHpBar === 'function') updateWorldHpBar(unit);
-                 } break;
+                const healAmount = itemData.value || 0;
+                if (healAmount > 0 && unit.hp < unit.maxHp) {
+                    const healApplied = Math.min(healAmount, unit.maxHp - unit.hp);
+                    unit.hp += healApplied;
+                    healAppliedTotal += healApplied; // Track total healing
+                    collectedCounts.health_potion++; // Count the potion
+                    // Defer UI updates until after loop
+                }
+                break;
+
             case 'openChest':
-                 if (!item.opened) {
-                     item.opened = true; chestOpenedThisCheck = true; if (typeof updateVisualItemState === 'function') updateVisualItemState(item);
-                     goldFromThisPickup += item.value;
-                     if (Math.random() < item.potionChance && unit.hp < unit.maxHp) {
-                          const healed = Math.min(HEALTH_POTION_HEAL_AMOUNT, unit.maxHp - unit.hp); unit.hp += healed; potionsCollectedThisCheck++;
-                          if (typeof showHealPopup === 'function') showHealPopup(unit.x, unit.y, healed);
-                          if (typeof updateUnitInfoDisplay === 'function') updateUnitInfoDisplay(unit);
-                          if (typeof updateWorldHpBar === 'function') updateWorldHpBar(unit);
-                     }
-                     if (Math.random() < item.gemChance) {
-                         const gemVal = Math.floor(Math.random() * (ITEM_DATA.shiny_gem.valueMax - ITEM_DATA.shiny_gem.valueMin + 1)) + ITEM_DATA.shiny_gem.valueMin;
-                         goldFromThisPickup += gemVal; gemsCollectedThisCheck++;
-                     }
-                 } break;
+                if (!item.opened) { // Ensure chest isn't already open
+                    item.opened = true;
+                    chestOpenedThisCheck = true;
+                    if (typeof updateVisualItemState === 'function') {
+                        updateVisualItemState(item); // Update visual to opened chest
+                    }
+
+                    // Add base gold from chest
+                    const chestGold = item.value || 0; // Use pre-calculated chest value
+                    goldFromThisPickup += chestGold;
+                    collectedCounts.gold += chestGold; // Add chest gold to gold count
+
+                    // Check for potion drop
+                    if (Math.random() < item.potionChance && unit.hp < unit.maxHp) {
+                         const potionHealAmount = HEALTH_POTION_HEAL_AMOUNT; // Use constant
+                         const healApplied = Math.min(potionHealAmount, unit.maxHp - unit.hp);
+                         unit.hp += healApplied;
+                         healAppliedTotal += healApplied;
+                         collectedCounts.health_potion++; // Count the potion from chest
+                    }
+
+                    // Check for gem drop
+                    if (Math.random() < item.gemChance) {
+                        const gemVal = Math.floor(Math.random() * (ITEM_DATA.shiny_gem.valueMax - ITEM_DATA.shiny_gem.valueMin + 1)) + ITEM_DATA.shiny_gem.valueMin;
+                        goldFromThisPickup += gemVal; // Add gem value to total gold
+                        collectedCounts.shiny_gem++; // Count the gem from chest
+                    }
+                }
+                // Note: We don't remove the chest item visually here, updateVisualItemState handles the appearance change
+                // Remove the chest from the animation list if it was added mistakenly
+                itemsToAnimateRemoval = itemsToAnimateRemoval.filter(animItem => animItem.id !== item.id);
+                break;
+
+            default:
+                console.warn(`Unknown item pickup action: ${itemData.pickupAction} for item type: ${item.type}`);
+                break;
         }
     });
 
-    playerGold += goldFromThisPickup; goldCollectedThisLevel += goldFromThisPickup;
-    if (chestOpenedThisCheck) playSfx('chestOpen');
-    else if (potionsCollectedThisCheck > 0) playSfx('potionPickup');
-    else if (gemsCollectedThisCheck > 0 || goldFromThisPickup > 0) playSfx('pickup');
-    let feedbackMsg = ""; const goldIcon = `<img src="./sprites/gold.png" class="feedback-gold-icon" alt="G">`;
-    if (goldFromThisPickup > 0) feedbackMsg += `+${goldFromThisPickup}${goldIcon} `;
-    if (potionsCollectedThisCheck > 0) feedbackMsg += `Potion! `;
-    if (feedbackMsg && typeof showFeedback === 'function') showFeedback(feedbackMsg.trim(), 'feedback-gold');
+    // --- Update Game State ---
+    playerGold += goldFromThisPickup;
+    goldCollectedThisLevel += goldFromThisPickup;
+
+    // --- Play Sounds (Prioritized) ---
+    if (chestOpenedThisCheck) {
+        playSfx('chestOpen');
+    } else if (collectedCounts.health_potion > 0) {
+        playSfx('potionPickup'); // Potion sound takes precedence over gold/gem if no chest
+    } else if (collectedCounts.gold > 0 || collectedCounts.shiny_gem > 0) {
+        playSfx('pickup'); // Generic pickup for gold/gems
+    }
+
+    // --- Update UI ---
+    if (healAppliedTotal > 0) {
+        if (typeof showHealPopup === 'function') showHealPopup(x, y, healAppliedTotal); // Show total heal
+        if (typeof updateUnitInfoDisplay === 'function') updateUnitInfoDisplay(unit);
+        if (typeof updateWorldHpBar === 'function') updateWorldHpBar(unit);
+    }
     if (typeof updateGoldDisplay === 'function') updateGoldDisplay();
+
+    // --- Build Consolidated Feedback Message ---
+    let feedbackParts = [];
+    const goldIcon = `<img src="./sprites/gold.png" class="feedback-gold-icon" alt="G">`;
+    const gemIcon = `<img src="./sprites/shiny_gem.png" class="feedback-gold-icon" alt="💎">`; // Use appropriate icon
+    const potionIcon = `<img src="./sprites/potion_heal.png" class="feedback-gold-icon" alt="❤️">`; // Use appropriate icon
+
+    // Add gold amount if collected (from coins or chests)
+    if (collectedCounts.gold > 0) {
+        feedbackParts.push(`+${collectedCounts.gold}${goldIcon}`);
+    }
+    // Add gem count if collected
+    if (collectedCounts.shiny_gem > 0) {
+        feedbackParts.push(`+${collectedCounts.shiny_gem}${gemIcon}`);
+    }
+    // Add potion count if collected
+    if (collectedCounts.health_potion > 0) {
+         feedbackParts.push(`+${collectedCounts.health_potion}${potionIcon}`);
+    }
+
+    // Show the consolidated feedback if any items were collected
+    if (feedbackParts.length > 0 && typeof showFeedback === 'function') {
+        showFeedback(feedbackParts.join(' '), 'feedback-gold'); // Join parts with space
+    }
+
+    // --- Handle Visual Removal/Animation ---
     if (itemsToAnimateRemoval.length > 0) {
-         if(typeof animateItemPickup === 'function') animateItemPickup(itemsToAnimateRemoval);
-         else removeVisualItems(itemsToAnimateRemoval);
-         setTimeout(() => updateCellItemStatus(x,y), ITEM_PICKUP_ANIMATION_DURATION_MS + 50);
-    } else if (chestOpenedThisCheck) { updateCellItemStatus(x, y); }
+        if (typeof animateItemPickup === 'function') {
+            animateItemPickup(itemsToAnimateRemoval); // Animate removal
+        } else {
+            removeVisualItems(itemsToAnimateRemoval); // Fallback: Instant removal
+        }
+        // Delay updating cell status until after animation might finish
+        setTimeout(() => updateCellItemStatus(x, y), ITEM_PICKUP_ANIMATION_DURATION_MS + 50);
+    } else if (chestOpenedThisCheck) {
+        // If only a chest was opened (no other items to animate), update cell status immediately
+        updateCellItemStatus(x, y);
+    }
+
+    // --- Check Win Conditions After Pickup ---
+    // Check if level cleared and no collectibles remain
     const remainingCollectibles = items.some(item => !item.collected && (item.type !== 'chest' || !item.opened));
     if (levelClearedAwaitingInput && !remainingCollectibles && typeof showFeedback === 'function') {
         showFeedback("All items collected!", "feedback-levelup");
-        if (typeof updateTurnDisplay === 'function') updateTurnDisplay();
+        if (typeof updateTurnDisplay === 'function') updateTurnDisplay(); // Update End Turn button text maybe
     }
+    // Let checkWinLossConditions handle the actual win state check if needed elsewhere
 }
 
 async function initiateTowerEntrySequence(unit, tower, path) {

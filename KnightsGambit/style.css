@@ -242,7 +242,7 @@ img { max-width: 100%; height: auto; vertical-align: middle; image-rendering: pi
 .grid-cell.flame-wave-preview-row:not(.has-obstacle) { background-color: var(--flame-wave-preview-bg) !important; box-shadow: inset 0 0 0 2px var(--flame-wave-preview-border), inset 0 0 6px rgba(255, 130, 0, 0.4) !important; z-index: 2; }
 
 /* Game Objects Base */
-.obstacle, .item, .unit, .projectile, .fireball-explosion, .flame-wave-explosion, .damage-popup, .freeze-popup, .heal-popup, .effect, .gold-popup, .gem-popup { position: absolute; pointer-events: none; image-rendering: pixelated; background-size: contain; background-repeat: no-repeat; background-position: center; transform-origin: center center; will-change: left, top, transform, opacity, filter; opacity: 1; }
+.obstacle, .item, .unit, .projectile, .fireball-explosion, .flame-wave-explosion, .damage-popup, .freeze-popup, .heal-popup, .effect, .gold-popup, .gem-popup { position: absolute; pointer-events: none; image-rendering: pixelated; background-size: contain; background-repeat: no-repeat; background-position: center; transform-origin: center center; will-change: transform, opacity; }
 
 /* Units */
 .unit { width: calc(var(--cell-size) * 0.85); height: calc(var(--cell-size) * 0.85); left: calc((var(--unit-x, 1) - 0.5) * var(--cell-size)); top: calc((var(--unit-y, 1) - 0.5) * var(--cell-size)); transform: translate(-50%, -50%); z-index: 10; transition: filter 0.2s, box-shadow 0.2s, opacity 0.2s ease-out, background-image 0.1s ease-in, transform var(--move-anim-time) ease-out, left var(--move-anim-time) ease-out, top var(--move-anim-time) ease-out; background-color: transparent; filter: var(--unit-base-shadow); pointer-events: auto; }
@@ -293,14 +293,44 @@ img { max-width: 100%; height: auto; vertical-align: middle; image-rendering: pi
 .obstacle.destroyed { opacity: 0 !important; pointer-events: none !important; filter: none; transform: translate(-50%, -50%) scale(0.7) rotate(20deg); }
 
 /* Items */
-.item { width: calc(var(--cell-size) * var(--item-size-factor, 0.6)); height: calc(var(--cell-size) * var(--item-size-factor, 0.6)); left: calc((var(--item-x, 1) - 0.5) * var(--cell-size)); top: calc((var(--item-y, 1) - 0.5) * var(--cell-size)); transform: translate(calc(-50% + var(--stackIndex, 0) * var(--stack-offset-x)), calc(-50% + var(--stackIndex, 0) * var(--stack-offset-y))); z-index: 9; transition: all 0.2s ease-out, opacity var(--item-pickup-anim-time) ease-out, transform 0.3s cubic-bezier(0.45, 0.05, 0.55, 0.95); --stackIndex: 0; pointer-events: auto; cursor: pointer; filter: var(--item-base-shadow); opacity: 1; }
-.item:hover { transform: translate(calc(-50% + var(--stackIndex, 0) * var(--stack-offset-x)), calc(-50% + var(--stackIndex, 0) * var(--stack-offset-y))) scale(1.3) rotate(8deg); filter: var(--item-hover-shadow) brightness(1.2); z-index: 10; }
+.item { position: absolute;
+    width: calc(var(--cell-size) * var(--item-size-factor, 0.6));
+    height: calc(var(--cell-size) * var(--item-size-factor, 0.6));
+
+    /* Set the origin point using left/top based on cell center */
+    left: calc((var(--item-grid-x, 0) + 0.5) * var(--cell-size));
+    top: calc((var(--item-grid-y, 0) + 0.5) * var(--cell-size));
+
+    /* Use transform to center the item AND apply stacking offset */
+    transform: translate(
+        calc(-50% + var(--stackIndex, 0) * var(--stack-offset-x)),
+        calc(-50% + var(--stackIndex, 0) * var(--stack-offset-y))
+    );
+
+    z-index: 9;
+    transition: opacity var(--item-pickup-anim-time) ease-out, transform 0.3s cubic-bezier(0.45, 0.05, 0.55, 0.95);
+    pointer-events: auto; cursor: pointer; filter: var(--item-base-shadow); opacity: 1;
+    image-rendering: pixelated;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    transform-origin: center center;
+    will-change: transform, opacity, left, top;
+}
+.item:hover {
+    transform: translate(
+        calc(-50% + var(--stackIndex, 0) * var(--stack-offset-x)),
+        calc(-50% + var(--stackIndex, 0) * var(--stack-offset-y))
+        ) scale(1.3) rotate(8deg);
+        filter: var(--item-hover-shadow) brightness(1.2);
+        z-index: 10; }
+
 .item.gold-coin { background-image: url('./sprites/gold.png'); z-index: 9; }
 .item.health-potion { background-image: url('./sprites/potion_heal.png'); z-index: 8; }
 .item.shiny-gem { background-image: url('./sprites/shiny_gem.png'); z-index: 8; }
 .item.chest { background-image: url('./sprites/chest.png'); width: calc(var(--cell-size) * var(--chest-size-factor)); height: calc(var(--cell-size) * var(--chest-size-factor)); background-size: 200% 100%; background-position: 0 0; z-index: 7; }
 .item.chest.opened { background-position: 100% 0%; pointer-events: none; cursor: default; filter: brightness(0.8) var(--item-base-shadow); }
-.item.collected { opacity: 0 !important; transform: translateY(-20px) scale(0.2) rotate(75deg); pointer-events: none !important; filter: none; transition: opacity var(--item-pickup-anim-time), transform var(--item-pickup-anim-time) ease-out; }
+.item.collected { opacity: 0 !important; transform: translate(-50%, calc(-50% - 20px)) scale(0.2) rotate(75deg); pointer-events: none !important; filter: none; transition: opacity var(--item-pickup-anim-time), transform var(--item-pickup-anim-time) ease-out; }
 .item.magnet-collecting { animation: item-magnet-fly var(--item-magnet-fly-time) cubic-bezier(0.4, 0, 0.2, 1) forwards; pointer-events: none !important; filter: none; }
 
 /* Effects & Projectiles */
@@ -607,7 +637,7 @@ img { max-width: 100%; height: auto; vertical-align: middle; image-rendering: pi
 #level-select-map-container.panning { cursor: grabbing; }
 #level-select-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: var(--map-bg-url); background-size: contain; background-position: center center; background-repeat: no-repeat; transform-origin: center center; will-change: transform; image-rendering: pixelated; }
 #level-select-dots-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; transform-origin: center center; will-change: transform; }
-.level-dot { position: absolute; width: var(--level-dot-size); height: var(--level-dot-size); border-radius: 50%; border: 2px solid var(--color-iron-black); box-shadow: 0 0 8px 3px rgba(0, 0, 0, 0.65), inset 0 0 5px rgba(0,0,0,0.6); cursor: pointer; transition: all 0.2s ease-out; pointer-events: auto; display: flex; justify-content: center; align-items: center; font-size: calc(var(--level-dot-size) * 0.45); font-weight: bold; color: rgba(255,255,255,0.9); text-shadow: 1px 1px 2px rgba(0,0,0,0.9); will-change: transform, left, top; transform: translate(-50%, -50%); --shine: radial-gradient(circle at 45% 38%, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 55%); background: var(--shine), linear-gradient(var(--color-iron-medium), var(--color-iron-dark));}
+.level-dot { position: absolute; width: var(--level-dot-size); height: var(--level-dot-size); border-radius: 50%; border: 2px solid var(--color-iron-black); box-shadow: 0 0 8px 3px rgba(0, 0, 0, 0.65), inset 0 0 5px rgba(0,0,0,0.6); cursor: pointer; transition: all 0.2s ease-out; pointer-events: auto; display: flex; justify-content: center; align-items: center; font-size: calc(var(--level-dot-size) * 0.45); font-weight: bold; color: rgba(255,255,255,0.9); text-shadow: 1px 1px 2px rgba(0,0,0,0.9); will-change: transform; transform: translate(-50%, -50%); --shine: radial-gradient(circle at 45% 38%, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 55%); background: var(--shine), linear-gradient(var(--color-iron-medium), var(--color-iron-dark));}
 .level-dot.locked { background: var(--shine), linear-gradient(var(--color-dot-locked-bg), var(--color-iron-dark)); border-color: var(--color-dot-locked-border); cursor: not-allowed; opacity: 0.5; filter: grayscale(80%); box-shadow: inset 0 0 7px rgba(0,0,0,0.8); animation: none; }
 .level-dot.unlocked { background: var(--shine), linear-gradient(var(--color-dot-unlocked-bg), var(--color-accent-red)); border-color: var(--color-dot-unlocked-border); animation: glow-unlocked 1.8s infinite ease-in-out; color: #fff;}
 .level-dot.beaten { background: var(--shine), linear-gradient(var(--color-dot-beaten-bg), var(--color-accent-green)); border-color: var(--color-dot-beaten-border); animation: pulse-beaten 3s infinite ease-in-out; color: #e8f5e9; }
@@ -673,7 +703,13 @@ button.shop-buy-button { padding: 11px 24px; font-size: 1.6rem; min-width: 120px
 /* World HP Bars */
 #unit-hp-bars-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 12; overflow: hidden; opacity: 0; transition: opacity 0.2s ease-in-out; transform-origin: top left; will-change: transform, opacity; }
 #unit-hp-bars-overlay.visible { opacity: 1; }
-.unit-hp-bar-world { position: absolute; width: calc(var(--cell-size) * 0.7); height: 5px; background-color: var(--hp-bar-bg); border: 1px solid var(--hp-bar-border); border-radius: 2px; overflow: hidden; z-index: 12; pointer-events: none; left: calc((var(--unit-grid-x, 0) + 0.5) * var(--cell-size)); transform: translateX(-50%); /* Position bar center over unit center X */ top: calc(((var(--unit-grid-y, 0) + 0.5) * var(--cell-size)) /* Unit Center Y */ - (var(--cell-size) * 0.425) /* Half Visual Unit Height */ - 7px /* Fixed offset: Bar Height (5px) + Gap (2px) */); will-change: left, top, width; }
+.unit-hp-bar-world {
+    position: absolute; width: calc(var(--cell-size) * 0.7); height: 5px; background-color: var(--hp-bar-bg); border: 1px solid var(--hp-bar-border); border-radius: 2px; overflow: hidden; z-index: 16; pointer-events: none;
+    left: calc( (var(--unit-grid-x, 0) + 0.5 - 3) * var(--cell-size) );
+    top: calc((var(--unit-grid-y, 0) + 0.5) * var(--cell-size));
+    transform: translateX(-50%) translateY(calc( (var(--cell-size) * -0.85 / 2) - 6px ));
+    will-change: transform;
+}
 .unit-hp-bar-world-fill { height: 100%; background-color: var(--hp-high); width: 0%; border-radius: 1px; transition: width 0.2s ease, background-color 0.2s ease; }
 .unit-hp-bar-world-fill.hp-low { background-color: var(--hp-low); }
 .unit-hp-bar-world-fill.hp-mid { background-color: var(--hp-mid); }
@@ -721,6 +757,9 @@ button.shop-buy-button { padding: 11px 24px; font-size: 1.6rem; min-width: 120px
     #unit-info p { font-size: 1.1rem; white-space: normal; }
     #unit-status { white-space: normal; font-size: 1.1rem; }
     #unit-info .unit-hp-bar-container.info-panel-hp-bar { height: 16px; }
+    .unit-hp-bar-world {
+        left: calc((var(--unit-grid-x, 0) + 0.5) * var(--cell-size));
+    }
     #spell-area { grid-template-columns: repeat(4, 1fr); flex-shrink: 0; margin-top: auto; gap: 8px; padding: 0.9rem;}
     .spell-icon { width: clamp(36px, 6vmin, 42px); height: clamp(36px, 6vmin, 42px); }
     .spell-label { font-size: 0.9rem; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
