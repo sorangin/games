@@ -1735,6 +1735,49 @@ function hideAllOverlays() {
     else stopTooltipUpdater();
 }
 
+function isMobileDevice() {
+    // Basic check for touch support first
+    const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    if (!hasTouch) {
+        return false; // Definitely not touch
+    }
+    // Additionally check user agent for mobile keywords (less reliable but helps exclude touch laptops)
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+    return /android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+}
+
+async function attemptEnterFullscreen(element) {
+    // Check if fullscreen is supported at all
+    const fsEnabled = document.fullscreenEnabled || document.webkitFullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled;
+    if (!fsEnabled) {
+        console.warn("Fullscreen API not supported by this browser.");
+        return false; // Not supported
+    }
+
+    // Check if already in fullscreen
+    if (isFullscreen()) {
+        return true; // Already in fullscreen
+    }
+
+    // Find the correct request method
+    const requestMethod = element.requestFullscreen || element.webkitRequestFullscreen || element.mozRequestFullScreen || element.msRequestFullscreen;
+
+    if (requestMethod) {
+        try {
+            await requestMethod.call(element);
+            console.log("Fullscreen request successful.");
+            return true; // Success
+        } catch (err) {
+            console.warn(`Fullscreen request failed: ${err.name} - ${err.message}`);
+            // Common reasons: Not triggered by user gesture, feature policy restrictions
+            return false; // Failed
+        }
+    } else {
+        console.warn("No requestFullscreen method found on the element.");
+        return false; // Method not found
+    }
+}
+
 function showMainMenu() { hideAllOverlays(); mainMenu?.classList.remove('hidden'); mainMenu?.classList.add('visible'); stopTooltipUpdater(); stopMusic(); fullGameReset(); }
 function hideMainMenu() { mainMenu?.classList.remove('visible'); mainMenu?.classList.add('hidden'); }
 function isMainMenuOpen() { return mainMenu?.classList.contains('visible'); }
@@ -2484,7 +2527,49 @@ document.addEventListener('DOMContentLoaded', () => {
     // Attach Event Listeners (Keep most as is)
     window.addEventListener('resize', handleResize, { passive: true }); window.addEventListener('keydown', handleKeyDown); document.addEventListener('mousemove', trackMousePosition); document.addEventListener('fullscreenchange', updateFullscreenButton); document.addEventListener('webkitfullscreenchange', updateFullscreenButton); document.addEventListener('mozfullscreenchange', updateFullscreenButton); document.addEventListener('MSFullscreenChange', updateFullscreenButton);
     gameBoard?.addEventListener('mousedown', handlePanStart); gameBoard?.addEventListener('wheel', handleZoom, { passive: false }); gridContent?.addEventListener('mouseleave', handleGridMouseLeave); defaultViewButton?.addEventListener('click', () => centerView(false));
-    startGameButton?.addEventListener('click', () => { if (!isProcessing) { if (initializeAudio()) { hideMainMenu(); showLevelSelect(); } else { hideMainMenu(); showLevelSelect(); } } });
+    // --- New Code ---
+startGameButton?.addEventListener('click', async () => {
+    console.log("Start Game button clicked.");
+
+    let proceedToGame = false; // Flag to control navigation
+
+    // 1. Initialize Audio Context (Requires User Gesture)
+    console.log("Initializing audio...");
+    const audioInitialized = initializeAudio(); // Assuming this function exists and handles context unlocking
+    if (!audioInitialized) {
+        console.warn("Audio context might require further interaction to unlock fully.");
+    } else {
+        console.log("Audio initialized successfully (or was already initialized).");
+    }
+
+    if (isMobileDevice()) { // Use the new function name
+        console.log("Mobile device detected, attempting fullscreen...");
+        const fsElement = gameContainer || document.documentElement;
+        const fullscreenSuccess = await attemptEnterFullscreen(fsElement);
+        console.log("Fullscreen attempt finished, success:", fullscreenSuccess);
+        proceedToGame = true;
+    } else {
+        console.log("Not a mobile device, skipping automatic fullscreen.");
+        proceedToGame = true;
+    }
+
+    // 3. Proceed to Level Select if appropriate
+    if (proceedToGame) {
+        console.log("Proceeding to Level Select screen...");
+        if (typeof hideMainMenu === 'function') {
+            hideMainMenu();
+        } else {
+            console.error("hideMainMenu function not found!");
+        }
+        if (typeof showLevelSelect === 'function') {
+            showLevelSelect();
+        } else {
+            console.error("showLevelSelect function not found!");
+        }
+    } else {
+         console.log("Not proceeding to game (should be rare).");
+    }
+});
     leaderboardMenuButton?.addEventListener('click', showLeaderboard);
     gameOverToTitleButton?.addEventListener('click', showMainMenu); restartButton?.addEventListener('click', () => { if (isProcessing || !isGameOverScreenVisible()) return; const titleText = gameOverTitle?.textContent.toLowerCase() || ""; if (titleText.includes("victory") || titleText.includes("forfeited")) showMainMenu(); else { hideGameOverScreen(); showChooseTroopsScreen(levelToRestartOnLoss); } });
     endTurnButton?.addEventListener('click', () => { if (levelClearedAwaitingInput) endTurn(); else if (isGameActive() && currentTurn === 'player' && !isProcessing) { deselectUnit(false); endTurn(); } });
