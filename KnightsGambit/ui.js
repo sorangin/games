@@ -1082,18 +1082,31 @@ function applyMapZoomAndPan(immediate = false) {
 
     // Calculate scale using 'contain' method
     const baseScale = calculateMapScale(containerRect.width, containerRect.height, mapIntrinsicWidth, mapIntrinsicHeight);
-    const currentMapZoom = typeof mapZoom === 'number' && !isNaN(mapZoom)
-                         ? Math.max(MIN_MAP_ZOOM, Math.min(MAX_MAP_ZOOM, mapZoom))
-                         : MIN_MAP_ZOOM;
+
+    // Ensure mapZoom is a valid number within bounds before using it
+    const currentMapZoom = (typeof mapZoom === 'number' && !isNaN(mapZoom) && mapZoom >= MIN_MAP_ZOOM)
+                         ? Math.min(MAX_MAP_ZOOM, mapZoom)
+                         : MIN_MAP_ZOOM; // Default to MIN_MAP_ZOOM if invalid
+
     const finalScale = baseScale * currentMapZoom;
 
-    // Use GLOBAL clamped offsets
-    const currentMapOffsetX = typeof mapOffsetX === 'number' && !isNaN(mapOffsetX) ? mapOffsetX : 0;
-    const currentMapOffsetY = typeof mapOffsetY === 'number' && !isNaN(mapOffsetY) ? mapOffsetY : 0;
+    // Ensure offsets are valid numbers
+    let currentMapOffsetX = typeof mapOffsetX === 'number' && !isNaN(mapOffsetX) ? mapOffsetX : 0;
+    let currentMapOffsetY = typeof mapOffsetY === 'number' && !isNaN(mapOffsetY) ? mapOffsetY : 0;
+
+    // --- Clamp Offsets BEFORE applying ---
+    // NOTE: clampMapOffsets now internally uses the global mapZoom
+    const clampedOffsets = clampMapOffsets(currentMapOffsetX, currentMapOffsetY);
+    currentMapOffsetX = clampedOffsets.x;
+    currentMapOffsetY = clampedOffsets.y;
+    // Update global state if clamping changed the values (optional but good practice)
+    mapOffsetX = currentMapOffsetX;
+    mapOffsetY = currentMapOffsetY;
+    // --- End Clamping ---
 
     // Apply transform with top-left origin
     const transformValue = `translate(${currentMapOffsetX}px, ${currentMapOffsetY}px) scale(${finalScale})`;
-    console.log(`Applying Transform (TL): ${transformValue} (immediate=${immediate})`);
+    // console.log(`Applying Transform (TL): ${transformValue} (immediate=${immediate})`); // Debug Log
 
     const transitionStyle = immediate ? 'none' : 'transform 0.3s ease-out';
 
@@ -1101,39 +1114,46 @@ function applyMapZoomAndPan(immediate = false) {
     levelSelectMap.style.transformOrigin = 'top left';
     levelSelectDotsLayer.style.transformOrigin = 'top left';
 
+    // Apply transition and transform
     levelSelectMap.style.transition = transitionStyle;
     levelSelectDotsLayer.style.transition = transitionStyle;
     levelSelectMap.style.transform = transformValue;
-    levelSelectDotsLayer.style.transform = transformValue;
+    levelSelectDotsLayer.style.transform = transformValue; // Apply identical transform
 
-    // Position dots (should still work with percentage)
+    // Position dots (relative positioning within the transformed layer)
     positionLevelDots();
 
-    // Cleanup transition style (same as before)
+    // Cleanup transition style
     if (!immediate) {
         const clearTransition = (event) => {
-            if (event.target === levelSelectMap && event.propertyName === 'transform') {
-                levelSelectMap.style.transition = '';
-                levelSelectDotsLayer.style.transition = '';
-                levelSelectMap.removeEventListener('transitionend', clearTransition);
+            // Check the target element to avoid issues if multiple transitions end simultaneously
+            if ((event.target === levelSelectMap || event.target === levelSelectDotsLayer) && event.propertyName === 'transform') {
+                if (levelSelectMap) levelSelectMap.style.transition = '';
+                if (levelSelectDotsLayer) levelSelectDotsLayer.style.transition = '';
+                event.target.removeEventListener('transitionend', clearTransition); // Remove listener from the element that triggered
             }
         };
+        // Add listener to both, although only one needs to clear both styles
         levelSelectMap.addEventListener('transitionend', clearTransition);
+        levelSelectDotsLayer.addEventListener('transitionend', clearTransition);
+
+        // Fallback timeout in case transitionend doesn't fire reliably
         setTimeout(() => {
             if (levelSelectMap && levelSelectMap.style.transition !== 'none') levelSelectMap.style.transition = '';
             if (levelSelectDotsLayer && levelSelectDotsLayer.style.transition !== 'none') levelSelectDotsLayer.style.transition = '';
             levelSelectMap?.removeEventListener('transitionend', clearTransition);
-        }, 350);
+            levelSelectDotsLayer?.removeEventListener('transitionend', clearTransition);
+        }, 350); // Slightly longer than transition duration
     }
 }
 
 function handleMapPanStart(event) {
-    console.log("handleMapPanStart: Mousedown detected."); // Log entry
+    // console.log("handleMapPanStart: Mousedown detected."); // Log entry
 
-    // Check conditions (button, target, overlay)
     const clickedDot = event.target.closest('.level-dot');
+    const clickedButton = event.target.closest('button, .primary-button, .secondary-button'); // Check for any button
 
-    // --- MODIFIED CHECK ---
+    // --- MODIFIED OVERLAY CHECK ---
     // Check if any OTHER overlay is active (excluding level select itself)
     const anotherOverlayActive = isGameOverScreenVisible() ||
                                  isMenuOpen() ||
@@ -1142,27 +1162,29 @@ function handleMapPanStart(event) {
                                  isLevelCompleteOpen() ||
                                  isChooseTroopsScreenOpen() ||
                                  isMainMenuOpen(); // Main menu counts as another overlay
-    // --- END MODIFIED CHECK ---
+    // --- END MODIFIED OVERLAY CHECK ---
 
-    console.log(`handleMapPanStart: button=${event.button}, clickedDot=${!!clickedDot}, anotherOverlayActive=${anotherOverlayActive}`);
+    // console.log(`handleMapPanStart: button=${event.button}, clickedDot=${!!clickedDot}, clickedButton=${!!clickedButton}, anotherOverlayActive=${anotherOverlayActive}`); // Debug Log
 
-    if (event.button !== 0 || clickedDot || anotherOverlayActive) { // Use the new flag
-        console.log("handleMapPanStart: Panning prevented by initial checks.");
+    // Prevent panning if: not left button, clicked a dot, clicked a button, OR another overlay is active
+    if (event.button !== 0 || clickedDot || clickedButton || anotherOverlayActive) {
+        // console.log("handleMapPanStart: Panning prevented by initial checks."); // Debug Log
         isMapPanning = false; // Ensure flag is reset
+        if (levelSelectMapContainer) levelSelectMapContainer.style.cursor = 'grab'; // Reset cursor if needed
         return; // Don't start panning
     }
 
-    // ... rest of the function remains the same ...
+    // If checks pass, proceed with panning setup
     event.preventDefault();
     isMapPanning = true;
     mapPanStartX = event.clientX;
     mapPanStartY = event.clientY;
-    mapStartPanX = mapOffsetX;
-    mapStartPanY = mapOffsetY;
-    console.log(`handleMapPanStart: Panning STARTED. isMapPanning=${isMapPanning}, startOffset=(${mapStartPanX}, ${mapStartPanY})`);
+    mapStartPanX = mapOffsetX; // Use global offset
+    mapStartPanY = mapOffsetY; // Use global offset
+    // console.log(`handleMapPanStart: Panning STARTED. isMapPanning=${isMapPanning}, startOffset=(${mapStartPanX}, ${mapStartPanY})`); // Debug Log
 
     if (levelSelectMapContainer) {
-         levelSelectMapContainer.style.cursor = 'grabbing';
+         levelSelectMapContainer.style.cursor = 'grabbing'; // Use grab/grabbing cursor
     }
     document.addEventListener('mousemove', handleMapPanMove, { passive: false });
     document.addEventListener('mouseup', handleMapPanEnd, { once: true });
@@ -1190,56 +1212,78 @@ function calculateMapScale(containerWidth, containerHeight, intrinsicWidth, intr
 }
 
 function clampMapOffsets(rawOffsetX, rawOffsetY) {
-    // console.log(`clampMapOffsets TL called with raw: (${rawOffsetX.toFixed(1)}, ${rawOffsetY.toFixed(1)})`); // Entry log
-
-    if (!levelSelectMapContainer || !levelSelectMap) {
-        console.error("Clamping ERROR: Missing map container or map elements.");
-        return { x: 0, y: 0 };
-    }
-
+    // --- Essential Setup (Checks and Calculations) ---
+    if (!levelSelectMapContainer || !levelSelectMap) return { x: 0, y: 0 };
     const containerRect = levelSelectMapContainer.getBoundingClientRect();
-    if (containerRect.width <= 0 || containerRect.height <= 0) {
-        console.error("Cannot clamp: Invalid container dimensions.");
-        return { x: mapOffsetX, y: mapOffsetY };
-    }
-
+    if (containerRect.width <= 0 || containerRect.height <= 0) return { x: mapOffsetX || 0, y: mapOffsetY || 0 };
     const safeMapWidth = Math.max(1, mapIntrinsicWidth || 1024);
     const safeMapHeight = Math.max(1, mapIntrinsicHeight || 1024);
-
-    // Calculate current final scale (using GLOBAL mapZoom and 'contain' base scale)
     const baseScale = calculateMapScale(containerRect.width, containerRect.height, safeMapWidth, safeMapHeight);
-    const currentMapZoom = typeof mapZoom === 'number' && !isNaN(mapZoom) && mapZoom >= MIN_MAP_ZOOM ? mapZoom : MIN_MAP_ZOOM;
+    const currentMapZoom = (typeof mapZoom === 'number' && !isNaN(mapZoom) && mapZoom >= MIN_MAP_ZOOM)
+                         ? Math.min(MAX_MAP_ZOOM, mapZoom)
+                         : MIN_MAP_ZOOM;
     const finalScale = baseScale * currentMapZoom;
-
-    if (finalScale <= 0 || isNaN(finalScale)) {
-        console.error(`Clamping ERROR: Invalid finalScale calculated: ${finalScale}`);
-        return { x: mapOffsetX, y: mapOffsetY };
-    }
-
-    // Calculate rendered map dimensions based on the actual map image size and scale
+    if (finalScale <= 0 || isNaN(finalScale)) return { x: mapOffsetX || 0, y: mapOffsetY || 0 };
     const mapRenderWidth = safeMapWidth * finalScale;
     const mapRenderHeight = safeMapHeight * finalScale;
+    // --- End Setup ---
 
-    // *** Bounds calculation for top-left origin ***
-    // Max offset is usually 0 (top-left aligns with container top-left)
-    // However, if the map is smaller than the container, we want to center it.
-    const maxOffsetX = Math.max(0, (containerRect.width - mapRenderWidth) / 2);
-    const maxOffsetY = Math.max(0, (containerRect.height - mapRenderHeight) / 2);
+    let minOffsetX, maxOffsetX, minOffsetY, maxOffsetY;
 
-    // Min offset is container dimension minus rendered dimension (stops bottom-right edge)
-    // OR the centering offset if map is smaller.
-    const minOffsetX = Math.min(maxOffsetX, containerRect.width - mapRenderWidth - maxOffsetX); // Should be <= maxOffsetX
-    const minOffsetY = Math.min(maxOffsetY, containerRect.height - mapRenderHeight - maxOffsetY); // Should be <= maxOffsetY
+    // Check screen width (adjust 700px if your CSS breakpoint differs)
+    const isMobileView = window.matchMedia("(max-width: 700px)").matches;
 
+    if (isMobileView) {
+        const mobileMaxOffsetX = 0;  // Example: How far left map's left edge can be (positive = space left)
+        const mobileMinOffsetX = containerRect.width - mapRenderWidth + 1150; // Example: Right boundary (negative = space right)
 
-    // Apply the clamp
+        const mobileMaxOffsetY = -320;  // Example: Top boundary
+        const mobileMinOffsetY = containerRect.height - mapRenderHeight + 807; // Example: Bottom boundary
+        // *** END MOBILE BOUNDARY DEFINITIONS ***
+
+        // Apply centering logic if map is smaller than container
+        if (mapRenderWidth < containerRect.width) {
+            minOffsetX = maxOffsetX = (containerRect.width - mapRenderWidth) / 2;
+        } else {
+            minOffsetX = mobileMinOffsetX;
+            maxOffsetX = mobileMaxOffsetX;
+        }
+
+        if (mapRenderHeight < containerRect.height) {
+            minOffsetY = maxOffsetY = (containerRect.height - mapRenderHeight) / 2;
+        } else {
+            minOffsetY = mobileMinOffsetY;
+            maxOffsetY = mobileMaxOffsetY;
+        }
+
+    } else {
+        // --- DESKTOP Clamping Limits (Your Perfected Values) ---
+
+        const desktopMaxOffsetX = -785; // Your value: Left boundary
+        const desktopMinOffsetX = containerRect.width - mapRenderWidth - 325; // Your value: Right boundary
+
+        const desktopMaxOffsetY = 0;     // Your value: Top boundary
+        const desktopMinOffsetY = containerRect.height - mapRenderHeight - (-500); // Your value: Bottom boundary
+
+        // Apply centering logic if map is smaller than container
+        if (mapRenderWidth < containerRect.width) {
+            minOffsetX = maxOffsetX = (containerRect.width - mapRenderWidth) / 2;
+        } else {
+            minOffsetX = desktopMinOffsetX;
+            maxOffsetX = desktopMaxOffsetX;
+        }
+
+        if (mapRenderHeight < containerRect.height) {
+            minOffsetY = maxOffsetY = (containerRect.height - mapRenderHeight) / 2;
+        } else {
+            minOffsetY = desktopMinOffsetY;
+            maxOffsetY = desktopMaxOffsetY;
+        }
+    }
+
+    // --- Final Clamp ---
     const clampedX = Math.max(minOffsetX, Math.min(maxOffsetX, rawOffsetX));
     const clampedY = Math.max(minOffsetY, Math.min(maxOffsetY, rawOffsetY));
-
-    console.log(`Clamping (TL): Zoom=${currentMapZoom.toFixed(2)}, Scale=${finalScale.toFixed(3)} | ` +
-                `RenderWH=(${mapRenderWidth.toFixed(0)}, ${mapRenderHeight.toFixed(0)}), ContWH=(${containerRect.width.toFixed(0)}, ${containerRect.height.toFixed(0)}) | ` +
-                `BoundsX=[${minOffsetX.toFixed(1)}, ${maxOffsetX.toFixed(1)}], BoundsY=[${minOffsetY.toFixed(1)}, ${maxOffsetY.toFixed(1)}] | ` +
-                `Raw(${rawOffsetX.toFixed(1)}, ${rawOffsetY.toFixed(1)}) -> Clamped(${clampedX.toFixed(1)}, ${clampedY.toFixed(1)})`);
 
     return { x: clampedX, y: clampedY };
 }
@@ -1775,55 +1819,69 @@ function showLevelSelect() {
 }
 
 function focusMapOnQuadrant(immediate = true) {
-    console.log("focusMapOnQuadrant (TL): Starting focus calculation.");
-    if (!levelSelectMapContainer) { console.error("focusMapOnQuadrant: levelSelectMapContainer not found."); return; }
+    if (!levelSelectMapContainer || !levelSelectMap) return;
 
+    // Determine target quadrant (same as before)
     const currentHighestLevel = parseInt(highestLevelUnlocked || '1', 10);
     const levelIndex = Math.max(0, currentHighestLevel - 1);
     const quadrantIndex = Math.floor(levelIndex / LEVELS_PER_QUADRANT) % 4;
-    console.log(`focusMapOnQuadrant: highestLevel=${currentHighestLevel}, levelIndex=${levelIndex}, quadrantIndex=${quadrantIndex}`);
-
     const targetCenter = VISUAL_QUADRANT_CENTERS[quadrantIndex] || { x: 50, y: 50 };
-    const targetXPercent = targetCenter.x; const targetYPercent = targetCenter.y;
+    const targetXPercent = targetCenter.x;
+    const targetYPercent = targetCenter.y;
 
-    let targetZoom = INITIAL_MAP_ZOOM_LEVEL;
+    // --- Determine Target Zoom Based on Screen Size ---
+    const isMobileView = window.matchMedia("(max-width: 700px)").matches;
+    // *** ADJUST THIS VALUE FOR MOBILE ZOOM ***
+    const MOBILE_INITIAL_MAP_ZOOM_LEVEL = 4.5; // Example: Set mobile zoom higher
+    // *** END ADJUST ***
+
+    let targetZoom;
+    if (isMobileView) {
+        targetZoom = MOBILE_INITIAL_MAP_ZOOM_LEVEL; // Use specific mobile zoom
+        console.log(`focusMapOnQuadrant: Using MOBILE initial zoom: ${targetZoom}`);
+    } else {
+        targetZoom = INITIAL_MAP_ZOOM_LEVEL; // Use original desktop zoom from config.js
+        console.log(`focusMapOnQuadrant: Using DESKTOP initial zoom: ${targetZoom}`);
+    }
+
+    // Clamp the chosen initial zoom within min/max limits
     targetZoom = Math.max(MIN_MAP_ZOOM, Math.min(MAX_MAP_ZOOM, targetZoom));
-    console.log(`focusMapOnQuadrant: Target Center %: (${targetXPercent}, ${targetYPercent}), Target Zoom: ${targetZoom}`);
+    // --- End Determine Target Zoom ---
 
+    // Get dimensions and calculate scale (same as before)
     const containerRect = levelSelectMapContainer.getBoundingClientRect();
-    if (containerRect.width <= 0 || containerRect.height <= 0) { console.error("focusMapOnQuadrant: Invalid container dimensions."); return; }
-    const safeMapWidth = Math.max(1, mapIntrinsicWidth || 1024); const safeMapHeight = Math.max(1, mapIntrinsicHeight || 1024);
-    if (safeMapWidth <= 0 || safeMapHeight <= 0) { console.error("focusMapOnQuadrant: Invalid map intrinsic dimensions."); return; }
-
-    // Use 'contain' scale calculation
+    if (containerRect.width <= 0 || containerRect.height <= 0) return;
+    const safeMapWidth = Math.max(1, mapIntrinsicWidth || 1024);
+    const safeMapHeight = Math.max(1, mapIntrinsicHeight || 1024);
     const baseScale = calculateMapScale(containerRect.width, containerRect.height, safeMapWidth, safeMapHeight);
     const finalScale = baseScale * targetZoom;
+    if (finalScale <= 0 || isNaN(finalScale)) return;
 
-    // Target world coordinates (relative to map's top-left)
+    // --- Adaptive Initial Offset Calculation (same as before) ---
+    let initialOffsetX, initialOffsetY;
     const targetWorldX = (targetXPercent / 100) * safeMapWidth;
     const targetWorldY = (targetYPercent / 100) * safeMapHeight;
 
-    // Calculate the raw offset needed to place the targetWorldX/Y at the *center* of the container
-    // Offset = ContainerCenter - TargetPointScaled
-    let rawOffsetX = containerRect.width / 2 - targetWorldX * finalScale;
-    let rawOffsetY = containerRect.height / 2 - targetWorldY * finalScale;
-    console.log(`focusMapOnQuadrant (TL): RAW Calculated offsetX=${rawOffsetX.toFixed(1)}, offsetY=${rawOffsetY.toFixed(1)}, finalScale=${finalScale.toFixed(3)}`);
+    // Calculate the initial desired center point offset
+    initialOffsetX = containerRect.width / 2 - targetWorldX * finalScale;
+    initialOffsetY = containerRect.height / 2 - targetWorldY * finalScale;
+    // console.log(`focusMapOnQuadrant (${isMobileView ? 'Mobile' : 'Desktop'}): Calculated initial centered offsets: X=${initialOffsetX.toFixed(1)}, Y=${initialOffsetY.toFixed(1)}`);
 
-    // Clamp the calculated offsets using the revised clamp function
+    // --- Clamp the INITIAL Offsets using the ADAPTIVE clamp function ---
+    // Temporarily set mapZoom for the clamp function to use the *target* zoom
     const originalMapZoom = mapZoom;
-    mapZoom = targetZoom; // Temporarily set zoom for clamping
-    const clampedOffsets = clampMapOffsets(rawOffsetX, rawOffsetY);
-    mapZoom = originalMapZoom; // Restore zoom
-
-    console.log(`focusMapOnQuadrant (TL): FINAL Clamped offsetX=${clampedOffsets.x.toFixed(1)}, offsetY=${clampedOffsets.y.toFixed(1)}`);
-
-    // Set the GLOBAL state
     mapZoom = targetZoom;
+    const clampedOffsets = clampMapOffsets(initialOffsetX, initialOffsetY); // Calls the adaptive clamp function
+    mapZoom = originalMapZoom; // Restore global mapZoom (applyMapZoomAndPan will use targetZoom anyway)
+
+    // --- Set Global State and Apply ---
+    mapZoom = targetZoom; // Set the global zoom to the determined initial value
     mapOffsetX = clampedOffsets.x;
     mapOffsetY = clampedOffsets.y;
 
-    // Apply the transform
-    applyMapZoomAndPan(immediate);
+    console.log(`focusMapOnQuadrant (Final State Set): Zoom=${mapZoom.toFixed(2)}, OffsetX=${mapOffsetX.toFixed(1)}, OffsetY=${mapOffsetY.toFixed(1)}`);
+
+    applyMapZoomAndPan(immediate); // Apply the initial view
 }
 
 
@@ -1899,10 +1957,19 @@ function handleLevelDotClick(e) {
 
 function positionLevelDots() {
     if (!levelSelectMap || !levelSelectDotsLayer) return;
+
     levelSelectDotsLayer.querySelectorAll('.level-dot').forEach(dot => {
-        const targetXPercent = parseFloat(dot.dataset.targetX || '50'); const targetYPercent = parseFloat(dot.dataset.targetY || '50');
-        dot.style.left = `${targetXPercent}%`; dot.style.top = `${targetYPercent}%`; const isHovered = dot === lastHoveredElement;
-        dot.style.transform = `translate(-50%, -50%)${isHovered ? ' scale(1.3)' : ' scale(1)'}`;
+        const targetXPercent = parseFloat(dot.dataset.targetX || '50');
+        const targetYPercent = parseFloat(dot.dataset.targetY || '50');
+
+        // Set position using percentages
+        dot.style.left = `${targetXPercent}%`;
+        dot.style.top = `${targetYPercent}%`;
+
+        const isHovered = dot === lastHoveredElement; // Check if this specific dot is being hovered
+
+        dot.style.transform = `translate(-50%, -50%)${isHovered ? ' scale(1.45)' : ''}`;
+        // --- END MODIFIED LINE ---
     });
 }
 

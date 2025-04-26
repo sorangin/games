@@ -134,7 +134,7 @@
     --explosion-sprite-width: 960px;
     --explosion-sprite-height: 120px;
     --map-bg-url: url('./sprites/world_map.png');
-    --level-dot-size: clamp(17px, 2.5vmin, 24px);
+    --level-dot-size: clamp(12px, 1.8vmin, 12px);
     --ui-panel-width: clamp(22%, 28vmin, 340px);
 }
 
@@ -635,13 +635,20 @@ img { max-width: 100%; height: auto; vertical-align: middle; image-rendering: pi
 #level-select-screen .level-select-content.no-style { background: none; border: none; box-shadow: none; padding: 0; border-radius: 0; max-width: 100%; max-height: 100%; width: 100%; height: 100%; overflow: hidden; display: flex; flex-direction: column; gap: 0; color: var(--color-text-main); }
 #level-select-map-container { width: 100%; flex-grow: 1; overflow: hidden; display: flex; justify-content: center; align-items: center; position: relative; background-color: #1c222a; cursor: grab; }
 #level-select-map-container.panning { cursor: grabbing; }
-#level-select-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: var(--map-bg-url); background-size: contain; background-position: top center; background-repeat: no-repeat; transform-origin: center center; will-change: transform; image-rendering: pixelated; }
-#level-select-dots-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; transform-origin: top center; will-change: transform; }
+#level-select-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: var(--map-bg-url); background-size: contain; background-position: center center; background-repeat: no-repeat; transform-origin: top left; will-change: transform; image-rendering: pixelated; border: none; padding: 0;}
+#level-select-dots-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; transform-origin: top center; will-change: transform; pointer-events: none; border: none; padding: 0; overflow: hidden; }
 .level-dot { position: absolute; width: var(--level-dot-size); height: var(--level-dot-size); border-radius: 50%; border: 2px solid var(--color-iron-black); box-shadow: 0 0 8px 3px rgba(0, 0, 0, 0.65), inset 0 0 5px rgba(0,0,0,0.6); cursor: pointer; transition: all 0.2s ease-out; pointer-events: auto; display: flex; justify-content: center; align-items: center; font-size: calc(var(--level-dot-size) * 0.45); font-weight: bold; color: rgba(255,255,255,0.9); text-shadow: 1px 1px 2px rgba(0,0,0,0.9); will-change: transform; transform: translate(-50%, -50%); --shine: radial-gradient(circle at 45% 38%, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 55%); background: var(--shine), linear-gradient(var(--color-iron-medium), var(--color-iron-dark));}
 .level-dot.locked { background: var(--shine), linear-gradient(var(--color-dot-locked-bg), var(--color-iron-dark)); border-color: var(--color-dot-locked-border); cursor: not-allowed; opacity: 0.5; filter: grayscale(80%); box-shadow: inset 0 0 7px rgba(0,0,0,0.8); animation: none; }
 .level-dot.unlocked { background: var(--shine), linear-gradient(var(--color-dot-unlocked-bg), var(--color-accent-red)); border-color: var(--color-dot-unlocked-border); animation: glow-unlocked 1.8s infinite ease-in-out; color: #fff;}
 .level-dot.beaten { background: var(--shine), linear-gradient(var(--color-dot-beaten-bg), var(--color-accent-green)); border-color: var(--color-dot-beaten-border); animation: pulse-beaten 3s infinite ease-in-out; color: #e8f5e9; }
-.level-dot:not(.locked):hover { transform: translate(-50%, -50%) scale(1.45); border-color: var(--color-gold-light); box-shadow: 0 0 14px 4px var(--color-gold-light), inset 0 0 6px rgba(0,0,0,0.6); z-index: 1; filter: brightness(1.1); }
+.level-dot:not(.locked):hover {
+    /* transform: translate(-50%, -50%) scale(1.45); */ /* REMOVE or COMMENT OUT this line */
+    transform: translate(-50%, -50%); /* KEEP only the translate for centering */
+    border-color: var(--color-gold-light);
+    box-shadow: 0 0 14px 4px var(--color-gold-light), inset 0 0 6px rgba(0,0,0,0.6);
+    z-index: 1; /* Keep z-index */
+    filter: brightness(1.1); /* Keep filter */
+}
 .bottom-bar-style { display: flex; gap: 25px; justify-content: center; align-items: center; width: 100%; padding: 18px 30px; box-sizing: border-box; background: linear-gradient(rgba(20, 20, 25, 0.85), rgba(10, 10, 12, 0.98)); flex-shrink: 0; border-top: 2px solid var(--color-iron-medium); box-shadow: 0 -4px 15px rgba(0,0,0,0.65); }
 .bottom-bar-style .secondary-button, .bottom-bar-style .primary-button { margin: 0; }
 .level-select-bottom-bar #level-select-shop-button { order: -1; }
@@ -718,7 +725,8 @@ button.shop-buy-button { padding: 11px 24px; font-size: 1.6rem; min-width: 100px
 
 /* Media Queries (Mobile / Small Screens) */
 @media (max-width: 700px), (max-height: 500px), (max-aspect-ratio: 1/1) {
-    :root { font-size: clamp(10px, 2.3vmin, 15px); --level-dot-size: clamp(15px, 2.3vmin, 20px); --icon-button-size: 40px; --ui-panel-width: 100%; }
+    :root { font-size: clamp(10px, 2.3vmin, 15px);
+        --level-dot-size: clamp(8px, 1.6vmin, 9px); --icon-button-size: 40px; --ui-panel-width: 100%; }
     #game-container { flex-direction: column; padding: 6px; gap: 6px; border-width: 8px; justify-content: flex-start; align-items: stretch;}
     #game-board-wrapper { width: 100%; height: auto; aspect-ratio: var(--board-aspect-ratio, 0.8); flex-grow: 0; flex-shrink: 0; }
     #board-feedback-area { font-size: clamp(1.8rem, 3.8vmin, 2.4rem); padding: 10px 16px; gap: 10px; border-radius: 10px; border-width: 1px;}
