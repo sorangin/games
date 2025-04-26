@@ -1235,9 +1235,9 @@ function clampMapOffsets(rawOffsetX, rawOffsetY) {
 
     if (isMobileView) {
         const mobileMaxOffsetX = 0;  // Example: How far left map's left edge can be (positive = space left)
-        const mobileMinOffsetX = containerRect.width - mapRenderWidth + 1150; // Example: Right boundary (negative = space right)
+        const mobileMinOffsetX = containerRect.width - mapRenderWidth + 1180; // Example: Right boundary (negative = space right)
 
-        const mobileMaxOffsetY = -320;  // Example: Top boundary
+        const mobileMaxOffsetY = -420;  // Example: Top boundary
         const mobileMinOffsetY = containerRect.height - mapRenderHeight + 807; // Example: Bottom boundary
         // *** END MOBILE BOUNDARY DEFINITIONS ***
 
@@ -1289,18 +1289,18 @@ function clampMapOffsets(rawOffsetX, rawOffsetY) {
 }
 
 function handleMapPanEnd(event) {
-    console.log(`handleMapPanEnd: Mouseup detected. isMapPanning was ${isMapPanning}`); // Log entry
     if (!isMapPanning) return;
     event.preventDefault();
-    isMapPanning = false; // Set flag to false FIRST
-    console.log(`handleMapPanEnd: Panning STOPPED. isMapPanning=${isMapPanning}`);
+    isMapPanning = false;
 
     if (levelSelectMapContainer) {
         levelSelectMapContainer.style.cursor = 'grab'; // Reset cursor
     }
     // Remove listeners from the document
     document.removeEventListener('mousemove', handleMapPanMove);
-    // The mouseup listener removes itself due to { once: true }
+    document.removeEventListener('touchmove', handleMapPanMoveTouch);
+    document.removeEventListener('touchend', handleMapPanEndTouch);
+    document.removeEventListener('touchcancel', handleMapPanEndTouch);
 }
 
 async function handleCellClick(event) {
@@ -1831,9 +1831,6 @@ function focusMapOnQuadrant(immediate = true) {
 
     // --- Determine Target Zoom Based on Screen Size ---
     const isMobileView = window.matchMedia("(max-width: 700px)").matches;
-    // *** ADJUST THIS VALUE FOR MOBILE ZOOM ***
-    const MOBILE_INITIAL_MAP_ZOOM_LEVEL = 4.5; // Example: Set mobile zoom higher
-    // *** END ADJUST ***
 
     let targetZoom;
     if (isMobileView) {
@@ -1884,6 +1881,92 @@ function focusMapOnQuadrant(immediate = true) {
     applyMapZoomAndPan(immediate); // Apply the initial view
 }
 
+function handleMapPanStartTouch(event) {
+    // console.log("handleMapPanStartTouch: Touch detected."); // Debug log
+
+    // Basic checks (already panning, overlays)
+    const anotherOverlayActive = isGameOverScreenVisible() || isMenuOpen() || isLeaderboardOpen() || isShopOpen() || isLevelCompleteOpen() || isChooseTroopsScreenOpen() || isMainMenuOpen();
+    if (isMapPanning || anotherOverlayActive) {
+         console.log("handleMapPanStartTouch: Panning prevented by existing pan or overlay.");
+         return;
+    }
+
+    // Check if the touch started on a button or level dot
+    const touchTarget = event.target;
+    const clickedDot = touchTarget.closest('.level-dot');
+    const clickedButton = touchTarget.closest('button, .primary-button, .secondary-button');
+    if (clickedDot || clickedButton) {
+        console.log("handleMapPanStartTouch: Panning prevented by touching dot or button.");
+        return;
+    }
+
+    // Prevent default scrolling/zooming behavior associated with touch drag
+    event.preventDefault();
+
+    // Proceed only if there's at least one touch point
+    if (event.touches.length >= 1) {
+        const touch = event.touches[0]; // Use the first touch point
+
+        isMapPanning = true;
+        mapPanStartX = touch.clientX; // Use clientX/clientY from the touch object
+        mapPanStartY = touch.clientY;
+        mapStartPanX = mapOffsetX;
+        mapStartPanY = mapOffsetY;
+        // console.log(`handleMapPanStartTouch: Panning STARTED. isMapPanning=${isMapPanning}, startOffset=(${mapStartPanX}, ${mapStartPanY})`); // Debug Log
+
+        if (levelSelectMapContainer) {
+             levelSelectMapContainer.style.cursor = 'grabbing'; // Still useful for desktop debugging
+        }
+
+        // Add MOVE and END listeners for touch
+        document.addEventListener('touchmove', handleMapPanMoveTouch, { passive: false }); // Use passive:false
+        document.addEventListener('touchend', handleMapPanEndTouch, { once: true });
+        document.addEventListener('touchcancel', handleMapPanEndTouch, { once: true }); // Handle cancellation
+    }
+}
+
+function handleMapPanMoveTouch(event) {
+    if (!isMapPanning || !levelSelectMap || !levelSelectMapContainer || event.touches.length === 0) {
+        return; // Exit if not panning or no touch points
+    }
+
+    // Prevent default scrolling
+    event.preventDefault();
+
+    const touch = event.touches[0]; // Use the first touch point
+
+    const deltaX = touch.clientX - mapPanStartX;
+    const deltaY = touch.clientY - mapPanStartY;
+    const rawOffsetX = mapStartPanX + deltaX;
+    const rawOffsetY = mapStartPanY + deltaY;
+
+    // Use the adaptive clamp function
+    const clampedOffsets = clampMapOffsets(rawOffsetX, rawOffsetY);
+    mapOffsetX = clampedOffsets.x;
+    mapOffsetY = clampedOffsets.y;
+
+    applyMapZoomAndPan(true); // Apply immediately during drag
+}
+
+// Touch equivalent of handleMapPanEnd
+function handleMapPanEndTouch(event) {
+    // console.log(`handleMapPanEndTouch: Touch end/cancel detected. isMapPanning was ${isMapPanning}`); // Debug log
+    if (!isMapPanning) return;
+
+    // No need for event.preventDefault() here typically
+
+    isMapPanning = false; // Set flag to false FIRST
+    // console.log(`handleMapPanEndTouch: Panning STOPPED. isMapPanning=${isMapPanning}`); // Debug Log
+
+    if (levelSelectMapContainer) {
+        levelSelectMapContainer.style.cursor = 'grab'; // Reset cursor
+    }
+
+    // Remove listeners specific to touch
+    document.removeEventListener('touchmove', handleMapPanMoveTouch);
+    document.removeEventListener('touchend', handleMapPanEndTouch);
+    document.removeEventListener('touchcancel', handleMapPanEndTouch);
+}
 
 function hideLevelSelect() { levelSelectScreen?.classList.remove('visible'); levelSelectScreen?.classList.add('hidden'); stopTooltipUpdater(); }
 function isLevelSelectOpen() { return levelSelectScreen?.classList.contains('visible'); }
@@ -1892,6 +1975,17 @@ function updateLevelSelectScreen() {
     if (!levelSelectDotsLayer || !levelSelectMap) return;
     levelSelectDotsLayer.innerHTML = '';
     levelSelectMap.style.backgroundImage = `url('${WORLD_MAP_IMAGE_URL}')`;
+
+    const isMobileView = window.matchMedia("(max-width: 700px)").matches;
+    const activeQuadrantCenters = isMobileView ? MOBILE_VISUAL_QUADRANT_CENTERS : VISUAL_QUADRANT_CENTERS;
+
+    const distanceStep = isMobileView
+    ? (typeof MOBILE_LEVEL_DOT_SPIRAL_DISTANCE_STEP !== 'undefined' ? MOBILE_LEVEL_DOT_SPIRAL_DISTANCE_STEP : 0.6) // Use mobile or default mobile
+    : (typeof LEVEL_DOT_SPIRAL_DISTANCE_STEP !== 'undefined' ? LEVEL_DOT_SPIRAL_DISTANCE_STEP : 0.8); // Use desktop or default desktop
+
+const angleStepDeg = isMobileView
+    ? (typeof MOBILE_LEVEL_DOT_SPIRAL_ANGLE_STEP !== 'undefined' ? MOBILE_LEVEL_DOT_SPIRAL_ANGLE_STEP : 137.5) // Use mobile or default mobile
+    : (typeof LEVEL_DOT_SPIRAL_ANGLE_STEP !== 'undefined' ? LEVEL_DOT_SPIRAL_ANGLE_STEP : 137.5);
 
     const fragment = document.createDocumentFragment();
     for (let i = 1; i <= TOTAL_LEVELS; i++) {
@@ -1902,23 +1996,31 @@ function updateLevelSelectScreen() {
 
         const levelIndex = i - 1;
         const quadrantIndex = Math.floor(levelIndex / LEVELS_PER_QUADRANT) % 4;
-        const center = VISUAL_QUADRANT_CENTERS[quadrantIndex];
-
+        const center = activeQuadrantCenters[quadrantIndex]; // Get the correct island center %
         const levelInQuadrant = levelIndex % LEVELS_PER_QUADRANT;
-        const angleDeg = (levelInQuadrant * (360 / LEVELS_PER_QUADRANT)) + (quadrantIndex * 15) + 45; // Offset angle
-        const baseRadius = Math.pow(levelInQuadrant + 1, 0.7) * (LEVEL_DOT_SPREAD_FACTOR_UI / LEVELS_PER_QUADRANT) * 0.9; // Tighter spread
-        const randomOffsetX = (Math.sin(i * 1.23 + quadrantIndex) * 0.4) * (LEVEL_DOT_SPREAD_FACTOR_UI / LEVELS_PER_QUADRANT); // Less random
-        const randomOffsetY = (Math.cos(i * 0.97 + quadrantIndex) * 0.4) * (LEVEL_DOT_SPREAD_FACTOR_UI / LEVELS_PER_QUADRANT); // Less random
 
-        const offsetX = Math.cos(angleDeg * Math.PI / 180) * baseRadius + randomOffsetX;
-        const offsetY = Math.sin(angleDeg * Math.PI / 180) * baseRadius + randomOffsetY;
+        // Use the distanceStep and angleStepDeg determined above
+        const distance = levelInQuadrant * distanceStep;
+        const angleDeg = (levelInQuadrant * angleStepDeg) + 90; // Add offset as before
+        const angleRad = angleDeg * (Math.PI / 180);
 
-        const clampedOffsetX = Math.max(-LEVEL_DOT_SPREAD_FACTOR_UI * 0.8, Math.min(LEVEL_DOT_SPREAD_FACTOR_UI * 0.8, offsetX));
-        const clampedOffsetY = Math.max(-LEVEL_DOT_SPREAD_FACTOR_UI * 0.8, Math.min(LEVEL_DOT_SPREAD_FACTOR_UI * 0.8, offsetY));
+        let offsetX = Math.cos(angleRad) * distance;
+        let offsetY = Math.sin(angleRad) * distance;
 
-        dot.dataset.targetX = center.x + clampedOffsetX;
-        dot.dataset.targetY = center.y + clampedOffsetY;
+        if (isMobileView) {
+            // Get stretch factor from config or use default 1 (no stretch)
+            const stretchFactor = (typeof MOBILE_HORIZONTAL_STRETCH_FACTOR !== 'undefined') ? MOBILE_HORIZONTAL_STRETCH_FACTOR : 1;
+            offsetX *= stretchFactor; // Multiply horizontal offset
+        }
 
+        const targetXPercent = center.x + offsetX;
+        const targetYPercent = center.y + offsetY;
+
+        // Store these base percentages in the dataset (used by positionLevelDots)
+        dot.dataset.targetX = targetXPercent;
+        dot.dataset.targetY = targetYPercent;
+
+        // Keep the rest of the logic for locked/beaten/unlocked and event listener
         if (i > highestLevelUnlocked) {
             dot.classList.add('locked');
             dot.disabled = true;
@@ -2392,6 +2494,7 @@ document.addEventListener('DOMContentLoaded', () => {
     toggleHpBarsSetting?.addEventListener('change', (e) => { updateSetting('showHpBars', e.target.checked); });
     closeLeaderboardButton?.addEventListener('click', () => { hideLeaderboard(); showMainMenu(); }); backToMainMenuButton?.addEventListener('click', showMainMenu); levelSelectTroopsButton?.addEventListener('click', () => { if (!isLevelSelectOpen()) return; hideLevelSelect(); showChooseTroopsScreen(0, 'levelSelect'); }); levelSelectShopButton?.addEventListener('click', () => { if (!isLevelSelectOpen()) return; hideLevelSelect(); showShop('levelSelect', false); });
     levelSelectMapContainer?.addEventListener('mousedown', handleMapPanStart); // Make sure this uses the function added above
+    levelSelectMapContainer?.addEventListener('touchstart', handleMapPanStartTouch, { passive: false });
     levelCompleteShopButton?.addEventListener('click', () => { hideLevelComplete(); showShop('levelComplete', true); }); nextLevelButton?.addEventListener('click', () => { hideLevelComplete(); proceedToNextLevelOrLocation(); });
     shopExitButton?.addEventListener('click', () => { hideShop(); proceedAfterShopMaybe(); }); shopTroopsButton?.addEventListener('click', () => { if (!isShopOpen()) return; hideShop(); showChooseTroopsScreen(shopIsBetweenLevels ? 0 : currentLevel, 'shop'); }); shopItemsContainer?.addEventListener('click', handleShopPurchase);
     currentTroopsList?.addEventListener('click', handleTroopCardClick); availableTroopsList?.addEventListener('click', handleTroopCardClick); confirmTroopsButton?.addEventListener('click', handleConfirmTroops);

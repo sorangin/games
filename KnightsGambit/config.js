@@ -208,13 +208,27 @@ const TILESET_GOBLIN_VARIANT_MAP = {
 const WORLD_MAP_IMAGE_URL = './sprites/world_map.png';
 
 const VISUAL_QUADRANT_CENTERS = [
-    { x: 28, y: 27 }, // Forest (Top-Left)
-    { x: 72, y: 28 }, // Castle (Top-Right)
-    { x: 27, y: 73 }, // Desert (Bottom-Left)
-    { x: 73, y: 73 }  // Snow (Bottom-Right)
+    { x: 37, y: 27 }, // Forest (Top-Left)
+    { x: 62, y: 28 }, // Castle (Top-Right)
+    { x: 39, y: 73 }, // Desert (Bottom-Left)
+    { x: 62, y: 73 }  // Snow (Bottom-Right)
 ];
+
+const MOBILE_VISUAL_QUADRANT_CENTERS = [
+    { x: 27, y: 39 }, // Forest (Top-Left)
+    { x: 73, y: 39 }, // Castle (Top-Right)
+    { x: 30, y: 60 }, // Desert (Bottom-Left)
+    { x: 73, y: 60 }  // Snow (Bottom-Right)
+];
+
 const LEVEL_DOT_SPREAD_FACTOR_UI = 25;
+const LEVEL_DOT_SPIRAL_DISTANCE_STEP = 1.5;
+const LEVEL_DOT_SPIRAL_ANGLE_STEP = 137.5;
+const MOBILE_LEVEL_DOT_SPIRAL_DISTANCE_STEP = 0.8;
+const MOBILE_LEVEL_DOT_SPIRAL_ANGLE_STEP = 137.5;
+const MOBILE_HORIZONTAL_STRETCH_FACTOR = 3.4;
 const INITIAL_MAP_ZOOM_LEVEL = 2.6;
+const MOBILE_INITIAL_MAP_ZOOM_LEVEL = 6;
 
 const LEVEL_COMPLETE_BONUS_GOLD = {
     noSpells: 10,

@@ -134,7 +134,7 @@
     --explosion-sprite-width: 960px;
     --explosion-sprite-height: 120px;
     --map-bg-url: url('./sprites/world_map.png');
-    --level-dot-size: clamp(12px, 1.8vmin, 12px);
+    --level-dot-size: clamp(18px, 2.5vmin, 18px);
     --ui-panel-width: clamp(22%, 28vmin, 340px);
 }
 
@@ -726,7 +726,7 @@ button.shop-buy-button { padding: 11px 24px; font-size: 1.6rem; min-width: 100px
 /* Media Queries (Mobile / Small Screens) */
 @media (max-width: 700px), (max-height: 500px), (max-aspect-ratio: 1/1) {
     :root { font-size: clamp(10px, 2.3vmin, 15px);
-        --level-dot-size: clamp(8px, 1.6vmin, 9px); --icon-button-size: 40px; --ui-panel-width: 100%; }
+        --level-dot-size: clamp(12px, 2vmin, 12px); --icon-button-size: 40px; --ui-panel-width: 100%; }
     #game-container { flex-direction: column; padding: 6px; gap: 6px; border-width: 8px; justify-content: flex-start; align-items: stretch;}
     #game-board-wrapper { width: 100%; height: auto; aspect-ratio: var(--board-aspect-ratio, 0.8); flex-grow: 0; flex-shrink: 0; }
     #board-feedback-area { font-size: clamp(1.8rem, 3.8vmin, 2.4rem); padding: 10px 16px; gap: 10px; border-radius: 10px; border-width: 1px;}
