@@ -491,6 +491,16 @@ body {
     transform: scale(1.1);
 }
 
+@keyframes cardFadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 
 /* ---=== Responsive Adjustments ===--- */
 @media (max-width: 768px) {
