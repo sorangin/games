@@ -157,7 +157,7 @@ body {
     justify-content: center;
     text-align: center;
     padding: var(--base-spacing) * 2;
-    background: url('images/hero-background.jpg') no-repeat center center/cover; /* !!! REPLACE with your background !!! */
+    background: url('images/rota_screenshot.jpg') no-repeat center center/cover; /* !!! REPLACE with your background !!! */
     overflow: hidden;
 }
 /* If you don't have a hero background image, use a gradient: */
