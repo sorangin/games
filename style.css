@@ -143,107 +143,33 @@ body {
 
 /* ---=== Main Content Area ===--- */
 .content-area {
-    max-width: 100%; /* Allow hero to be full width */
-    margin: 0 auto;
+    max-width: var(--container-width); /* Content centered */
+    margin: 0 auto; /* Center content */
+    padding-top: calc(var(--base-spacing) * 2); /* Add some space below sticky header */
 }
 
-/* ---=== Hero Section ===--- */
-.hero {
-    position: relative;
-    height: 70vh; /* Adjust height as needed */
-    min-height: 400px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: var(--base-spacing) * 2;
-    background: url('images/rota_screenshot.jpg') no-repeat center center/cover; /* !!! REPLACE with your background !!! */
-    overflow: hidden;
-}
-/* If you don't have a hero background image, use a gradient: */
-/*
-.hero {
-    background: linear-gradient(135deg, var(--primary-color), var(--background-color) 70%);
-}
-*/
+/* ---=== Hero Section Styles Removed ===--- */
 
-.hero-background-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(31, 32, 40, 0.7); /* Dark overlay */
-    z-index: 1;
-}
-
-.hero-content {
-    position: relative;
-    z-index: 2;
-    max-width: 800px;
-    animation: fadeInSlideUp 1s ease-out forwards;
-}
-
-@keyframes fadeInSlideUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.hero h1 {
-    font-family: var(--font-display);
-    font-size: clamp(2.5rem, 6vw, 4rem); /* Responsive font size */
-    margin-bottom: var(--base-spacing);
-    color: #fff; /* Brighter text on hero */
-    text-shadow: 2px 2px 8px var(--shadow-color);
-}
-
-.tagline {
-    font-size: clamp(1rem, 3vw, 1.3rem);
-    color: var(--text-muted);
-    margin-bottom: calc(var(--base-spacing) * 2);
-    font-weight: 300;
-}
-
-.cta-button {
-    display: inline-block;
-    background-color: var(--accent-color);
-    color: var(--background-color);
-    padding: calc(var(--base-spacing) * 0.8) calc(var(--base-spacing) * 2);
-    border-radius: 50px; /* Pill shape */
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 1rem;
-    transition: background-color 0.3s ease, transform 0.3s ease;
-    border: 2px solid var(--accent-color);
-}
-
-.cta-button:hover {
-    background-color: var(--light-accent);
-    border-color: var(--light-accent);
-    transform: translateY(-3px);
-}
-
-.cta-button i {
-    margin-left: 8px;
-}
 
 /* ---=== Game Sections ===--- */
 .game-section {
-    padding: calc(var(--base-spacing) * 4) calc(var(--base-spacing) * 1.5);
-    max-width: var(--container-width);
-    margin: 0 auto; /* Center content within the page */
+    padding: calc(var(--base-spacing) * 3) calc(var(--base-spacing) * 1.5); /* Adjusted padding */
+    /* max-width: var(--container-width); */ /* Already handled by content-area */
+    /* margin: 0 auto; */ /* Already handled by content-area */
 }
+/* Add top margin to first game section if needed after removing hero */
+#main-games {
+    margin-top: calc(var(--base-spacing) * 2);
+}
+
 
 .prototype-section {
     background-color: rgba(42, 43, 53, 0.5); /* Slightly different background */
     border-top: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
+    margin-top: calc(var(--base-spacing) * 4); /* Space between sections */
+    padding-top: calc(var(--base-spacing) * 4); /* More padding for section with bg */
+    padding-bottom: calc(var(--base-spacing) * 4);
 }
 
 .section-title {
@@ -297,18 +223,22 @@ body {
     display: flex;
     flex-direction: column;
     box-shadow: 0 4px 15px var(--shadow-color);
-    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-    position: relative; /* For pseudo-elements if needed */
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; /* Keep hover transitions */
+    position: relative;
     border: 1px solid transparent;
-    opacity: 0; /* Start hidden */
-    transform: translateY(30px); /* Start slightly lower */
-    will-change: transform, opacity;
+
+    /* --- Start hidden for animation --- */
+    opacity: 0;
+    transform: translateY(30px);
+    will-change: transform, opacity; /* Optimize for animation */
+    /* --- End start hidden --- */
 }
 
 .game-card:hover {
-    transform: translateY(-8px) scale(1.02);
+    transform: translateY(-8px) scale(1.02); /* Adjust hover transform origin */
     box-shadow: 0 10px 30px var(--shadow-color);
     border-color: var(--accent-color);
+    /* Opacity and non-hover transform handled by animation */
 }
 
 .card-image-container {
@@ -476,9 +406,12 @@ body {
     cursor: pointer;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
+    transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease, background-color 0.3s ease; /* Added background-color transition */
     z-index: 999;
     box-shadow: 0 4px 10px var(--shadow-color);
+    display: flex; /* Use flexbox to center icon */
+    align-items: center;
+    justify-content: center;
 }
 
 #back-to-top.show {
@@ -491,16 +424,6 @@ body {
     transform: scale(1.1);
 }
 
-@keyframes cardFadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
 
 /* ---=== Responsive Adjustments ===--- */
 @media (max-width: 768px) {
@@ -509,39 +432,52 @@ body {
     }
 
     .header-content {
+        /* Keeping the header layout for consistency, adjust if needed */
+        padding: 0 var(--base-spacing);
+    }
+    .site-header {
+        /* Adjust height if content wraps badly, or change flex behavior */
+         height: auto;
+         padding-top: calc(var(--base-spacing)*0.5);
+         padding-bottom: calc(var(--base-spacing)*0.5);
+    }
+     .header-content {
         flex-direction: column;
-        height: auto;
-        padding-top: calc(var(--base-spacing)*0.5);
-        padding-bottom: calc(var(--base-spacing)*0.5);
-    }
-    .site-header{
-        position: static; /* Or adjust height and layout carefully */
-        height: auto;
-    }
+        gap: 10px; /* Add gap if header items stack */
+     }
 
     .main-nav {
-        margin-top: var(--base-spacing);
+        margin-top: 0; /* Reset margin if header stacks */
     }
 
-    .hero {
-        height: 60vh;
-        min-height: 350px;
+    .content-area {
+         padding-top: var(--base-spacing); /* Reduce top padding */
+    }
+    #main-games {
+         margin-top: var(--base-spacing);
     }
 
     .game-grid {
-        /* Switch to single column layout for cards on smaller screens if needed */
-        /* grid-template-columns: 1fr; */
-        /* Or adjust minmax if cards become too small */
          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+         gap: var(--base-spacing); /* Reduce gap */
+    }
+
+    .game-section {
+        padding: calc(var(--base-spacing) * 2) var(--base-spacing);
+    }
+     .prototype-section {
+        padding-top: calc(var(--base-spacing) * 3);
+        padding-bottom: calc(var(--base-spacing) * 3);
     }
 
     .footer-content {
         flex-direction: column;
         text-align: center;
+        gap: calc(var(--base-spacing) * 1.5);
     }
 
     .footer-social {
-        margin-top: var(--base-spacing);
+        margin-top: 0; /* Remove extra margin when stacked */
     }
      .footer-social a {
          margin: 0 calc(var(--base-spacing) * 0.75);
@@ -552,16 +488,38 @@ body {
      html {
         font-size: 14px;
     }
+    .logo-text {
+        font-size: 1.3rem; /* Slightly smaller logo text */
+    }
     .game-grid {
-         grid-template-columns: 1fr; /* Definitely single column now */
-         gap: var(--base-spacing);
+         grid-template-columns: 1fr; /* Single column layout */
     }
     .game-section {
-        padding: calc(var(--base-spacing) * 2.5) var(--base-spacing);
+        padding: calc(var(--base-spacing) * 1.5) var(--base-spacing);
     }
+     .prototype-section {
+        padding-top: calc(var(--base-spacing) * 2.5);
+        padding-bottom: calc(var(--base-spacing) * 2.5);
+    }
+
     #back-to-top {
         width: 45px;
         height: 45px;
         font-size: 1.2rem;
+        bottom: 15px;
+        right: 15px;
+    }
+}
+
+
+/* ---=== Card Fade-In Animation Definition ===--- */
+@keyframes cardFadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
