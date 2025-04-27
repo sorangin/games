@@ -354,6 +354,8 @@ body {
     justify-content: space-between;
     align-items: center;
     gap: var(--base-spacing);
+    align-items: center;
+    gap: calc(var(--base-spacing) * 1.5);
 }
 
 .footer-logo {
@@ -388,6 +390,32 @@ body {
 .footer-social a:hover {
     color: var(--accent-color);
     transform: scale(1.1);
+}
+
+.footer-donate {
+    text-align: center; /* Center text and button if needed */
+    margin-top: calc(var(--base-spacing) * 0.5); /* Add some space above if stacked */
+}
+
+.footer-donate .donate-text {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: calc(var(--base-spacing) * 0.5);
+}
+
+.footer-donate a {
+    display: inline-block; /* Allows transforms and prevents extra space */
+    transition: transform 0.2s ease;
+}
+
+.footer-donate img {
+    height: 40px; /* Adjust size as needed */
+    width: auto;
+    vertical-align: middle; /* Align nicely if next to text */
+}
+
+.footer-donate a:hover {
+    transform: scale(1.05); /* Slight grow effect on hover */
 }
 
 /* ---=== Back to Top Button ===--- */
@@ -471,16 +499,24 @@ body {
 
     .footer-content {
         flex-direction: column;
-        text-align: center;
-        gap: calc(var(--base-spacing) * 1.5);
+        gap: calc(var(--base-spacing) * 1.2);
     }
 
     .footer-social {
-        margin-top: 0; /* Remove extra margin when stacked */
+        margin-top: 0;
+        order: 3;
     }
      .footer-social a {
          margin: 0 calc(var(--base-spacing) * 0.75);
      }
+
+    .footer-donate {
+        margin-top: 0; /* Reset margin when stacked */
+        order: 2; /* Optional: Change stacking order, e.g., put copyright last */
+    }
+    .footer-info {
+        order: 1; /* Optional: Example */
+    }
 }
 
 @media (max-width: 480px) {
