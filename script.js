@@ -95,8 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add staggering delay
     document.querySelectorAll('.game-card').forEach((card, index) => {
-        card.style.opacity = '0'; // Start hidden
-        card.style.transform = 'translateY(30px)';
         card.dataset.delay = `${index * 0.08}s`; // Stagger animation
         cardObserver.observe(card);
     });
