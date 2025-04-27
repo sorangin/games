@@ -3,152 +3,293 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sora Games</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Sora Games - Handcrafted Indie Experiences</title> <!-- More descriptive title -->
+
+    <!-- Favicon (replace with your actual favicon) -->
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome (for icons) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- SEO Meta Tags (Optional but recommended) -->
+    <meta name="description" content="Explore the collection of unique indie games developed by Sora Games. Play strategy, puzzle, action, and experimental titles.">
+    <meta name="keywords" content="Sora Games, indie games, web games, html5 games, strategy games, puzzle games, browser games">
+
 </head>
 <body>
 
+    <div class="noise-overlay"></div> <!-- Subtle background effect -->
+
     <header class="site-header">
-        <h1><img src="images/logo.png" alt="Sora Logo"></h1>
+        <div class="header-content">
+            <a href="index.html" class="logo-link">
+                <img src="images/logo.png" alt="Sora Games Logo" class="logo-img">
+                <span class="logo-text">Sora Games</span>
+            </a>
+            <nav class="main-nav">
+                <!-- Add nav links here if needed later, e.g., About, Blog, Contact -->
+                <!-- <a href="#about">About</a> -->
+            </nav>
+        </div>
     </header>
 
-    <main>
+    <main class="content-area">
+
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="hero-content">
+                <h1>Handcrafted Indie Experiences</h1>
+                <p class="tagline">Dive into worlds of strategy, creativity, and adventure.</p>
+                <a href="#main-games" class="cta-button">Explore Games <i class="fas fa-chevron-down"></i></a>
+            </div>
+            <div class="hero-background-overlay"></div>
+        </section>
 
         <!-- Section 1: Main Games -->
-        <section class="game-section">
-            <h2 class="section-title">Games</h2>
+        <section id="main-games" class="game-section featured-games">
+            <h2 class="section-title">Featured Creations</h2>
             <div class="game-grid">
 
-                <a href="rota/index.html" class="game-card">
-                    <img src="images/rota_screenshot.png"
-                         alt="Revenge of the Ants Screenshot"
-                         data-static-src="images/rota_screenshot.png"
-                         data-gif-src="images/rota_anim.gif"> 
-                    <h3>Revenge of the Ants</h3>
+                <!-- Game Card Example (Repeat for each game) -->
+                <a href="rota/index.html" class="game-card" data-tags="Strategy, Simulation">
+                    <div class="card-image-container">
+                        <img src="images/rota_screenshot.png"
+                             alt="Revenge of the Ants Gameplay"
+                             class="game-image"
+                             data-static-src="images/rota_screenshot.png"
+                             data-gif-src="images/rota_anim.gif">
+                        <div class="image-overlay">
+                            <i class="fas fa-play play-icon"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="game-title">Revenge of the Ants</h3>
+                        <p class="game-description">Command ant colonies in this tactical RTS. Gather resources, expand your territory, and overwhelm your foes.</p>
+                        <div class="game-tags">
+                            <span class="tag">Strategy</span>
+                            <span class="tag">Simulation</span>
+                        </div>
+                    </div>
                 </a>
 
-                <a href="KnightsGambit/index.html" class="game-card">
-                    <img src="images/knights_vs_goblins_screenshot.png"
-                         alt="Knight's Gambit Screenshot"
-                         data-static-src="images/knights_vs_goblins_screenshot.png"
-                         data-gif-src="images/knights_gambit_anim.gif"> 
-                    <h3>Knight's Gambit</h3>
+                <a href="KnightsGambit/index.html" class="game-card" data-tags="Strategy, Puzzle, Turn-Based">
+                    <div class="card-image-container">
+                        <img src="images/knights_vs_goblins_screenshot.png"
+                             alt="Knight's Gambit Gameplay"
+                             class="game-image"
+                             data-static-src="images/knights_vs_goblins_screenshot.png"
+                             data-gif-src="images/knights_gambit_anim.gif">
+                        <div class="image-overlay"><i class="fas fa-play play-icon"></i></div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="game-title">Knight's Gambit</h3>
+                        <p class="game-description">Outmaneuver goblin hordes using chess-inspired movement on a perilous battlefield. Every move counts!</p>
+                        <div class="game-tags">
+                            <span class="tag">Strategy</span>
+                            <span class="tag">Puzzle</span>
+                        </div>
+                    </div>
                 </a>
 
-                <a href="KingsfallChess/index.html" class="game-card">
-                    <img src="images/chess_screenshot.png"
-                         alt="Kingsfall Screenshot"
-                         data-static-src="images/chess_screenshot.png"
-                         data-gif-src="images/chess_anim.gif"> 
-                    <h3>Kingsfall Chess</h3>
-                </a>
+                <a href="KingsfallChess/index.html" class="game-card" data-tags="Strategy, Chess, Board Game">
+                     <div class="card-image-container">
+                         <img src="images/chess_screenshot.png"
+                              alt="Kingsfall Chess Gameplay"
+                              class="game-image"
+                              data-static-src="images/chess_screenshot.png"
+                              data-gif-src="images/chess_anim.gif">
+                        <div class="image-overlay"><i class="fas fa-play play-icon"></i></div>
+                    </div>
+                    <div class="card-content">
+                         <h3 class="game-title">Kingsfall Chess</h3>
+                         <p class="game-description">A unique twist on classic chess with special rules and challenging AI opponents. Checkmate awaits!</p>
+                         <div class="game-tags">
+                            <span class="tag">Strategy</span>
+                            <span class="tag">Chess</span>
+                         </div>
+                    </div>
+                 </a>
 
-                <a href="tcg.html" class="game-card">
-                    <img src="images/tcg_screenshot.png"
-                         alt="Risen Realms Screenshot"
-                         data-static-src="images/tcg_screenshot.png"
-                         data-gif-src="images/tcg_anim.gif"> 
-                    <h3>Risen Realms</h3>
-                </a>
+                 <a href="tcg.html" class="game-card" data-tags="Card Game, Strategy, TCG">
+                     <div class="card-image-container">
+                         <img src="images/tcg_screenshot.png"
+                              alt="Risen Realms Card Game Gameplay"
+                              class="game-image"
+                              data-static-src="images/tcg_screenshot.png"
+                              data-gif-src="images/tcg_anim.gif">
+                         <div class="image-overlay"><i class="fas fa-play play-icon"></i></div>
+                     </div>
+                     <div class="card-content">
+                         <h3 class="game-title">Risen Realms</h3>
+                         <p class="game-description">Build powerful decks and battle opponents in this strategic trading card game. Master the elements!</p>
+                         <div class="game-tags">
+                             <span class="tag">Card Game</span>
+                             <span class="tag">Strategy</span>
+                         </div>
+                     </div>
+                 </a>
+                 <!-- Add other main games using the same structure -->
 
-            </div><!-- End .game-grid for Main Games -->
-        </section> <!-- End Section 1 -->
+            </div><!-- End .game-grid -->
+        </section> <!-- End Featured Games -->
 
-
-        <!-- Section 2: Test Games / Experiments -->
-        <section class="game-section prototype-section">
+        <!-- Section 2: Prototypes & Experiments -->
+        <section id="prototypes" class="game-section prototype-section">
             <h2 class="section-title">Prototypes & Experiments</h2>
+            <p class="section-subtitle">Playground for new ideas and works-in-progress.</p>
              <div class="game-grid">
 
-                <a href="MedievalMath.html" class="game-card">
-                    <img src="images/medieval_math_screenshot.png"
-                         alt="Medieval Math Screenshot"
-                         data-static-src="images/medieval_math_screenshot.png"
-                         data-gif-src="images/medieval_math_anim.gif"> 
-                    <h3>Medieval Math</h3>
+                 <a href="MedievalMath.html" class="game-card prototype-card" data-tags="Educational, Math, Puzzle">
+                     <div class="card-image-container">
+                         <img src="images/medieval_math_screenshot.png"
+                              alt="Medieval Math Screenshot"
+                              class="game-image"
+                              data-static-src="images/medieval_math_screenshot.png"
+                              data-gif-src="images/medieval_math_anim.gif">
+                         <div class="image-overlay"><i class="fas fa-flask play-icon"></i></div> <!-- Flask icon for experiments -->
+                     </div>
+                     <div class="card-content">
+                         <h3 class="game-title">Medieval Math</h3>
+                         <p class="game-description">Sharpen your arithmetic skills with a medieval twist. Solve problems to defend the kingdom!</p>
+                         <div class="game-tags">
+                             <span class="tag tag-proto">Educational</span>
+                             <span class="tag tag-proto">Prototype</span>
+                         </div>
+                     </div>
+                 </a>
+
+                 <a href="GoblinTypingInvasion.html" class="game-card prototype-card" data-tags="Typing, Educational, Action">
+                     <div class="card-image-container">
+                         <img src="images/goblin_typing_invasion_screenshot.png"
+                              alt="Goblin Typing Invasion Screenshot"
+                              class="game-image"
+                              data-static-src="images/goblin_typing_invasion_screenshot.png"
+                              data-gif-src="images/goblin_typing_invasion_anim.gif">
+                         <div class="image-overlay"><i class="fas fa-flask play-icon"></i></div>
+                     </div>
+                     <div class="card-content">
+                         <h3 class="game-title">Goblin Typing Invasion</h3>
+                         <p class="game-description">Improve your typing speed and accuracy by repelling waves of goblins. Type the words to defeat them!</p>
+                         <div class="game-tags">
+                            <span class="tag tag-proto">Typing</span>
+                            <span class="tag tag-proto">Prototype</span>
+                         </div>
+                     </div>
+                 </a>
+
+                 <a href="GoblinSiegeDefense.html" class="game-card prototype-card" data-tags="Defense, Strategy, Action">
+                    <div class="card-image-container">
+                        <img src="images/goblin_siege_defense_screenshot.png"
+                             alt="Goblin Siege Defense Screenshot"
+                             class="game-image"
+                             data-static-src="images/goblin_siege_defense_screenshot.png"
+                             data-gif-src="images/goblin_siege_defense_anim.gif">
+                        <div class="image-overlay"><i class="fas fa-flask play-icon"></i></div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="game-title">Goblin Siege Defense</h3>
+                        <p class="game-description">Place defenders and manage resources to withstand the relentless goblin onslaught. A simple defense prototype.</p>
+                        <div class="game-tags">
+                           <span class="tag tag-proto">Defense</span>
+                           <span class="tag tag-proto">Prototype</span>
+                        </div>
+                    </div>
                 </a>
 
-                <a href="GoblinTypingInvasion.html" class="game-card">
-                    <img src="images/goblin_typing_invasion_screenshot.png"
-                         alt="Goblin Typing Invasion Screenshot"
-                         data-static-src="images/goblin_typing_invasion_screenshot.png"
-                         data-gif-src="images/goblin_typing_invasion_anim.gif"> 
-                    <h3>Goblin Typing Invasion</h3>
+                 <a href="PyroKnightDash.html" class="game-card prototype-card" data-tags="Action, Platformer, Endless Runner">
+                    <div class="card-image-container">
+                        <img src="images/pyro_knight_dash_screenshot.png"
+                             alt="Pyro Knight Dash Screenshot"
+                             class="game-image"
+                             data-static-src="images/pyro_knight_dash_screenshot.png"
+                             data-gif-src="images/pyro_knight_dash_anim.gif">
+                        <div class="image-overlay"><i class="fas fa-flask play-icon"></i></div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="game-title">Pyro Knight Dash</h3>
+                        <p class="game-description">An experimental endless runner featuring a knight with fiery abilities. Dash, jump, and burn!</p>
+                         <div class="game-tags">
+                           <span class="tag tag-proto">Action</span>
+                           <span class="tag tag-proto">Prototype</span>
+                        </div>
+                    </div>
                 </a>
 
-                <a href="GoblinSiegeDefense.html" class="game-card">
-                    <img src="images/goblin_siege_defense_screenshot.png"
-                         alt="Goblin Siege Defense Screenshot"
-                         data-static-src="images/goblin_siege_defense_screenshot.png"
-                         data-gif-src="images/goblin_siege_defense_anim.gif"> 
-                    <h3>Goblin Siege Defense</h3>
+                 <a href="ASCII.html" class="game-card prototype-card" data-tags="Roguelike, ASCII, Turn-Based">
+                    <div class="card-image-container">
+                        <img src="images/ascii_screenshot.png"
+                             alt="ASCII Roguelike Screenshot"
+                             class="game-image"
+                             data-static-src="images/ascii_screenshot.png"
+                             data-gif-src="images/ascii_anim.gif">
+                        <div class="image-overlay"><i class="fas fa-flask play-icon"></i></div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="game-title">ASCII Roguelike</h3>
+                        <p class="game-description">Explore a dungeon rendered entirely in text characters. A classic roguelike experiment.</p>
+                         <div class="game-tags">
+                           <span class="tag tag-proto">Roguelike</span>
+                           <span class="tag tag-proto">Prototype</span>
+                        </div>
+                    </div>
                 </a>
 
-                 <a href="PyroKnightDash.html" class="game-card">
-                    <img src="images/pyro_knight_dash_screenshot.png"
-                         alt="Pyro Knight Dash Screenshot"
-                         data-static-src="images/pyro_knight_dash_screenshot.png"
-                         data-gif-src="images/pyro_knight_dash_anim.gif"> 
-                    <h3>Pyro Knight Dash</h3>
+                <a href="ColorCascade.html" class="game-card prototype-card" data-tags="Puzzle, Match-3, Casual">
+                    <div class="card-image-container">
+                        <img src="images/color_cascade_screenshot.png"
+                             alt="Color Cascade Screenshot"
+                             class="game-image"
+                             data-static-src="images/color_cascade_screenshot.png"
+                             data-gif-src="images/color_cascade_anim.gif">
+                        <div class="image-overlay"><i class="fas fa-flask play-icon"></i></div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="game-title">Color Cascade</h3>
+                        <p class="game-description">A simple match-3 style puzzle game experiment focused on satisfying chain reactions.</p>
+                         <div class="game-tags">
+                           <span class="tag tag-proto">Puzzle</span>
+                           <span class="tag tag-proto">Prototype</span>
+                        </div>
+                    </div>
                 </a>
+                <!-- Add other prototype games -->
 
-                 <a href="ASCII.html" class="game-card">
-                    <img src="images/ascii_screenshot.png"
-                         alt="ASCII Screenshot"
-                         data-static-src="images/ascii_screenshot.png"
-                         data-gif-src="images/ascii_anim.gif"> 
-                    <h3>ASCII Roguelike</h3>
-                </a>
-
-                <a href="ColorCascade.html" class="game-card">
-                    <img src="images/color_cascade_screenshot.png"
-                         alt="Color Cascade Screenshot"
-                         data-static-src="images/color_cascade_screenshot.png"
-                         data-gif-src="images/color_cascade_anim.gif"> 
-                    <h3>Color Cascade</h3>
-                </a>
-
-            </div> <!-- End .game-grid for Test Games -->
-        </section> <!-- End Section 2 -->
+            </div> <!-- End .game-grid -->
+        </section> <!-- End Prototypes -->
 
     </main>
 
     <footer class="site-footer">
-        <p>© 2025 Sora Ngin / Sora Entertainment</p>
+        <div class="footer-content">
+            <div class="footer-logo">
+                <img src="images/logo.png" alt="Sora Games Logo" class="footer-logo-img">
+                <span>Sora Games</span>
+            </div>
+            <div class="footer-info">
+                 <p>© <span id="current-year"></span> Sora Ngin / Sora Entertainment. All Rights Reserved.</p>
+                 <p>Creating worlds, one pixel at a time.</p>
+            </div>
+            <div class="footer-social">
+                <!-- Add social media links here if you have them -->
+                <!-- <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a> -->
+                <!-- <a href="#" aria-label="Itch.io"><i class="fab fa-itch-io"></i></a> -->
+            </div>
+        </div>
     </footer>
 
-    <!-- **** ADD THE JAVASCRIPT HERE **** -->
-    <script>
-        // Wait until the DOM is fully loaded before running the script
-        document.addEventListener('DOMContentLoaded', () => {
+    <!-- Back to Top Button (Optional) -->
+    <button id="back-to-top" title="Back to Top"><i class="fas fa-arrow-up"></i></button>
 
-            // Get all the game cards
-            const gameCards = document.querySelectorAll('.game-card');
-
-            // Loop through each game card
-            gameCards.forEach(card => {
-                const img = card.querySelector('img'); // Find the image inside the card
-                const staticSrc = img.dataset.staticSrc; // Get the static image source from data attribute
-                const gifSrc = img.dataset.gifSrc;     // Get the GIF image source from data attribute
-
-                // Only add listeners if both static and gif sources are defined
-                if (img && staticSrc && gifSrc) {
-                    // Event listener for when the mouse enters the card area
-                    card.addEventListener('mouseenter', () => {
-                        img.src = gifSrc; // Change image source to the GIF
-                    });
-
-                    // Event listener for when the mouse leaves the card area
-                    card.addEventListener('mouseleave', () => {
-                        img.src = staticSrc; // Change image source back to the static image
-                    });
-                }
-            });
-        });
-    </script>
+    <!-- Main JavaScript File -->
+    <script src="script.js"></script>
 
 </body>
 </html>
