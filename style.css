@@ -409,7 +409,7 @@ body {
 }
 
 .footer-donate img {
-    height: 40px; /* Adjust size as needed */
+    height: 60px; /* Adjust size as needed */
     width: auto;
     vertical-align: middle; /* Align nicely if next to text */
 }
