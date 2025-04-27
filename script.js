@@ -15,15 +15,18 @@ document.addEventListener('DOMContentLoaded', () => {
             gifImage.src = gifSrc;
 
             card.addEventListener('mouseenter', () => {
-                img.src = gifSrc; // Change image source to the GIF
+                // Double check image exists before changing source
+                if (img) img.src = gifSrc;
             });
 
             card.addEventListener('mouseleave', () => {
-                img.src = staticSrc; // Change back to static image
+                 // Double check image exists before changing source
+                if (img) img.src = staticSrc;
             });
         } else {
             // Optional: Log if sources are missing for debugging
-            // console.warn('Game card image or data sources missing for:', card);
+             if (!img) console.warn('Game card image element missing for:', card);
+             if (!staticSrc || !gifSrc) console.warn('Game card data-static-src or data-gif-src missing for:', card.querySelector('h3')?.textContent || 'Unknown Card');
         }
     });
 
@@ -47,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 backToTopButton.classList.remove('show');
             }
-        });
+        }, { passive: true }); // Improve scroll performance
 
         backToTopButton.addEventListener('click', () => {
             window.scrollTo({
@@ -58,60 +61,68 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // --- Smooth Scrolling for Internal Links (like CTA button) ---
+    // --- Smooth Scrolling for Internal Links ---
+    // (Note: Since the hero section is removed, this might not be strictly needed
+    // unless you add other internal links later, but it doesn't hurt to keep)
     const internalLinks = document.querySelectorAll('a[href^="#"]');
 
     internalLinks.forEach(link => {
         link.addEventListener('click', function(e) {
-            e.preventDefault(); // Prevent default jump
             const targetId = this.getAttribute('href');
-            const targetElement = document.querySelector(targetId);
+            // Check if it's more than just "#"
+            if (targetId && targetId.length > 1) {
+                const targetElement = document.querySelector(targetId);
 
-            if (targetElement) {
-                // Calculate position, considering potential sticky header height
-                const headerOffset = document.querySelector('.site-header')?.offsetHeight || 0; // Get header height or 0
-                const elementPosition = targetElement.getBoundingClientRect().top + window.scrollY;
-                const offsetPosition = elementPosition - headerOffset - 20; // Add a little extra space
+                if (targetElement) {
+                    e.preventDefault(); // Prevent default jump only if target exists
+                    // Calculate position, considering potential sticky header height
+                    const header = document.querySelector('.site-header');
+                    const headerOffset = header ? header.offsetHeight : 0; // Get header height or 0
+                    const elementPosition = targetElement.getBoundingClientRect().top + window.scrollY;
+                    const offsetPosition = elementPosition - headerOffset - 20; // Add a little extra space
 
-                window.scrollTo({
-                    top: offsetPosition,
-                    behavior: 'smooth'
-                });
+                    window.scrollTo({
+                        top: offsetPosition,
+                        behavior: 'smooth'
+                    });
+                }
             }
         });
     });
 
 
-    // --- Optional: Add subtle animation to cards on scroll ---
+    // --- Add subtle animation to cards on scroll ---
     // Uses Intersection Observer API for better performance
-    const cardObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.style.animation = `cardFadeInUp 0.6s ${entry.target.dataset.delay || '0s'} ease-out forwards`;
-                observer.unobserve(entry.target); // Observe only once
-            }
+    if ('IntersectionObserver' in window) { // Check if browser supports IntersectionObserver
+        const cardObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    // Apply the animation defined in CSS
+                    entry.target.style.animation = `cardFadeInUp 0.6s ${entry.target.dataset.delay || '0s'} ease-out forwards`;
+                    observer.unobserve(entry.target); // Stop observing once animated
+                }
+            });
+        }, { threshold: 0.1 }); // Trigger when 10% of the card is visible
+
+        // Observe each game card and set stagger delay
+        document.querySelectorAll('.game-card').forEach((card, index) => {
+            // We no longer set initial styles here (opacity/transform) - CSS handles it.
+            card.dataset.delay = `${index * 0.08}s`; // Stagger animation delay
+            cardObserver.observe(card);
         });
-    }, { threshold: 0.1 }); // Trigger when 10% of the card is visible
 
-    // Add staggering delay
-    document.querySelectorAll('.game-card').forEach((card, index) => {
-        card.dataset.delay = `${index * 0.08}s`; // Stagger animation
-        cardObserver.observe(card);
-    });
+    } else {
+        // Fallback for older browsers that don't support IntersectionObserver:
+        // Just make all cards visible immediately without animation.
+        console.warn("IntersectionObserver not supported. Animations disabled.");
+        document.querySelectorAll('.game-card').forEach(card => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        });
+    }
 
-    // Add keyframes for the animation in CSS or here
-    const styleSheet = document.styleSheets[0]; // Get the first stylesheet
-    styleSheet.insertRule(`
-        @keyframes cardFadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-    `, styleSheet.cssRules.length);
+    // --- KEYFRAMES INJECTION BLOCK IS REMOVED ---
+    // The @keyframes cardFadeInUp rule should now be in your style.css file
+
 
 }); // End DOMContentLoaded
