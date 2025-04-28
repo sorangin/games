@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ninja Arena [2011] - Sora Games</title>
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="noise-overlay"></div>
+    <header class="site-header">
+        <div class="header-content">
+            <a href="index.html" class="logo-link"><img src="images/logo.png" alt="Sora Games Logo" class="logo-img"><span class="logo-text">Sora Games</span></a>
+            <nav class="main-nav"><a href="index.html#in-development">Back to Games</a></nav>
+        </div>
+    </header>
+    <main class="content-area game-detail-page">
+        <article class="game-detail-content">
+            <header class="game-detail-header">
+                <h1>Ninja Arena <span class="release-year">[2011 Project - Revived]</span></h1>
+                <p class="game-status"><i class="fas fa-cogs"></i> In Development</p>
+                <div class="game-detail-tags"><span class="tag">Action</span><span class="tag">Fighting</span><span class="tag tag-dev">Multiplayer</span></div>
+            </header>
+            <section class="game-trailer">
+                <h2>Trailer</h2>
+                <div class="video-placeholder"><p>(Gameplay Prototype Video Coming Soon)</p></div>
+            </section>
+            <section class="game-description-full">
+                <h2>Description</h2>
+                <p>Prepare for intense, high-speed combat in 'Ninja Arena'! Dusting off a 2011 concept, this game aims to be a fast-paced multiplayer fighting game where skilled ninjas clash in dynamic, interactive arenas. Master unique character move sets, utilize wall-running and acrobatic maneuvers, deploy classic ninja tools, and outsmart your opponents to claim victory. Both online and local multiplayer are planned.</p>
+            </section>
+            <section class="game-screenshots">
+                <h2>Concepts</h2>
+                <div class="screenshot-grid">
+                    <img src="images/ninja_arena_char_concept.png" alt="Ninja Arena - Character Concepts">
+                    <img src="images/ninja_arena_stage_concept.png" alt="Ninja Arena - Arena Concept Art">
+                    <img src="images/ninja_arena_combat_mockup.png" alt="Ninja Arena - Combat Mockup">
+                    <img src="images/placeholder_screenshot.png" alt="Ninja Arena - Placeholder">
+                </div>
+            </section>
+            <section class="game-features">
+                <h2>Key Features (Planned)</h2>
+                <ul>
+                    <li><i class="fas fa-check"></i> Fast-Paced, Acrobatic Ninja Combat</li>
+                    <li><i class="fas fa-check"></i> Roster of Unique Ninja Characters with Different Styles</li>
+                    <li><i class="fas fa-check"></i> Dynamic Arenas with Interactable Elements</li>
+                    <li><i class="fas fa-check"></i> Skill-Based Gameplay: Combos, Parries, Special Moves</li>
+                    <li><i class="fas fa-check"></i> Online & Local Multiplayer Modes</li>
+                    <li><i class="fas fa-check"></i> Ranking and Progression System</li>
+                </ul>
+            </section>
+            <section class="game-download">
+                <h2>Get Involved / Download</h2>
+                <p>Prototyping for 'Ninja Arena' is underway. Follow for development insights!</p>
+                <a href="#" class="cta-button disabled" title="Demo not yet available">Download Demo (Coming Soon) <i class="fas fa-download"></i></a>
+            </section>
+            <nav class="back-link-section"><a href="index.html#in-development" class="back-link"><i class="fas fa-arrow-left"></i> Back to All Games</a></nav>
+        </article>
+    </main>
+    <footer class="site-footer">
+         <div class="footer-content">
+            <div class="footer-logo"><img src="images/logo.png" alt="Sora Games Logo" class="footer-logo-img"><span>Sora Games</span></div>
+            <div class="footer-info"><p>&copy; <span id="current-year"></span> Sora Ngin / Sora Entertainment. All Rights Reserved.</p><p>Creating worlds, one pixel at a time.</p></div>
+            <div class="footer-donate"><p class="donate-text">Enjoy the games? Support development!</p><a href="https://www.paypal.com/donate/?cmd=_donations&business=Sorangin%40gmail.com" target="_blank" rel="noopener noreferrer" title="Donate via PayPal"><img src="images/donate.png" alt="PayPal Donate Button"></a></div>
+            <div class="footer-social"></div>
+        </div>
+    </footer>
+    <script src="script.js"></script>
+    <script>document.getElementById('current-year').textContent = new Date().getFullYear();</script>
+</body>
+</html>
