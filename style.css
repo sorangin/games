@@ -496,7 +496,6 @@ body {
     font-size: 0.9em;
     color: var(--text-muted);
     font-weight: normal;
-    display: block; /* Put year on its own line or adjust */
     margin-bottom: 0.5rem;
 }
 
