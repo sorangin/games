@@ -3,167 +3,456 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Medieval Math</title> <!-- Version Bump -->
+    <title>Medieval Math: Knight's Gambit (v3)</title>
     <style>
-        /* Basic resets */
-        html {
-            height: 100%; margin: 0; padding: 0;
-            overflow: hidden; /* Prevent scroll on HTML */
-            font-family: 'Verdana', sans-serif;
-        }
-        body {
-            height: 100%; /* Fill HTML */
-            margin: 0; padding: 0;
-            background-color: #5d6a5a; color: #eee;
-            overflow: hidden; /* Prevent scroll on Body */
-            /* Remove flex from body */
+        @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap');
+
+        :root {
+            --font-main: 'MedievalSharp', cursive;
+            --font-ui: 'Verdana', sans-serif;
+            --color-text: #f0e8d8;
+            --color-text-dark: #3a2e20;
+            --color-bg-main: #4a3b2a;
+            --color-bg-panel: rgba(60, 45, 30, 0.85);
+            --color-border: #7a5f41;
+            --color-accent: #e8b86d;
+            --color-accent-dark: #a07b4c;
+            --color-hp-knight: #5fa8d3;
+            --color-hp-enemy: #c74040;
+            --color-hp-bg: #443322;
+            --color-correct: #90ee90;
+            --color-incorrect: #ff7f7f;
+            --color-level-up: #ffd700;
+            --color-purchase: #add8e6;
+            --shadow-text: 1px 1px 2px rgba(0,0,0,0.7);
+            --shadow-panel: 3px 3px 6px rgba(0,0,0,0.4);
         }
 
-        /* Game container - Acts as viewport for internal scroll */
+        html, body {
+            height: 100%; margin: 0; padding: 0;
+            overflow: hidden;
+            font-family: var(--font-ui);
+            color: var(--color-text);
+            background-color: var(--color-bg-main);
+        }
+
         #game-container {
-            position: relative; /* For absolute children (button, overlays) */
-            width: 100%; /* Fill the iframe width provided by Wix wrapper */
-            height: 100%; /* Fill the iframe height provided by Wix wrapper */
-            background-color: #8d7163;
-            /* Remove border/padding here if they interfere with 100% height */
-            /* border: 5px solid #4b3f31; */
-            /* padding: clamp(10px, 3vw, 20px); */
+            position: relative;
+            width: 100%; height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-image: url('./sprites/tile_wasteland.png');
+            background-repeat: repeat;
+            overflow: hidden;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
             box-sizing: border-box;
             text-align: center;
-            overflow: hidden; /* Clip children like overlays */
+            backdrop-filter: blur(3px);
+        }
+        .screen.active { display: flex; }
 
-            /* Use Flexbox to manage internal layout */
-            display: flex;
+        #menu-screen { background: rgba(0,0,0,0.6); }
+        #menu-screen h1 {
+             font-family: var(--font-main);
+             font-size: clamp(3em, 10vw, 5em);
+             color: var(--color-accent);
+             text-shadow: 3px 3px 5px #000;
+             margin-bottom: 10px;
+        }
+        #menu-screen p {
+            font-size: clamp(1em, 3vw, 1.3em);
+            margin-bottom: 30px;
+            max-width: 600px;
+            line-height: 1.6;
+            text-shadow: var(--shadow-text);
+        }
+        .menu-button {
+            padding: 12px 25px;
+            font-family: var(--font-main);
+            font-size: clamp(1.2em, 4vw, 1.8em);
+            cursor: pointer;
+            background-color: var(--color-accent-dark);
+            border: 3px solid var(--color-text-dark);
+            color: var(--color-text);
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            box-shadow: 3px 3px 0px var(--color-text-dark);
+            margin: 10px;
+            min-width: 200px;
+            text-shadow: 1px 1px #000;
+            outline: none;
+        }
+        .menu-button:hover {
+            background-color: var(--color-accent);
+            transform: translate(-1px, -1px);
+            box-shadow: 4px 4px 0px var(--color-text-dark);
+        }
+        .menu-button:active {
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0px var(--color-text-dark);
+        }
+
+
+        #game-screen {
             flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            overflow-y: auto;
+            padding-top: 65px;
+            padding-bottom: 20px;
+            width: 100%; height: 100%;
         }
 
-        /* NEW: Scrollable Content Area */
-        #scrollable-content {
-            flex-grow: 1; /* Take up remaining vertical space */
-            overflow-y: auto; /* THIS element scrolls */
-            overflow-x: hidden;
-            padding: clamp(10px, 3vw, 20px); /* Add padding inside */
-             /* Need min-height 0 for flexbox overflow */
-             min-height: 0;
-             /* Add back border/background if desired */
-             /* background-color: #8d7163; */
-             /* border: 5px solid #4b3f31; */
-             border-radius: 8px; /* Optional */
-             width: 95%; /* Or desired width */
-             max-width: 550px; /* Max width */
-             margin: 0 auto; /* Center horizontally */
-             box-sizing: border-box;
-             scroll-behavior: smooth;
+        #top-ui-bar {
+            position: absolute; /* Keep absolute positioning relative to game-screen */
+            top: 0; left: 0; right: 0;
+            display: flex;
+            justify-content: space-between; /* Space between left status and right controls */
+            align-items: center;
+            padding: 8px 15px;
+            background-color: var(--color-bg-panel);
+            border-bottom: 3px solid var(--color-border);
+            box-shadow: var(--shadow-panel);
+            z-index: 10;
+            flex-wrap: wrap; /* Allow wrapping on small screens */
+            gap: 10px; /* Gap between items if they wrap */
+            min-height: 45px;
         }
 
+        #status-area {
+            display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center;
+            font-size: clamp(0.85em, 2.5vw, 1.1em);
+        }
+        #status-area span {
+            display: flex; align-items: center; gap: 5px;
+            text-shadow: var(--shadow-text); font-weight: bold;
+        }
+         #status-area img { height: clamp(18px, 4vw, 24px); vertical-align: middle; }
+         #sharpen-indicator { color: orange; font-style: italic; font-weight: bold; }
 
-        /* Fullscreen Button - Absolute to game-container */
+        /* New wrapper for right-side controls */
+        #top-controls-right {
+            display: flex;
+            align-items: center;
+            gap: 10px; /* Space between audio buttons and fullscreen button */
+        }
+
+        #audio-controls { display: flex; gap: 10px; }
+        #audio-controls button, #fullscreen-button { /* Style both audio and fullscreen buttons */
+            background: none; border: 2px solid var(--color-accent); color: var(--color-accent);
+            width: 35px; height: 35px; border-radius: 50%; cursor: pointer;
+            font-size: 1.2em; line-height: 31px; text-align: center; /* Adjusted line-height */
+            padding: 0; /* Remove padding that might affect centering */
+            display: flex; /* Use flex to center content */
+            justify-content: center;
+            align-items: center;
+            transition: all 0.2s; outline: none;
+            flex-shrink: 0; /* Prevent buttons from shrinking */
+        }
+        #audio-controls button:hover, #fullscreen-button:hover { background-color: rgba(255,255,255,0.2); }
+        #audio-controls button.muted { text-decoration: line-through; opacity: 0.7; }
+
         #fullscreen-button {
-            position: absolute; top: 8px; right: 8px;
-            width: 35px; height: 35px; font-size: clamp(1.1em, 3vw, 1.6em);
-            line-height: 33px; text-align: center;
-            background: rgba(75, 63, 49, 0.8); /* Slightly less transparent */
-            border: 1px solid #eee; color: #eee;
-            border-radius: 5px; cursor: pointer; z-index: 110; /* Above overlays */
+            font-size: 1.5em; /* Keep fullscreen icon larger */
+             line-height: 1; /* Reset line-height for flex centering */
+             /* No absolute positioning needed */
         }
-        #fullscreen-button:hover { background: rgba(75, 63, 49, 1); }
-        #game-container:fullscreen { /* Style container when fullscreen */
-             /* When game container itself is fullscreen, it should scroll */
-            overflow-y: auto !important;
-        }
-         /* Ensure scrollable content scrolls fine in fullscreen too */
-         #game-container:fullscreen #scrollable-content {
-             /* Usually okay, but ensures overflow if needed */
-             /* overflow-y: auto; */
-         }
 
 
-        /* Overlays - Absolute to game-container */
-        .overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.85); display: flex;
-            flex-direction: column; justify-content: center; align-items: center;
-            color: white; text-align: center; z-index: 100; /* Below fullscreen button */
-            padding: 20px; box-sizing: border-box; font-family: 'Verdana', sans-serif;
+        #game-content {
+             width: 100%;
+             max-width: 700px;
+             margin: 0 auto;
+             padding: 15px;
+             box-sizing: border-box;
+             display: flex;
+             flex-direction: column;
+             gap: 15px;
+        }
+
+        #duel-area {
+            display: flex; justify-content: space-around; align-items: flex-end;
+            height: clamp(180px, 30vh, 240px);
+            border-bottom: 4px solid var(--color-border);
+            padding-bottom: 15px;
+            margin-bottom: 10px;
+        }
+        .character {
+            display: flex; flex-direction: column; align-items: center;
+            position: relative;
+            width: 40%;
+        }
+        .sprite {
+            width: clamp(70px, 20vw, 100px); height: clamp(70px, 20vw, 100px);
+            background-size: contain; background-repeat: no-repeat; background-position: center;
+            image-rendering: pixelated;
+            margin-bottom: 5px;
+            position: relative;
+            z-index: 1;
+            transition: transform 0.15s ease-in-out, opacity 0.3s ease-in, filter 0.5s ease-out;
+            /* Adjust margin-top to prevent overlap with portrait */
+            margin-top: clamp(50px, 12vw, 65px);
+        }
+        #knight-sprite { background-image: url('./sprites/Knight.png'); }
+
+        .portrait {
+            position: absolute;
+            top: 0px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: clamp(45px, 11vw, 60px);
+            height: clamp(45px, 11vw, 60px);
+            background-size: cover;
+            background-position: center;
+            border: 3px solid var(--color-border);
+            border-radius: 5px;
+            box-shadow: var(--shadow-panel);
+            image-rendering: pixelated;
+            z-index: 5;
             display: none;
         }
-        #start-screen { display: flex; }
-        /* Rest of overlay styles are fine */
-         .overlay h2 { color: #ffd700; margin-bottom: 20px; text-shadow: 2px 2px #553300; font-size: clamp(1.8em, 6vw, 2.5em); }
-         .overlay p { margin-bottom: 25px; font-size: clamp(1em, 3vw, 1.2em); line-height: 1.6; max-width: 600px; }
-         .overlay button { padding: clamp(10px, 3vw, 14px) clamp(20px, 5vw, 28px); font-size: clamp(1em, 3.5vw, 1.2em); cursor: pointer; background-color: #a0522d; border: 3px solid #1a0f0c; color: white; border-radius: 5px; font-family: 'Verdana', sans-serif; transition: background-color 0.2s; box-shadow: 3px 3px 0px #1a0f0c; }
-         .overlay button:hover { background-color: #8B4513; }
-         .overlay button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0px #1a0f0c; }
+        #knight-portrait { background-image: url('./sprites/knight_portrait.png'); display: block; }
+        #goblin-portrait { display: block; }
 
+        .hp-bar-container {
+            width: clamp(100px, 25vw, 150px); height: 18px;
+            background-color: var(--color-hp-bg); border: 2px solid var(--color-text-dark);
+            border-radius: 5px; overflow: hidden; margin: 5px auto 3px auto;
+            box-shadow: inset 1px 1px 3px rgba(0,0,0,0.5);
+        }
+        .hp-bar { height: 100%; width: 100%; transition: width 0.4s ease-out; }
+        .hp-bar.knight { background-color: var(--color-hp-knight); }
+        .hp-bar.enemy { background-color: var(--color-hp-enemy); }
+        .hp-text {
+            font-size: clamp(0.8em, 2.5vw, 1em); font-weight: bold;
+            color: var(--color-text); text-shadow: var(--shadow-text);
+            margin-top: 2px;
+        }
 
-        /* Styles for elements INSIDE #scrollable-content */
-        h1 { font-size: clamp(1.5em, 5vw, 2.2em); margin-bottom: 15px; color: #fff; text-shadow: 2px 2px #2a231b; }
-        #duel-area { display: flex; justify-content: space-around; align-items: flex-end; height: clamp(140px, 25vh, 180px); margin-bottom: 15px; border-bottom: 3px dashed #4b3f31; padding-bottom: 15px; }
-        .character { display: flex; flex-direction: column; align-items: center; }
-        .sprite { width: clamp(65px, 18vw, 90px); height: clamp(65px, 18vw, 90px); background-size: contain; background-repeat: no-repeat; background-position: center; image-rendering: pixelated; margin-bottom: 5px; position: relative; transition: transform 0.15s ease-in-out, opacity 0.3s ease-in, filter 0.5s ease-out; }
-        #knight-sprite { background-image: url('./sprites/Knight.png'); }
-        #goblin-sprite { background-image: url('./sprites/Goblin.png'); }
-        #knight-sprite.attack { transform: translateX(15px) scale(1.05); }
-        #knight-sprite.level-up { filter: drop-shadow(0 0 6px yellow); }
-        #goblin-sprite.attack { transform: translateX(-15px) scale(1.05); }
-        #goblin-sprite.defeat { transform: rotate(-90deg) translateY(20px); opacity: 0.6; }
-        .hp-bar-container { width: clamp(80px, 20vw, 110px); height: 15px; background-color: #555; border: 1px solid #222; border-radius: 3px; overflow: hidden; margin: 0 auto 3px auto; }
-        .hp-bar { height: 100%; width: 100%; transition: width 0.3s ease-out; }
-        .hp-bar.knight { background-color: #4a90e2; }
-        .hp-bar:not(.knight) { background-color: #d0021b; }
-        .hp-text { font-size: clamp(0.8em, 2.5vw, 0.9em); font-weight: bold; color: #fff; text-shadow: 1px 1px #111; }
-        #status-area { display: flex; flex-wrap: wrap; justify-content: space-evenly; padding: clamp(6px, 2vw, 8px); margin-bottom: 10px; background-color: #6b4f41; border-radius: 4px; border: 1px solid #4b3f31; font-size: clamp(0.8em, 2.5vw, 0.9em); }
-        #status-area span { margin: 3px 8px; font-weight: bold; color: #fff; text-shadow: 1px 1px #111; }
-        #sharpen-indicator { color: orange; font-style: italic; }
-        #shop-area { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
-        #shop-area button { padding: 8px 12px; font-size: 0.9em; cursor: pointer; background-color: #6a4b3a; border: 2px solid #3b2f21; color: #fff; border-radius: 4px; transition: background-color 0.2s, opacity 0.2s; line-height: 1.3; }
-        #shop-area button:hover:not(:disabled) { background-color: #5a3b2a; }
-        #shop-area button:disabled { background-color: #777; color: #aaa; cursor: not-allowed; opacity: 0.6; }
-        #problem-area { background-color: #6b4f41; padding: clamp(10px, 3vw, 15px); border-radius: 5px; border: 2px solid #4b3f31; margin-bottom: 15px; }
-        #math-problem { font-size: clamp(1.4em, 5vw, 1.9em); font-weight: bold; margin-bottom: 10px; color: #fff; text-shadow: 1px 1px #222; word-wrap: break-word; }
-        #answer-input { width: clamp(60px, 20vw, 90px); padding: clamp(6px, 2vw, 9px); font-size: clamp(1.2em, 4vw, 1.6em); text-align: center; border: 2px solid #4b3f31; border-radius: 4px; margin-right: 10px; margin-bottom: 5px; -moz-appearance: textfield; }
+        .sprite.attack { transform: scale(1.1); }
+        #knight-sprite.attack { transform: translate(15px, -5px) scale(1.1); } /* Added slight vertical move */
+        #goblin-sprite.attack { transform: translate(-15px, -5px) scale(1.1); }/* Added slight vertical move */
+        .sprite.hit { animation: shake 0.3s ease-in-out; }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px) rotate(-2deg); }
+            50% { transform: translateX(5px) rotate(2deg); }
+            75% { transform: translateX(-3px) rotate(-1deg); }
+        }
+        .sprite.defeat { transform: rotate(-90deg) translateY(30px) scale(0.8); opacity: 0.5; filter: grayscale(80%); }
+        .sprite.level-up { animation: levelup-glow 1s ease-out; }
+        @keyframes levelup-glow {
+            0% { filter: drop-shadow(0 0 2px yellow); }
+            50% { filter: drop-shadow(0 0 15px yellow) scale(1.1); }
+            100% { filter: drop-shadow(0 0 2px yellow) scale(1); }
+        }
+
+        .game-panel {
+            background-color: var(--color-bg-panel);
+            padding: clamp(10px, 3vw, 15px);
+            border-radius: 8px;
+            border: 3px solid var(--color-border);
+            box-shadow: var(--shadow-panel);
+            margin-bottom: 15px;
+        }
+
+        #shop-area { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
+        .shop-button {
+            padding: 8px 12px; font-size: clamp(0.8em, 2.5vw, 1em); cursor: pointer;
+            background-color: var(--color-accent-dark); border: 2px solid var(--color-text-dark);
+            color: var(--color-text); border-radius: 5px; transition: all 0.2s;
+            line-height: 1.3; display: flex; flex-direction: column; align-items: center; gap: 5px;
+            min-width: 100px;
+            text-shadow: 1px 1px #000; outline: none;
+        }
+        .shop-button img { height: clamp(25px, 6vw, 35px); image-rendering: pixelated; }
+        /* Style for the sword icon */
+        .shop-button .icon {
+            font-size: clamp(1.8em, 5vw, 2.2em); /* Make icon larger */
+            line-height: 1; /* Adjust line height for icon */
+             margin-bottom: 2px; /* Space below icon */
+        }
+        .shop-button:hover:not(:disabled) { background-color: var(--color-accent); }
+        .shop-button:disabled { background-color: #777; color: #aaa; cursor: not-allowed; opacity: 0.6; }
+        .shop-button .cost { font-weight: bold; }
+
+        #problem-area { text-align: center; }
+        #math-problem {
+            font-family: var(--font-main);
+            font-size: clamp(1.8em, 6vw, 2.8em); font-weight: bold;
+            margin-bottom: 15px; color: var(--color-accent); text-shadow: 2px 2px #000;
+            word-wrap: break-word; min-height: 1.2em;
+        }
+        #answer-input {
+            width: clamp(80px, 25vw, 120px); padding: clamp(8px, 2.5vw, 12px);
+            font-size: clamp(1.4em, 5vw, 2em); text-align: center;
+            border: 3px solid var(--color-border); border-radius: 5px;
+            margin-right: 10px; margin-bottom: 10px;
+            background-color: var(--color-text); color: var(--color-text-dark);
+            -moz-appearance: textfield; font-family: var(--font-ui);
+            outline: none;
+        }
         #answer-input::-webkit-outer-spin-button, #answer-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        #submit-button { padding: clamp(8px, 2.5vw, 12px) clamp(15px, 4vw, 20px); font-size: clamp(1em, 3.5vw, 1.3em); background-color: #a0522d; border: 2px solid #1a0f0c; color: white; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; vertical-align: top; margin-bottom: 5px; }
+
+        #submit-button {
+            padding: clamp(10px, 3vw, 15px) clamp(20px, 5vw, 30px);
+            font-size: clamp(1.2em, 4vw, 1.6em);
+            background-color: #a0522d; border: 3px solid #1a0f0c; color: white;
+            border-radius: 5px; cursor: pointer; transition: all 0.2s;
+            vertical-align: top; margin-bottom: 10px; font-family: var(--font-main);
+            box-shadow: 3px 3px 0px #1a0f0c; text-shadow: 1px 1px #000;
+            outline: none;
+        }
         #submit-button:hover:not(:disabled) { background-color: #8B4513; }
-        #submit-button:disabled { background-color: #888; cursor: not-allowed; }
-        #feedback-area { margin-top: 10px; min-height: 20px; font-size: clamp(0.9em, 3vw, 1.1em); font-weight: bold; }
-        .feedback-correct { color: #33FF57; text-shadow: 1px 1px #114411; }
-        .feedback-incorrect { color: #FF5733; text-shadow: 1px 1px #441111; }
-        .feedback-levelup { color: #ffd700; text-shadow: 1px 1px #443300; }
-        .feedback-purchase { color: #87CEEB; text-shadow: 1px 1px #112233; }
+        #submit-button:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0px #1a0f0c; }
+        #submit-button:disabled { background-color: #888; cursor: not-allowed; box-shadow: none; transform: none; opacity: 0.7; }
+
+        .feedback-area { /* Changed ID to class for consistency */
+            margin-top: 10px; min-height: 25px;
+            font-size: clamp(1em, 3.5vw, 1.3em); font-weight: bold;
+            text-align: center; text-shadow: var(--shadow-text);
+            transition: color 0.3s;
+        }
+        .feedback-correct { color: var(--color-correct); }
+        .feedback-incorrect { color: var(--color-incorrect); }
+        .feedback-levelup { color: var(--color-level-up); animation: pulse 1s infinite alternate; }
+        .feedback-purchase { color: var(--color-purchase); }
+        .feedback-enemy-defeated { color: var(--color-accent); }
+
+        @keyframes pulse {
+            from { text-shadow: 1px 1px 2px #443300; }
+            to { text-shadow: 1px 1px 6px var(--color-level-up); }
+        }
+
+        #game-over-screen { background: rgba(0,0,0,0.7); }
+        #game-over-title {
+            font-family: var(--font-main);
+            font-size: clamp(2.5em, 8vw, 4em);
+            color: var(--color-incorrect);
+            text-shadow: 3px 3px 5px #000;
+            margin-bottom: 15px;
+        }
+         #game-over-message {
+             font-size: clamp(1em, 3vw, 1.3em);
+             margin-bottom: 30px; max-width: 600px; line-height: 1.6;
+             text-shadow: var(--shadow-text);
+         }
+        #game-over-stats {
+            font-size: clamp(0.9em, 2.8vw, 1.1em);
+            margin-bottom: 25px;
+            background: rgba(255,255,255,0.1);
+            padding: 10px 15px;
+            border-radius: 5px;
+            border: 1px solid var(--color-border);
+            line-height: 1.5;
+        }
 
     </style>
 </head>
 <body>
-    <!-- Game Container -->
     <div id="game-container">
-        <button id="fullscreen-button" title="Toggle Fullscreen">⛶</button>
 
-        <!-- NEW: Scrollable Content Wrapper -->
-        <div id="scrollable-content">
-            <h1>Medieval Math Duel</h1>
-            <div id="duel-area"> <div class="character" id="knight"> <div class="sprite" id="knight-sprite"></div> <div class="hp-bar-container"><div class="hp-bar knight" id="knight-hp-bar"></div></div> <div class="hp-text" id="knight-hp-text">HP: 20/20</div> </div> <div class="character" id="goblin"> <div class="sprite" id="goblin-sprite"></div> <div class="hp-bar-container"><div class="hp-bar" id="goblin-hp-bar"></div></div> <div class="hp-text" id="goblin-hp-text">HP: 15/15</div> </div> </div>
-            <div id="status-area"> <span id="level-display">Level: 1</span> <span id="xp-display">XP: 0 / 15</span> <span id="gold-display">Gold: 0</span> <span id="sharpen-indicator" style="display: none;">Sword Sharpened!</span></div>
-            <div id="shop-area"> <button id="buy-potion-button">Potion (15g)<br/>+10 HP</button> <button id="buy-sharpen-button">Sharpen (20g)<br/>+2 ATK (Next Turn)</button> </div>
-            <div id="problem-area"> <div id="math-problem"> Solve: 5 + 3 = ?</div> <input type="tel" pattern="[0-9\-]*" inputmode="numeric" id="answer-input" autofocus> <button id="submit-button">Attack!</button> </div>
-            <div id="feedback-area"></div>
+        <!-- Fullscreen button moved inside top-ui-bar -->
+
+        <div id="menu-screen" class="screen active">
+            <h1>Medieval Math</h1>
+            <p>Sharpen your mind and your blade! Solve math problems to defeat waves of goblins. Earn gold, buy items, and level up your Knight!</p>
+            <button id="start-button" class="menu-button">Start Game</button>
         </div>
-        <!-- End Scrollable Content Wrapper -->
 
-        <!-- Overlays remain direct children of game-container -->
-        <div id="start-screen" class="overlay"> <h2>Math Duel!</h2> <p>Your Knight faces a fearsome Goblin!...<br>Use Gold for Potions or to Sharpen your blade!<br>Defeat Goblins to gain XP, Gold and Level Up!...</p> <button id="start-button">Begin Duel!</button> </div>
-        <div id="game-over-screen" class="overlay"> <h2 id="game-over-title">Defeat!</h2> <p id="game-over-message">The Goblin overcame thy Knight!</p> <button id="restart-button">Try Again?</button> </div>
+        <div id="game-screen" class="screen">
+             <div id="top-ui-bar">
+                 <div id="status-area">
+                     <span id="level-display"><img src="./sprites/shiny_gem.png" alt="Level"> Lvl: 1</span>
+                     <span id="xp-display">XP: 0 / 15</span>
+                     <span id="gold-display"><img src="./sprites/gold.png" alt="Gold"> 0</span>
+                     <span id="sharpen-indicator" style="display: none;">⚔️ Sharpened!</span>
+                 </div>
+                 <!-- New wrapper for right controls -->
+                 <div id="top-controls-right">
+                     <div id="audio-controls">
+                         <button id="music-toggle-button" title="Toggle Music">🎵</button>
+                         <button id="sfx-toggle-button" title="Toggle SFX">🔊</button>
+                     </div>
+                     <button id="fullscreen-button" title="Toggle Fullscreen">⛶</button>
+                 </div>
+             </div>
 
-    </div> <!-- End of game-container -->
+             <div id="game-content">
+                 <div id="duel-area">
+                     <div class="character" id="knight">
+                         <div class="portrait" id="knight-portrait"></div>
+                         <div class="sprite" id="knight-sprite"></div>
+                         <div class="hp-bar-container"><div class="hp-bar knight" id="knight-hp-bar"></div></div>
+                         <div class="hp-text" id="knight-hp-text">HP: 20/20</div>
+                     </div>
+                     <div class="character" id="goblin">
+                          <div class="portrait" id="goblin-portrait"></div>
+                          <div class="sprite" id="goblin-sprite"></div>
+                          <div class="hp-bar-container"><div class="hp-bar enemy" id="goblin-hp-bar"></div></div>
+                          <div class="hp-text" id="goblin-hp-text">HP: 15/15</div>
+                     </div>
+                 </div>
+
+                 <div id="shop-area" class="game-panel">
+                      <button id="buy-potion-button" class="shop-button">
+                          <img src="./sprites/potion_heal.png" alt="Potion">
+                          <span>Potion (<span class="cost">15g</span>)</span>
+                          <span class="description">+10 HP</span>
+                      </button>
+                      <button id="buy-sharpen-button" class="shop-button">
+                           <!-- Replaced img with span icon -->
+                          <span class="icon">⚔️</span>
+                          <span>Sharpen (<span class="cost">20g</span>)</span>
+                          <span class="description">+2 ATK Next Turn</span>
+                     </button>
+                 </div>
+
+                 <div id="problem-area" class="game-panel">
+                     <div id="math-problem">Solve: 5 + 3 = ?</div>
+                     <input type="tel" pattern="[0-9\-]*" inputmode="numeric" id="answer-input" autofocus>
+                     <button id="submit-button">Attack!</button>
+                      <!-- Changed feedback ID to class -->
+                     <div id="feedback-area" class="feedback-area"></div>
+                 </div>
+             </div>
+         </div>
+
+        <div id="game-over-screen" class="screen">
+            <h2 id="game-over-title">Defeat!</h2>
+            <p id="game-over-message">The goblin horde proved too much...</p>
+            <div id="game-over-stats">Final Stats Placeholder</div>
+            <button id="restart-button" class="menu-button">Try Again?</button>
+        </div>
+
+    </div>
 
     <script>
         // --- DOM Elements ---
         const gameContainer = document.getElementById('game-container');
-        // Get the new scrollable div
-        const scrollableContent = document.getElementById('scrollable-content');
+        const menuScreen = document.getElementById('menu-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const startButton = document.getElementById('start-button');
+        const restartButton = document.getElementById('restart-button');
+        const fullscreenButton = document.getElementById('fullscreen-button'); // Still selecting by ID
+        const musicToggleButton = document.getElementById('music-toggle-button');
+        const sfxToggleButton = document.getElementById('sfx-toggle-button');
+
         const knightSprite = document.getElementById('knight-sprite');
-        // ... rest of the element selections are the same ...
         const goblinSprite = document.getElementById('goblin-sprite');
+        const knightPortrait = document.getElementById('knight-portrait');
+        const goblinPortrait = document.getElementById('goblin-portrait');
         const knightHpBar = document.getElementById('knight-hp-bar');
         const knightHpText = document.getElementById('knight-hp-text');
         const goblinHpBar = document.getElementById('goblin-hp-bar');
@@ -171,229 +460,387 @@
         const mathProblemDisplay = document.getElementById('math-problem');
         const answerInput = document.getElementById('answer-input');
         const submitButton = document.getElementById('submit-button');
-        const feedbackArea = document.getElementById('feedback-area');
-        const startScreen = document.getElementById('start-screen');
-        const gameOverScreen = document.getElementById('game-over-screen');
-        const startButton = document.getElementById('start-button');
-        const restartButton = document.getElementById('restart-button');
+        const feedbackArea = document.getElementById('feedback-area'); // Selecting by ID
         const gameOverTitle = document.getElementById('game-over-title');
         const gameOverMessage = document.getElementById('game-over-message');
+        const gameOverStats = document.getElementById('game-over-stats');
         const levelDisplay = document.getElementById('level-display');
         const xpDisplay = document.getElementById('xp-display');
         const goldDisplay = document.getElementById('gold-display');
         const sharpenIndicator = document.getElementById('sharpen-indicator');
-        const fullscreenButton = document.getElementById('fullscreen-button');
         const buyPotionButton = document.getElementById('buy-potion-button');
         const buySharpenButton = document.getElementById('buy-sharpen-button');
 
-        // --- Game Config & State (No changes needed) ---
-        const KNIGHT_MAX_HP_BASE = 20; const GOBLIN_MAX_HP_BASE = 15;
-        const KNIGHT_ATTACK_BASE = 3; const GOBLIN_ATTACK_BASE = 2;
-        const KNIGHT_HP_PER_LEVEL = 5; const KNIGHT_ATK_PER_LEVEL = 1;
-        const GOBLIN_HP_PER_LEVEL = 4; const GOBLIN_ATK_PER_LEVEL = 1;
-        const BASE_MAX_NUMBER = 8; const NUMBER_INCREASE_PER_LEVEL = 4;
-        const MULTIPLICATION_UNLOCK_LEVEL = 3; const MAX_MULTIPLICATION_FACTOR = 4;
+        // --- Game Config ---
+        const KNIGHT_MAX_HP_BASE = 20;
+        const KNIGHT_ATTACK_BASE = 3;
+        const KNIGHT_HP_PER_LEVEL = 5;
+        const KNIGHT_ATK_PER_LEVEL = 1;
+
+        const BASE_MAX_NUMBER = 8;
+        const NUMBER_INCREASE_PER_LEVEL = 4;
+        const MULTIPLICATION_UNLOCK_LEVEL = 3;
+        const MAX_MULTIPLICATION_FACTOR = 4;
         const MULT_FACTOR_INCREASE_PER_LEVEL = 1;
-        const XP_PER_GOBLIN_BASE = 10; const GOLD_PER_GOBLIN_BASE = 5;
-        const XP_LEVEL_BONUS_FACTOR = 1.5; const GOLD_LEVEL_BONUS = 2;
-        const BASE_XP_TO_LEVEL = 15; const XP_LEVEL_SCALING_FACTOR = 1.5;
-        const POTION_COST = 15; const POTION_HEAL_AMOUNT = 10;
-        const SHARPEN_COST = 20; const SHARPEN_BONUS_ATTACK = 2;
+
+        const XP_PER_GOBLIN_BASE = 10;
+        const GOLD_PER_GOBLIN_BASE = 5;
+        const XP_LEVEL_BONUS_FACTOR = 1.5;
+        const GOLD_LEVEL_BONUS = 2;
+        const BASE_XP_TO_LEVEL = 15;
+        const XP_LEVEL_SCALING_FACTOR = 1.5;
+
+        const POTION_COST = 15;
+        const POTION_HEAL_AMOUNT = 10;
+        const SHARPEN_COST = 20;
+        const SHARPEN_BONUS_ATTACK = 2;
+
         const FEEDBACK_DURATION = 2000;
         const SCROLL_DELAY = 300;
+        const ENEMY_DEFEAT_DELAY = 1200;
+        const LEVEL_UP_DELAY = 1500;
+        const ACTION_DELAY = 250;
 
-        let knightMaxHp = KNIGHT_MAX_HP_BASE; let knightAttack = KNIGHT_ATTACK_BASE;
-        let goblinMaxHp = GOBLIN_MAX_HP_BASE; let goblinAttack = GOBLIN_ATTACK_BASE;
-        let knightHp = KNIGHT_MAX_HP_BASE; let goblinHp = GOBLIN_MAX_HP_BASE;
+        const GOBLIN_TYPES = [
+            { name: "Goblin", sprite: "goblin.png", portrait: "goblin_portrait.png", hpMult: 1.0, atkMult: 1.0, xpMult: 1.0, goldMult: 1.0, hpBase: 15, atkBase: 2 },
+            { name: "Goblin Archer", sprite: "goblin_archer.png", portrait: "goblin_archer_portrait.png", hpMult: 0.9, atkMult: 1.2, xpMult: 1.1, goldMult: 1.1, hpBase: 14, atkBase: 3 },
+            { name: "Goblin Club", sprite: "goblin_club.png", portrait: "goblin_club_portrait.png", hpMult: 1.2, atkMult: 1.1, xpMult: 1.2, goldMult: 1.2, hpBase: 18, atkBase: 2 },
+            { name: "Goblin Netter", sprite: "goblin_netter.png", portrait: "goblin_netter_portrait.png", hpMult: 1.0, atkMult: 0.9, xpMult: 1.3, goldMult: 1.4, hpBase: 15, atkBase: 1 },
+            { name: "Goblin Sapper", sprite: "goblin_sapper.png", portrait: "goblin_sapper_portrait.png", hpMult: 0.8, atkMult: 1.4, xpMult: 1.4, goldMult: 1.3, hpBase: 12, atkBase: 4 },
+            { name: "Goblin Pyromancer", sprite: "goblin_pyromancer.png", portrait: "goblin_pyromancer_portrait.png", hpMult: 0.9, atkMult: 1.3, xpMult: 1.5, goldMult: 1.5, hpBase: 14, atkBase: 3 },
+            { name: "Goblin Shaman", sprite: "goblin_shaman.png", portrait: "goblin_shaman_portrait.png", hpMult: 1.1, atkMult: 1.1, xpMult: 1.6, goldMult: 1.6, hpBase: 16, atkBase: 2 },
+        ];
+
+        // --- Game State ---
+        let gameState = 'MENU';
+        let knightMaxHp, knightAttack, knightHp;
+        let currentGoblinTypeIndex = 0;
+        let currentGoblinStats = {};
+        let goblinMaxHp, goblinAttack, goblinHp;
         let currentProblem = { num1: 0, num2: 0, operator: '+', answer: 0 };
-        let isGameOver = true; let processingAnswer = false;
-        let playerLevel = 1; let playerXP = 0; let xpToNextLevel = BASE_XP_TO_LEVEL;
+        let processingAnswer = false;
+        let playerLevel = 1;
+        let playerXP = 0;
+        let xpToNextLevel = BASE_XP_TO_LEVEL;
         let playerGold = 0;
         let isSwordSharpened = false;
         let feedbackTimeoutId = null;
+        let musicAudio = null;
+        let sfx = {};
+        let isMusicMuted = false;
+        let isSfxMuted = false;
+        let audioInitialized = false;
 
-        // --- Functions (Most remain unchanged, focus listener slightly adjusted) ---
+        // --- Audio Manager ---
+        const AudioManager = {
+            sounds: {
+                music: './audio/music_WarcraftOrc.mp3',
+                correct: './audio/Success.wav',
+                incorrect: './audio/Error.wav',
+                knightAttack: './audio/sfxHit.wav',
+                goblinAttack: './audio/enemy_hit.wav',
+                knightDie: './audio/player_die.wav',
+                goblinDie: './audio/sfxGoblinDead.wav',
+                levelUp: './audio/powerup.wav',
+                potion: './audio/heal.wav',
+                sharpen: './audio/chest.wav',
+                gold: './audio/coin.wav',
+                buttonClick: './audio/start_beep.wav',
+                arrow: './audio/arrow_shoot.wav',
+                fireball: './audio/sfxFireballCast.wav',
+                net: './audio/net_throw.wav'
+            },
 
-        function calculateXpNeeded(level) { return BASE_XP_TO_LEVEL + Math.floor(Math.pow(level -1, XP_LEVEL_SCALING_FACTOR) * 5); }
+            init() {
+                if (audioInitialized) return;
+                console.log("Initializing Audio...");
+                try {
+                    window.AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (window.AudioContext) {
+                        const context = new AudioContext();
+                        if (context.state === 'suspended') {
+                            const resume = () => {
+                                context.resume().then(() => {
+                                    console.log("AudioContext resumed!");
+                                    document.removeEventListener('click', resume);
+                                    document.removeEventListener('touchstart', resume);
+                                    this.loadSounds();
+                                }).catch(e => console.error("AudioContext resume failed:", e));
+                            };
+                            document.addEventListener('click', resume, { once: true });
+                             document.addEventListener('touchstart', resume, { once: true });
+                        } else { this.loadSounds(); }
+                    } else { this.loadSounds(); }
+                } catch (e) { this.loadSounds(); }
+                 this.loadSettings();
+                 this.updateButtonStates();
+            },
+             loadSounds() {
+                 if (audioInitialized) return;
+                 console.log("Loading sound files...");
+                 try {
+                     musicAudio = new Audio(this.sounds.music); musicAudio.loop = true; musicAudio.volume = 0.3;
+                 } catch (e) { console.error("Failed to create music audio:", e); }
+                 Object.keys(this.sounds).forEach(key => {
+                     if (key !== 'music') {
+                         try { sfx[key] = new Audio(this.sounds[key]); sfx[key].volume = 0.6; }
+                         catch(e) { console.error(`Failed to load SFX ${key}:`, e); }
+                     }
+                 });
+                 audioInitialized = true;
+                 console.log("Audio loading attempted.");
+            },
+            playMusic() {
+                if (!audioInitialized) this.init();
+                if (musicAudio && !isMusicMuted && musicAudio.paused) {
+                    console.log("Attempting to play music...");
+                    musicAudio.play().then(() => { console.log("Music playing."); })
+                                     .catch(e => console.error("Music play failed:", e));
+                }
+            },
+            stopMusic() { if (musicAudio && !musicAudio.paused) { musicAudio.pause(); musicAudio.currentTime = 0; console.log("Music stopped."); } },
+            playSound(soundName) {
+                 if (!audioInitialized) this.init();
+                 if (!isSfxMuted && sfx[soundName]) { sfx[soundName].currentTime = 0; sfx[soundName].play().catch(e => {}); }
+            },
+            toggleMusic() {
+                 if (!audioInitialized) this.init(); isMusicMuted = !isMusicMuted;
+                 if (isMusicMuted) { this.stopMusic(); } else { this.playMusic(); }
+                 localStorage.setItem('medievalMathMusicMuted', isMusicMuted);
+                 this.updateButtonStates(); this.playSound('buttonClick');
+            },
+            toggleSfx() {
+                 if (!audioInitialized) this.init(); isSfxMuted = !isSfxMuted;
+                 localStorage.setItem('medievalMathSfxMuted', isSfxMuted);
+                 this.updateButtonStates(); if (!isSfxMuted) this.playSound('buttonClick');
+            },
+            loadSettings() { isMusicMuted = localStorage.getItem('medievalMathMusicMuted') === 'true'; isSfxMuted = localStorage.getItem('medievalMathSfxMuted') === 'true'; },
+             updateButtonStates() {
+                 if (!musicToggleButton || !sfxToggleButton) return; // Ensure buttons exist
+                 musicToggleButton.style.opacity = isMusicMuted ? 0.5 : 1; musicToggleButton.classList.toggle('muted', isMusicMuted);
+                 sfxToggleButton.textContent = isSfxMuted ? '🔇' : '🔊'; sfxToggleButton.style.opacity = isSfxMuted ? 0.5 : 1; sfxToggleButton.classList.toggle('muted', isSfxMuted);
+            }
+        };
+
+        // --- Game Flow & State ---
+        function switchScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
+            const targetScreen = document.getElementById(screenId);
+            if (targetScreen) {
+                 targetScreen.classList.add('active'); gameState = screenId.replace('-screen', '').toUpperCase(); console.log("Switched to state:", gameState);
+            } else { console.error("Screen not found:", screenId); return; }
+
+            if (gameState === 'MENU') { AudioManager.stopMusic(); processingAnswer = false; }
+            if (gameState === 'GAME') { processingAnswer = false; setTimeout(() => answerInput?.focus(), 100); AudioManager.playMusic(); }
+            if (gameState === 'GAMEOVER') { AudioManager.stopMusic(); processingAnswer = false; }
+        }
+
+        function calculateXpNeeded(level) { return BASE_XP_TO_LEVEL + Math.floor(Math.pow(level - 1, XP_LEVEL_SCALING_FACTOR) * 5); }
+
+        function setupGoblin(goblinIndex) {
+             if (!GOBLIN_TYPES[goblinIndex]) { goblinIndex = 0; }
+             const type = GOBLIN_TYPES[goblinIndex]; currentGoblinTypeIndex = goblinIndex; currentGoblinStats = { ...type };
+             currentGoblinStats.spritePath = `./sprites/${type.sprite}`; currentGoblinStats.portraitPath = `./sprites/${type.portrait}`;
+             const levelMultiplier = 1 + (playerLevel - 1) * 0.15;
+             goblinMaxHp = Math.max(5, Math.round((type.hpBase * type.hpMult) * levelMultiplier));
+             goblinAttack = Math.max(1, Math.round((type.atkBase * type.atkMult) * levelMultiplier));
+             goblinHp = goblinMaxHp;
+             if (goblinSprite) goblinSprite.style.backgroundImage = `url('${currentGoblinStats.spritePath}')`;
+             if (goblinPortrait) goblinPortrait.style.backgroundImage = `url('${currentGoblinStats.portraitPath}')`;
+             console.log(`Spawned Lvl ${playerLevel} ${type.name} (Index ${goblinIndex}): HP=${goblinMaxHp}, ATK=${goblinAttack}`);
+             updateHpDisplay('goblin'); // Update display immediately after setup
+         }
 
         function updatePlayerStatsForLevel(healPlayer = false) {
-             knightMaxHp = KNIGHT_MAX_HP_BASE + (playerLevel - 1) * KNIGHT_HP_PER_LEVEL;
-             knightAttack = KNIGHT_ATTACK_BASE + (playerLevel - 1) * KNIGHT_ATK_PER_LEVEL;
-             if (healPlayer) { knightHp = knightMaxHp; console.log("Knight Healed on Level Up!"); }
-             else { knightHp = Math.min(knightHp, knightMaxHp); }
-             goblinMaxHp = GOBLIN_MAX_HP_BASE + (playerLevel - 1) * GOBLIN_HP_PER_LEVEL;
-             goblinAttack = GOBLIN_ATTACK_BASE + (playerLevel - 1) * GOBLIN_ATK_PER_LEVEL;
-             goblinHp = goblinMaxHp;
-             console.log(`Stats Lvl ${playerLevel}: K HP=${knightHp}/${knightMaxHp}, ATK=${knightAttack} | G HP=${goblinHp}/${goblinMaxHp}, ATK=${goblinAttack}`);
-             updateHpDisplay('knight'); updateHpDisplay('goblin');
-             updatePurchaseButtonStates();
+            knightMaxHp = KNIGHT_MAX_HP_BASE + (playerLevel - 1) * KNIGHT_HP_PER_LEVEL;
+            knightAttack = KNIGHT_ATTACK_BASE + (playerLevel - 1) * KNIGHT_ATK_PER_LEVEL;
+            let healedAmount = 0;
+            if (healPlayer) {
+                healedAmount = knightMaxHp - knightHp; knightHp = knightMaxHp;
+                if (healedAmount > 0 && playerLevel > 1) { showTemporaryFeedback(`Knight Healed +${healedAmount} HP!`, 'feedback-levelup', 1500); AudioManager.playSound('potion'); }
+            } else { knightHp = Math.min(knightHp, knightMaxHp); }
+            xpToNextLevel = calculateXpNeeded(playerLevel); updateStatusDisplay(); updateHpDisplay('knight'); updatePurchaseButtonStates();
+            console.log(`Stats Lvl ${playerLevel}: K HP=${knightHp}/${knightMaxHp}, ATK=${knightAttack}`);
         }
 
         function startNewDuel() {
-            console.log("Starting New Duel...");
-            updatePlayerStatsForLevel(false);
-
-            isGameOver = false; processingAnswer = false; clearTemporaryFeedback();
-
+            console.log(`Starting Duel against ${currentGoblinStats.name || 'Goblin'}...`);
+            processingAnswer = false; clearTemporaryFeedback();
+            goblinSprite.classList.remove('attack', 'defeat', 'hit'); goblinSprite.style.opacity = 1; goblinSprite.style.filter = 'none';
+            knightSprite.classList.remove('attack', 'level-up', 'hit');
             updateHpDisplay('knight'); updateHpDisplay('goblin');
-            knightSprite.classList.remove('attack', 'level-up');
-            goblinSprite.classList.remove('attack', 'defeat'); goblinSprite.style.opacity = 1;
-
             answerInput.value = ''; submitButton.disabled = false; answerInput.disabled = false;
-
-            xpToNextLevel = calculateXpNeeded(playerLevel); updateStatusDisplay();
-            generateProblem(); displayProblem();
-
-            startScreen.style.display = 'none'; gameOverScreen.style.display = 'none';
-
-            // Scroll the inner container to the top when a new duel starts
-            if (scrollableContent) scrollableContent.scrollTop = 0;
-
-            setTimeout(() => { if(!isGameOver) answerInput.focus(); }, 100);
-            console.log(`Duel Started. Lvl:${playerLevel}, XP:${playerXP}/${xpToNextLevel}, Gold:${playerGold}, Sharpened:${isSwordSharpened}`);
-        }
+            updateStatusDisplay(); generateProblem(); displayProblem();
+            if (gameScreen) gameScreen.scrollTop = gameScreen.scrollHeight;
+            setTimeout(() => { if(gameState === 'GAME' && answerInput && !answerInput.disabled) { answerInput.focus(); } }, 150);
+            console.log(`Duel Ready. Lvl:${playerLevel}, XP:${playerXP}/${xpToNextLevel}, Gold:${playerGold}, Sharpened:${isSwordSharpened}`);
+         }
 
         function resetGameFull() {
              playerLevel = 1; playerXP = 0; playerGold = 0; isSwordSharpened = false;
-             xpToNextLevel = calculateXpNeeded(playerLevel);
-             knightHp = KNIGHT_MAX_HP_BASE;
-             startNewDuel();
+             knightHp = KNIGHT_MAX_HP_BASE; updatePlayerStatsForLevel(true);
+             currentGoblinTypeIndex = 0; setupGoblin(currentGoblinTypeIndex);
+             switchScreen('game-screen'); startNewDuel();
         }
 
         function updateStatusDisplay() {
-            levelDisplay.textContent = `Level: ${playerLevel}`; xpDisplay.textContent = `XP: ${playerXP} / ${xpToNextLevel}`; goldDisplay.textContent = `Gold: ${playerGold}`;
+            levelDisplay.innerHTML = `<img src="./sprites/shiny_gem.png" alt="Level"> Lvl: ${playerLevel}`;
+            xpDisplay.textContent = `XP: ${playerXP} / ${xpToNextLevel}`;
+            goldDisplay.innerHTML = `<img src="./sprites/gold.png" alt="Gold"> ${playerGold}`;
             sharpenIndicator.style.display = isSwordSharpened ? 'inline' : 'none';
-            if (isSwordSharpened) sharpenIndicator.classList.add('sharpened'); else sharpenIndicator.classList.remove('sharpened');
             updatePurchaseButtonStates();
         }
 
-        function generateProblem() { let n1, n2, op, ans; let max = BASE_MAX_NUMBER + (playerLevel - 1) * NUMBER_INCREASE_PER_LEVEL; let ops = ['+', '-']; if (playerLevel >= MULTIPLICATION_UNLOCK_LEVEL) ops.push('*'); op = ops[Math.floor(Math.random() * ops.length)]; switch(op) { case '+': n1=~~(Math.random()*(max+1)); n2=~~(Math.random()*(max+1)); ans=n1+n2; break; case '-': n1=~~(Math.random()*(max+1)); n2=~~(Math.random()*(n1+1)); ans=n1-n2; break; case '*': let lfb=Math.max(0,playerLevel-MULTIPLICATION_UNLOCK_LEVEL); const f1=MAX_MULTIPLICATION_FACTOR+lfb*MULT_FACTOR_INCREASE_PER_LEVEL; const f2=Math.max(2,MAX_MULTIPLICATION_FACTOR+~~(lfb/2)); n1=~~(Math.random()*(f1+1)); n2=~~(Math.random()*(f2+1)); if(n1==0&&Math.random()<0.4) n1=1; if(n2==0&&Math.random()<0.4) n2=1; ans=n1*n2; break; } currentProblem = { num1:n1, num2:n2, operator:op, answer:ans }; console.log(`Lvl ${playerLevel} Problem: ${n1} ${op} ${n2} = ? (Ans: ${ans})`);}
-        function displayProblem() { const op = currentProblem.operator === '*' ? '×' : currentProblem.operator; mathProblemDisplay.textContent = `Solve: ${currentProblem.num1} ${op} ${currentProblem.num2} = ?`; }
-        function updateHpDisplay(char) { let cur, max, bar, txt; if(char==='knight'){cur=knightHp;max=knightMaxHp;bar=knightHpBar;txt=knightHpText;}else{cur=goblinHp;max=goblinMaxHp;bar=goblinHpBar;txt=goblinHpText;} const pct=Math.max(0,(cur/max)*100); bar.style.width=`${pct}%`; txt.textContent=`HP: ${Math.max(0,cur)}/${max}`; updatePurchaseButtonStates(); }
-        function triggerAnimation(el, anim) { if(el.classList.contains('defeat')&&anim!=='defeat')return; if(el.classList.contains('level-up')&&anim!=='level-up')return; el.classList.remove('attack','level-up'); el.classList.add(anim); let delay=(anim==='level-up')?1000:200; if(anim!=='defeat'){setTimeout(()=>{if(el)el.classList.remove(anim);},delay);} }
-        function showTemporaryFeedback(message, typeClass = '', duration = FEEDBACK_DURATION) { clearTemporaryFeedback(); feedbackArea.textContent = message; feedbackArea.className = typeClass; feedbackTimeoutId = setTimeout(() => { if (feedbackArea.textContent === message) { feedbackArea.textContent = ''; feedbackArea.className = ''; } }, duration); }
-        function clearTemporaryFeedback() { if (feedbackTimeoutId) { clearTimeout(feedbackTimeoutId); feedbackTimeoutId = null; } }
-        function updatePurchaseButtonStates() { if (!buyPotionButton || !buySharpenButton) return; buyPotionButton.disabled = (playerGold < POTION_COST || knightHp >= knightMaxHp || isGameOver || processingAnswer); buySharpenButton.disabled = (playerGold < SHARPEN_COST || isSwordSharpened || isGameOver || processingAnswer); }
-        function buyPotion() { if (buyPotionButton.disabled) return; playerGold -= POTION_COST; const healAmount = Math.min(POTION_HEAL_AMOUNT, knightMaxHp - knightHp); knightHp += healAmount; console.log(`Bought Potion. Healed ${healAmount}. HP: ${knightHp}/${knightMaxHp}. Gold: ${playerGold}`); showTemporaryFeedback(`Used Potion! +${healAmount} HP.`, 'feedback-purchase'); updateStatusDisplay(); updateHpDisplay('knight'); }
-        function buySharpen() { if (buySharpenButton.disabled) return; playerGold -= SHARPEN_COST; isSwordSharpened = true; console.log(`Bought Sharpening. Buff active! Gold: ${playerGold}`); showTemporaryFeedback(`Sword Sharpened! +${SHARPEN_BONUS_ATTACK} ATK next turn.`, 'feedback-purchase'); updateStatusDisplay(); }
+        function generateProblem() {
+            let n1, n2, op, ans; let max = BASE_MAX_NUMBER + (playerLevel - 1) * NUMBER_INCREASE_PER_LEVEL; let ops = ['+', '-'];
+            if (playerLevel >= MULTIPLICATION_UNLOCK_LEVEL) ops.push('*'); op = ops[Math.floor(Math.random() * ops.length)];
+            switch(op) {
+                case '+': n1=~~(Math.random()*(max+1)); n2=~~(Math.random()*(max+1)); ans=n1+n2; break;
+                case '-': n1=~~(Math.random()*(max+1)); n2=~~(Math.random()*(n1+1)); ans=n1-n2; break;
+                case '*': let lfb=Math.max(0,playerLevel-MULTIPLICATION_UNLOCK_LEVEL); const f1=MAX_MULTIPLICATION_FACTOR+lfb*MULT_FACTOR_INCREASE_PER_LEVEL; const f2=Math.max(2,MAX_MULTIPLICATION_FACTOR+~~(lfb/2)); n1=~~(Math.random()*(f1+1)); n2=~~(Math.random()*(f2+1)); if(n1==0&&Math.random()<0.4) n1=1; if(n2==0&&Math.random()<0.4) n2=1; ans=n1*n2; break;
+                default: n1=~~(Math.random()*10); n2=~~(Math.random()*10); op='+'; ans=n1+n2; break;
+            } currentProblem = { num1:n1, num2:n2, operator:op, answer:ans }; console.log(`Lvl ${playerLevel} Problem: ${n1} ${op} ${n2} = ? (Ans: ${ans})`);
+        }
 
-        function handleSubmit() {
-            if (isGameOver || processingAnswer) return;
-            processingAnswer = true; submitButton.disabled = true; answerInput.disabled = true;
-            updatePurchaseButtonStates(); clearTemporaryFeedback();
+        function displayProblem() { const opSymbol = currentProblem.operator === '*' ? '×' : currentProblem.operator; mathProblemDisplay.textContent = `${currentProblem.num1} ${opSymbol} ${currentProblem.num2} = ?`; }
 
-            const playerAnswerStr = answerInput.value.trim(); const playerAnswer = parseInt(playerAnswerStr);
+        function updateHpDisplay(char) {
+            let current, max, barElement, textElement;
+            if (char === 'knight') { current = knightHp; max = knightMaxHp; barElement = knightHpBar; textElement = knightHpText; }
+            else { current = goblinHp; max = goblinMaxHp; barElement = goblinHpBar; textElement = goblinHpText; }
+            const percentage = Math.max(0, (current / max) * 100);
+             if (barElement) barElement.style.width = `${percentage}%`;
+             if (textElement) textElement.textContent = `HP: ${Math.max(0, Math.round(current))} / ${max}`;
+            updatePurchaseButtonStates();
+        }
 
-            if (playerAnswerStr === '' || isNaN(playerAnswer)) {
-                showTemporaryFeedback('Please enter a valid number!', 'feedback-incorrect');
-                processingAnswer = false; submitButton.disabled = false; answerInput.disabled = false;
-                updatePurchaseButtonStates(); answerInput.focus(); answerInput.select(); return;
-            }
+        function triggerAnimation(element, animationClass, duration = 300) { if (!element) return; element.classList.add(animationClass); setTimeout(() => { element.classList.remove(animationClass); }, duration); }
 
-            let actualKnightAttack = knightAttack;
-            if (isSwordSharpened) { console.log("Applying Sharpened bonus!"); actualKnightAttack += SHARPEN_BONUS_ATTACK; isSwordSharpened = false; /* Buff used */ }
-
-            if (playerAnswer === currentProblem.answer) { // Correct
-                feedbackArea.textContent = 'Correct!'; feedbackArea.className = 'feedback-correct';
-                triggerAnimation(knightSprite, 'attack'); goblinHp -= actualKnightAttack;
-                setTimeout(() => { // Delay updates
-                    updateHpDisplay('goblin'); console.log(`Correct. Dealt ${actualKnightAttack}. G HP:`, Math.max(0, goblinHp));
-                    if (goblinHp <= 0) { // Goblin Defeated
-                        console.log("Goblin Defeated!"); triggerAnimation(goblinSprite, 'defeat');
-                        let xpGained = XP_PER_GOBLIN_BASE + Math.floor((playerLevel-1) * XP_LEVEL_BONUS_FACTOR);
-                        let goldGained = GOLD_PER_GOBLIN_BASE + (playerLevel - 1) * GOLD_LEVEL_BONUS;
-                        playerXP += xpGained; playerGold += goldGained;
-                        showTemporaryFeedback(`Goblin Vanquished! +${xpGained} XP, +${goldGained} Gold.`, 'feedback-correct', 2500);
-                        let leveledUp = checkLevelUp(); updateStatusDisplay();
-                        setTimeout(startNewDuel, leveledUp ? 1200 : 800); // Auto proceed
-                    } else { // Continue round
-                        generateProblem(); displayProblem(); answerInput.value = '';
-                        submitButton.disabled = false; answerInput.disabled = false; processingAnswer = false;
-                        updatePurchaseButtonStates();
-                        setTimeout(() => { if (!isGameOver) answerInput.focus(); }, 50);
+        function showTemporaryFeedback(message, typeClass = '', duration = FEEDBACK_DURATION) {
+            clearTemporaryFeedback();
+            if (feedbackArea) { // Check if element exists
+                feedbackArea.textContent = message;
+                feedbackArea.className = `feedback-area ${typeClass}`;
+                feedbackTimeoutId = setTimeout(() => {
+                    if (feedbackArea.textContent === message) {
+                        feedbackArea.textContent = '';
+                        feedbackArea.className = 'feedback-area';
                     }
-                }, 200);
-            } else { // Incorrect
-                feedbackArea.textContent = `Incorrect! Answer: ${currentProblem.answer}.`; feedbackArea.className = 'feedback-incorrect';
-                triggerAnimation(goblinSprite, 'attack'); knightHp -= goblinAttack;
-                 setTimeout(() => { // Delay updates
-                     updateHpDisplay('knight'); console.log("Incorrect. K HP:", Math.max(0, knightHp));
-                     if (knightHp <= 0) { // Knight Defeated
-                        setTimeout(() => gameOver(false), 600); processingAnswer = false;
-                     } else { // Continue round
-                        generateProblem(); displayProblem(); answerInput.value = '';
-                        submitButton.disabled = false; answerInput.disabled = false; processingAnswer = false;
-                        updatePurchaseButtonStates();
-                        setTimeout(() => { if (!isGameOver) answerInput.focus(); }, 50);
-                     }
-                 }, 200);
+                }, duration);
             }
         }
+
+        function clearTemporaryFeedback() { if (feedbackTimeoutId) { clearTimeout(feedbackTimeoutId); feedbackTimeoutId = null; } if (feedbackArea) { feedbackArea.textContent = ''; feedbackArea.className = 'feedback-area'; } }
+
+        function updatePurchaseButtonStates() {
+            if (!buyPotionButton || !buySharpenButton) return;
+            buyPotionButton.disabled = (playerGold < POTION_COST || knightHp >= knightMaxHp || gameState !== 'GAME' || processingAnswer);
+            buySharpenButton.disabled = (playerGold < SHARPEN_COST || isSwordSharpened || gameState !== 'GAME' || processingAnswer);
+        }
+
+        function buyPotion() {
+            if (buyPotionButton.disabled) return; playerGold -= POTION_COST; const healAmount = Math.min(POTION_HEAL_AMOUNT, knightMaxHp - knightHp); knightHp += healAmount;
+            console.log(`Bought Potion. Healed ${healAmount}. HP: ${knightHp}/${knightMaxHp}. Gold: ${playerGold}`);
+            showTemporaryFeedback(`Used Potion! +${healAmount} HP.`, 'feedback-purchase'); AudioManager.playSound('potion'); updateStatusDisplay(); updateHpDisplay('knight');
+        }
+
+        function buySharpen() {
+            if (buySharpenButton.disabled) return; playerGold -= SHARPEN_COST; isSwordSharpened = true; console.log(`Bought Sharpening. Buff active! Gold: ${playerGold}`);
+            showTemporaryFeedback(`Sword Sharpened! +${SHARPEN_BONUS_ATTACK} ATK next turn.`, 'feedback-purchase'); AudioManager.playSound('sharpen'); updateStatusDisplay();
+        }
+
+        function handleSubmit() {
+             if (gameState !== 'GAME' || processingAnswer) { console.warn("Submit rejected. State:", gameState, "Processing:", processingAnswer); return; }
+             console.log("handleSubmit triggered"); processingAnswer = true; submitButton.disabled = true; answerInput.disabled = true; updatePurchaseButtonStates(); clearTemporaryFeedback();
+             const playerAnswerStr = answerInput.value.trim(); const playerAnswer = parseInt(playerAnswerStr);
+
+             if (playerAnswerStr === '' || isNaN(playerAnswer)) {
+                 showTemporaryFeedback('Please enter a valid number!', 'feedback-incorrect'); AudioManager.playSound('incorrect');
+                 processingAnswer = false; submitButton.disabled = false; answerInput.disabled = false; updatePurchaseButtonStates(); answerInput.focus(); answerInput.select();
+                 console.log("Invalid input, reset processing."); return;
+             }
+
+             let actualKnightAttack = knightAttack; if (isSwordSharpened) { console.log("Applying Sharpened bonus!"); actualKnightAttack += SHARPEN_BONUS_ATTACK; isSwordSharpened = false; updateStatusDisplay(); }
+
+             if (playerAnswer === currentProblem.answer) { // Correct
+                 console.log("Answer Correct"); showTemporaryFeedback('Correct!', 'feedback-correct', FEEDBACK_DURATION / 1.5); AudioManager.playSound('correct');
+                 triggerAnimation(knightSprite, 'attack', 200); AudioManager.playSound('knightAttack'); triggerAnimation(goblinSprite, 'hit', 300); goblinHp -= actualKnightAttack;
+                 setTimeout(() => {
+                     updateHpDisplay('goblin'); console.log(`Dealt ${actualKnightAttack}. G HP:`, Math.max(0, goblinHp));
+                     if (goblinHp <= 0) { // Goblin Defeated
+                         console.log(`${currentGoblinStats.name} Defeated!`); goblinSprite.classList.add('defeat'); AudioManager.playSound('goblinDie');
+                         let xpGained = Math.round((XP_PER_GOBLIN_BASE + Math.floor((playerLevel-1) * XP_LEVEL_BONUS_FACTOR)) * (currentGoblinStats.xpMult || 1));
+                         let goldGained = Math.round((GOLD_PER_GOBLIN_BASE + (playerLevel - 1) * GOLD_LEVEL_BONUS) * (currentGoblinStats.goldMult || 1));
+                         playerXP += xpGained; playerGold += goldGained; AudioManager.playSound('gold');
+                         showTemporaryFeedback(`${currentGoblinStats.name} Vanquished! +${xpGained} XP, +${goldGained} Gold.`, 'feedback-enemy-defeated', ENEMY_DEFEAT_DELAY - 100);
+                         let leveledUp = checkLevelUp(); updateStatusDisplay(); currentGoblinTypeIndex++; setupGoblin(currentGoblinTypeIndex % GOBLIN_TYPES.length);
+                         processingAnswer = false; console.log("Correct -> Goblin Defeated. processingAnswer = false.");
+                         setTimeout(startNewDuel, leveledUp ? LEVEL_UP_DELAY : ENEMY_DEFEAT_DELAY);
+                     } else { // Continue Round
+                         generateProblem(); displayProblem(); answerInput.value = ''; processingAnswer = false; submitButton.disabled = false; answerInput.disabled = false; updatePurchaseButtonStates();
+                         console.log("Correct -> Continue Round. processingAnswer = false."); setTimeout(() => { if (gameState === 'GAME') answerInput.focus(); }, 50);
+                     }
+                 }, ACTION_DELAY);
+             } else { // Incorrect
+                 console.log("Answer Incorrect"); showTemporaryFeedback(`Incorrect! Answer: ${currentProblem.answer}.`, 'feedback-incorrect'); AudioManager.playSound('incorrect');
+                 triggerAnimation(goblinSprite, 'attack', 200);
+                 if (currentGoblinStats.name?.includes("Archer")) AudioManager.playSound('arrow'); else if (currentGoblinStats.name?.includes("Pyromancer")) AudioManager.playSound('fireball'); else if (currentGoblinStats.name?.includes("Netter")) AudioManager.playSound('net'); else AudioManager.playSound('goblinAttack');
+                 triggerAnimation(knightSprite, 'hit', 300); knightHp -= goblinAttack;
+                 setTimeout(() => {
+                     updateHpDisplay('knight'); console.log("Incorrect. K HP:", Math.max(0, knightHp));
+                     if (knightHp <= 0) { // Knight Defeated
+                         AudioManager.playSound('knightDie'); processingAnswer = false; console.log("Incorrect -> Knight Defeated. processingAnswer = false."); setTimeout(gameOver, 600);
+                     } else { // Continue Round
+                         generateProblem(); displayProblem(); answerInput.value = ''; processingAnswer = false; submitButton.disabled = false; answerInput.disabled = false; updatePurchaseButtonStates();
+                         console.log("Incorrect -> Continue Round. processingAnswer = false."); setTimeout(() => { if (gameState === 'GAME') answerInput.focus(); }, 50);
+                     }
+                 }, ACTION_DELAY);
+             }
+         }
 
         function checkLevelUp() {
             let leveledUp = false;
             while (playerXP >= xpToNextLevel) {
-                leveledUp = true; playerXP -= xpToNextLevel; playerLevel++;
-                xpToNextLevel = calculateXpNeeded(playerLevel);
-                updatePlayerStatsForLevel(true); // Heal player
-                showTemporaryFeedback(`LEVEL UP! Level ${playerLevel}! Knight Healed!`, 'feedback-levelup', 2500);
-                triggerAnimation(knightSprite, 'level-up');
+                leveledUp = true; playerXP -= xpToNextLevel; playerLevel++; console.log(`Level Up! Reached Level ${playerLevel}`);
+                AudioManager.playSound('levelUp'); updatePlayerStatsForLevel(true); showTemporaryFeedback(`LEVEL UP! Reached Level ${playerLevel}!`, 'feedback-levelup', LEVEL_UP_DELAY - 100);
+                triggerAnimation(knightSprite, 'level-up', 1000);
             }
-            return leveledUp;
+            updateStatusDisplay(); return leveledUp;
         }
 
-        function gameOver(playerWon) { // Only called on loss
-             console.log("--- Game Over --- Player Won:", playerWon);
-             isGameOver = true; submitButton.disabled = true; answerInput.disabled = true;
-             xpToNextLevel = calculateXpNeeded(playerLevel);
-             clearTemporaryFeedback(); feedbackArea.textContent = ''; feedbackArea.className = '';
-             updatePurchaseButtonStates(); // Disable shop buttons
-
-             if (!playerWon) {
-                 gameOverTitle.textContent = "Defeat!";
-                 gameOverMessage.innerHTML = `Alas, the Level ${playerLevel} Goblin overcame thy Knight!<br>Final Stats: Level ${playerLevel}, XP ${playerXP}/${xpToNextLevel}, Gold ${playerGold}.`;
-                 gameOverScreen.style.display = 'flex';
-             } else { console.error("gameOver(true) called unexpectedly!"); }
+        function gameOver() {
+             console.log("--- Game Over ---"); if (gameState === 'GAMEOVER') return; switchScreen('game-over-screen'); submitButton.disabled = true; answerInput.disabled = true; processingAnswer = false; clearTemporaryFeedback(); updatePurchaseButtonStates();
+             gameOverTitle.textContent = "Defeat!"; gameOverMessage.textContent = `Alas, the Level ${playerLevel} ${currentGoblinStats.name || 'Goblin'} overcame thy Knight!`;
+             gameOverStats.innerHTML = `Defeated Goblin: ${currentGoblinStats.name || 'Unknown'} (Rank ${currentGoblinTypeIndex + 1})<br>Final Level: ${playerLevel}<br>XP: ${playerXP} / ${xpToNextLevel}<br>Gold: ${playerGold}`;
          }
 
-        function toggleFullscreen() { if(!gameContainer)return; try{if(!document.fullscreenElement){if(gameContainer.requestFullscreen)gameContainer.requestFullscreen().catch(err=>console.error(`FS request failed: ${err.message}`,err));}else{if(document.exitFullscreen)document.exitFullscreen().catch(err=>console.error(`Exit FS failed: ${err.message}`,err));}}catch(error){console.error("Error toggling fullscreen:",error);} }
+        function toggleFullscreen() {
+            if(!gameContainer) return;
+            try { if (!document.fullscreenElement) { gameContainer.requestFullscreen().catch(err => console.error("FS request failed:", err)); } else { document.exitFullscreen().catch(err => console.error("Exit FS failed:", err)); } }
+            catch(error) { console.error("Error toggling fullscreen:", error); }
+        }
 
-        // --- Event Listeners ---
-        submitButton.addEventListener('click', handleSubmit);
-        answerInput.addEventListener('keyup', function(event) { if (event.key === 'Enter' && !submitButton.disabled && !processingAnswer) { event.preventDefault(); handleSubmit(); } });
-        startButton.onclick = () => { resetGameFull(); };
-        restartButton.onclick = () => { resetGameFull(); };
-        if (fullscreenButton) { fullscreenButton.addEventListener('click', toggleFullscreen); } else { console.error("FS button not found!"); }
-        document.addEventListener('fullscreenchange', () => { if (fullscreenButton) { fullscreenButton.textContent = document.fullscreenElement ? '✕' : '⛶'; fullscreenButton.title = document.fullscreenElement ? 'Exit FS' : 'Enter FS'; } });
-        document.addEventListener('keydown', function(event) { if (isGameOver && gameOverScreen.style.display === 'flex') { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); resetGameFull(); } } });
-        buyPotionButton.addEventListener('click', buyPotion);
-        buySharpenButton.addEventListener('click', buySharpen);
-        answerInput.addEventListener('focus', () => {
-            console.log("Answer input focused, scheduling scroll...");
-            setTimeout(() => {
-                 if (!isGameOver && document.activeElement === answerInput) {
-                     console.log("Scrolling input into view (targeting scrollable content)...");
-                     // Scroll the input OR its container within the scrollable div
-                     answerInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                     // Alternatively:
-                     // document.getElementById('problem-area').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                 } else { console.log("Scroll cancelled."); }
-            }, SCROLL_DELAY);
-        });
+        function setupInitialUI() { updatePurchaseButtonStates(); updateHpDisplay('knight'); updateHpDisplay('goblin'); updateStatusDisplay(); }
 
-        // --- Initial Setup on Load ---
-         window.onload = () => {
-             gameOverScreen.style.display = 'none'; startScreen.style.display = 'flex';
-             answerInput.disabled = true; submitButton.disabled = true; isGameOver = true;
-             updatePlayerStatsForLevel(true); // Set initial Lvl 1 stats & FULLY HEAL
-             xpToNextLevel = calculateXpNeeded(playerLevel); updateStatusDisplay();
-             if (!fullscreenButton) console.warn("FS button element not found during init.");
-             buyPotionButton.innerHTML = `Potion (${POTION_COST}g)<br/>+${POTION_HEAL_AMOUNT} HP`;
-             buySharpenButton.innerHTML = `Sharpen (${SHARPEN_COST}g)<br/>+${SHARPEN_BONUS_ATTACK} ATK (Next Turn)`;
-             updatePurchaseButtonStates(); // Set initial disabled state
-             console.log("Game loaded. Waiting for player to start.");
-         };
+        function initializeGame() {
+            console.log("Initializing Game..."); AudioManager.init(); setupInitialUI();
+             // Event listeners
+             submitButton.addEventListener('click', handleSubmit);
+             answerInput.addEventListener('keyup', function(event) { if (event.key === 'Enter') { event.preventDefault(); if (!submitButton.disabled) { submitButton.click(); } } });
+             startButton.addEventListener('click', () => { AudioManager.playSound('buttonClick'); AudioManager.init(); resetGameFull(); });
+             restartButton.addEventListener('click', () => { AudioManager.playSound('buttonClick'); resetGameFull(); });
+             fullscreenButton.addEventListener('click', toggleFullscreen);
+             document.addEventListener('fullscreenchange', () => { fullscreenButton.textContent = document.fullscreenElement ? '✕' : '⛶'; fullscreenButton.title = document.fullscreenElement ? 'Exit Fullscreen' : 'Enter Fullscreen'; });
+             document.addEventListener('keydown', function(event) { if (gameState === 'GAMEOVER' && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); AudioManager.playSound('buttonClick'); resetGameFull(); } });
+             buyPotionButton.addEventListener('click', buyPotion);
+             buySharpenButton.addEventListener('click', buySharpen);
+             musicToggleButton.addEventListener('click', () => AudioManager.toggleMusic());
+             sfxToggleButton.addEventListener('click', () => AudioManager.toggleSfx());
+             answerInput.addEventListener('focus', () => { if (window.innerWidth < 768) { setTimeout(() => { if (gameState === 'GAME' && document.activeElement === answerInput) { document.getElementById('problem-area')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }, SCROLL_DELAY); } });
+             switchScreen('menu-screen'); console.log("Game Initialized. Waiting for player to start.");
+        }
 
+        window.onload = initializeGame;
     </script>
 </body>
 </html>
