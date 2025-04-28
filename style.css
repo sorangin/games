@@ -15,6 +15,7 @@
     --shadow-color: rgba(0, 0, 0, 0.4);
     --success-color: #2a9d8f; /* For tags maybe */
     --prototype-color: #6c757d; /* Grey for prototype tags */
+    --dev-color: #2a9d8f; /* Teal/Green for Dev tag - adjust as needed */
 
 
     /* Typography */
@@ -153,21 +154,24 @@ body {
 
 /* ---=== Game Sections ===--- */
 .game-section {
-    padding: calc(var(--base-spacing) * 3) calc(var(--base-spacing) * 1.5); /* Adjusted padding */
-    /* max-width: var(--container-width); */ /* Already handled by content-area */
-    /* margin: 0 auto; */ /* Already handled by content-area */
+    padding: calc(var(--base-spacing) * 3) calc(var(--base-spacing) * 1.5); /* Padding inside section */
+    margin-top: calc(var(--base-spacing) * 4); /* Space BETWEEN sections */
 }
-/* Add top margin to first game section if needed after removing hero */
+/* Remove excessive top margin from the very first section */
 #main-games {
     margin-top: calc(var(--base-spacing) * 2);
 }
 
+/* Optional: Style the new development section distinctively if desired */
+/* .development-games { */
+    /* Add specific background or borders here */
+/* } */
 
 .prototype-section {
     background-color: rgba(42, 43, 53, 0.5); /* Slightly different background */
     border-top: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
-    margin-top: calc(var(--base-spacing) * 4); /* Space between sections */
+    /* margin-top is handled by .game-section rule */
     padding-top: calc(var(--base-spacing) * 4); /* More padding for section with bg */
     padding-bottom: calc(var(--base-spacing) * 4);
 }
@@ -265,12 +269,12 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0); /* Initially transparent */
+    background-color: rgba(0, 0, 0, 0); /* Keep transparent - no dimming */
     display: flex;
     align-items: center;
     justify-content: center;
     opacity: 0;
-    transition: background-color 0.3s ease, opacity 0.3s ease;
+    transition: opacity 0.3s ease; /* Only transition opacity */
 }
 
 .game-card:hover .image-overlay {
@@ -333,7 +337,13 @@ body {
 }
 
 .tag-proto {
-    background-color: var(--prototype-color); /* Different color for prototype tags */
+    background-color: var(--prototype-color);
+}
+
+.tag-dev {
+    background-color: var(--dev-color);
+    color: var(--background-color); /* Dark text on light green/teal */
+     /* Or use var(--text-color) if your --dev-color is dark */
 }
 
 
@@ -353,9 +363,7 @@ body {
     flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    gap: var(--base-spacing);
-    align-items: center;
-    gap: calc(var(--base-spacing) * 1.5);
+    gap: calc(var(--base-spacing) * 1.5); /* Ensure some space */
 }
 
 .footer-logo {
@@ -375,26 +383,22 @@ body {
 .footer-info {
     text-align: center;
     font-size: 0.9rem;
+    /* Allow flexbox to handle alignment */
+    flex-grow: 1; /* Let info take available space if needed */
+    text-align: left; /* Align text left when space allows */
 }
+@media (max-width: 768px) {
+    .footer-info { text-align: center; } /* Center text when stacked */
+}
+
 .footer-info p {
     margin-bottom: 5px;
 }
 
-.footer-social a {
-    color: var(--text-muted);
-    font-size: 1.4rem;
-    margin-left: var(--base-spacing);
-    transition: color 0.3s ease, transform 0.3s ease;
-}
-
-.footer-social a:hover {
-    color: var(--accent-color);
-    transform: scale(1.1);
-}
 
 .footer-donate {
-    text-align: center; /* Center text and button if needed */
-    margin-top: calc(var(--base-spacing) * 0.5); /* Add some space above if stacked */
+    text-align: center;
+    margin-top: 0; /* Remove default margin */
 }
 
 .footer-donate .donate-text {
@@ -404,19 +408,40 @@ body {
 }
 
 .footer-donate a {
-    display: inline-block; /* Allows transforms and prevents extra space */
+    display: inline-block;
     transition: transform 0.2s ease;
 }
 
 .footer-donate img {
-    height: 60px; /* Adjust size as needed */
+    height: 60px; /* Donation image size */
     width: auto;
-    vertical-align: middle; /* Align nicely if next to text */
+    vertical-align: middle;
 }
 
 .footer-donate a:hover {
-    transform: scale(1.05); /* Slight grow effect on hover */
+    transform: scale(1.05);
 }
+
+
+.footer-social {
+     margin-top: 0; /* Remove default margin */
+}
+
+.footer-social a {
+    color: var(--text-muted);
+    font-size: 1.4rem;
+    margin-left: var(--base-spacing);
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+.footer-social a:first-child {
+    margin-left: 0; /* Remove margin from first social icon */
+}
+
+.footer-social a:hover {
+    color: var(--accent-color);
+    transform: scale(1.1);
+}
+
 
 /* ---=== Back to Top Button ===--- */
 #back-to-top {
@@ -433,10 +458,10 @@ body {
     cursor: pointer;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease, background-color 0.3s ease; /* Added background-color transition */
+    transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease, background-color 0.3s ease;
     z-index: 999;
     box-shadow: 0 4px 10px var(--shadow-color);
-    display: flex; /* Use flexbox to center icon */
+    display: flex;
     align-items: center;
     justify-content: center;
 }
@@ -455,68 +480,56 @@ body {
 /* ---=== Responsive Adjustments ===--- */
 @media (max-width: 768px) {
     html {
-        font-size: 15px; /* Slightly smaller base font on mobile */
+        font-size: 15px;
     }
 
-    .header-content {
-        /* Keeping the header layout for consistency, adjust if needed */
-        padding: 0 var(--base-spacing);
-    }
     .site-header {
-        /* Adjust height if content wraps badly, or change flex behavior */
          height: auto;
          padding-top: calc(var(--base-spacing)*0.5);
          padding-bottom: calc(var(--base-spacing)*0.5);
+         position: static; /* Consider changing from sticky on mobile if layout breaks */
     }
      .header-content {
         flex-direction: column;
-        gap: 10px; /* Add gap if header items stack */
+        gap: 10px;
+        padding: 0 var(--base-spacing);
      }
 
     .main-nav {
-        margin-top: 0; /* Reset margin if header stacks */
+        margin-top: 0;
     }
 
     .content-area {
-         padding-top: var(--base-spacing); /* Reduce top padding */
+         padding-top: var(--base-spacing);
     }
-    #main-games {
-         margin-top: var(--base-spacing);
-    }
-
-    .game-grid {
-         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-         gap: var(--base-spacing); /* Reduce gap */
-    }
-
     .game-section {
         padding: calc(var(--base-spacing) * 2) var(--base-spacing);
+        margin-top: calc(var(--base-spacing) * 3); /* Adjust section spacing */
     }
-     .prototype-section {
+    #main-games {
+         margin-top: var(--base-spacing); /* First section spacing */
+    }
+    .prototype-section {
         padding-top: calc(var(--base-spacing) * 3);
         padding-bottom: calc(var(--base-spacing) * 3);
     }
 
-    .footer-content {
-        flex-direction: column;
-        gap: calc(var(--base-spacing) * 1.2);
+    .game-grid {
+         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+         gap: var(--base-spacing);
     }
 
-    .footer-social {
-        margin-top: 0;
-        order: 3;
+    .footer-content {
+        flex-direction: column;
+        gap: calc(var(--base-spacing) * 1.5); /* Consistent gap */
     }
+    .footer-info { order: 1; text-align: center;} /* Center info text when stacked */
+    .footer-donate { order: 2; }
+    .footer-social { order: 3; }
      .footer-social a {
          margin: 0 calc(var(--base-spacing) * 0.75);
      }
 
-    .footer-donate {
-        margin-top: 0; /* Reset margin when stacked */
-        order: 2; /* Optional: Change stacking order, e.g., put copyright last */
-    }
-    .footer-info {
-        order: 1; /* Optional: Example */
-    }
 }
 
 @media (max-width: 480px) {
@@ -524,17 +537,21 @@ body {
         font-size: 14px;
     }
     .logo-text {
-        font-size: 1.3rem; /* Slightly smaller logo text */
+        font-size: 1.3rem;
     }
     .game-grid {
          grid-template-columns: 1fr; /* Single column layout */
     }
     .game-section {
         padding: calc(var(--base-spacing) * 1.5) var(--base-spacing);
+         margin-top: calc(var(--base-spacing) * 2.5);
     }
      .prototype-section {
         padding-top: calc(var(--base-spacing) * 2.5);
         padding-bottom: calc(var(--base-spacing) * 2.5);
+    }
+    #main-games {
+         margin-top: var(--base-spacing);
     }
 
     #back-to-top {
