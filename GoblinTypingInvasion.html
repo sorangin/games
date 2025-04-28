@@ -30,21 +30,6 @@
         #loading-indicator{position:absolute;bottom:20px;font-size:clamp(1em, 2.5vw, 1.2em);color:var(--color-ui-accent);background:rgba(0,0,0,0.5);padding:5px 10px;border-radius:5px}
         #game-over-screen #final-stats{font-size:clamp(1em, 2.4vw, 1.4em);margin-bottom:30px;line-height:1.9;color:var(--color-text-light);background:rgba(0,0,0,0.3);padding:15px;border-radius:8px;border:1px solid var(--color-ui-border);min-width:280px;text-align:left}
         #game-over-screen #final-stats span{font-weight:bold;color:var(--color-ui-accent);margin-left:8px}
-        .overlay{position:fixed;top:0;left:0;width:100%;height:100%;background-color:rgba(0, 0, 0, 0.9);z-index:var(--z-overlay);display:flex;justify-content:center;align-items:center;opacity:0;visibility:hidden;transition:opacity 0.4s ease, visibility 0s linear 0.4s}
-        .overlay.active{opacity:1;visibility:visible;transition-delay:0s}
-        .overlay-content{background:var(--color-ui-bg);padding:clamp(20px, 4vw, 30px) clamp(25px, 5vw, 40px);border:6px solid var(--color-ui-border);border-radius:15px;max-width:90%;width:600px;color:var(--color-text-light);box-shadow:0 0 30px rgba(0, 0, 0, 0.7);position:relative;text-align:center;max-height:90vh;overflow-y:auto}
-        .overlay-content h2{font-family:var(--font-title);font-size:clamp(1.8em, 5vw, 2.8em);margin-bottom:25px;color:var(--color-ui-accent);text-shadow:2px 2px 4px #000}
-        .overlay-content p{font-size:clamp(0.9em, 2.3vw, 1.1em);line-height:1.7;margin-bottom:18px}
-        .overlay-content ul{list-style:none;padding-left:0;margin-bottom:18px}
-        .overlay-content li{margin-bottom:10px;text-align:left;padding-left:1.5em;position:relative; font-size:clamp(0.85em, 2.2vw, 1.05em);}
-        .overlay-content li::before{content:'⚔️';position:absolute;left:0px;top:2px;font-size:1em}
-        .overlay-close-button{position:absolute;top:10px;right:10px;background:var(--color-health);color:white;border:3px solid darkred;border-radius:50%;width:30px;height:30px;line-height:26px;text-align:center;font-weight:bold;font-size:1.2em;cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,0.6);transition:all 0.2s ease;z-index:1}
-        .overlay-close-button:hover{background-color:#ff5c5c;transform:scale(1.1)}
-        .settings-group{margin-bottom:25px}
-        .settings-group label{display:block;margin-bottom:10px;font-size:clamp(1em, 2.5vw, 1.2em);font-weight:bold;color:var(--color-ui-accent)}
-        .settings-group input[type="range"]{width:80%;cursor:pointer;height:8px;appearance:none;background:var(--color-text-dark);border-radius:5px;border:1px solid var(--color-ui-border)}
-        .settings-group input[type="range"]::-webkit-slider-thumb{appearance:none;width:20px;height:20px;background:var(--color-ui-accent);border-radius:50%;cursor:pointer;border:2px solid var(--color-text-light)}
-        .settings-group input[type="range"]::-moz-range-thumb{width:18px;height:18px;background:var(--color-ui-accent);border-radius:50%;cursor:pointer;border:2px solid var(--color-text-light)}
 
         #ui-bar{padding:clamp(5px, 1.5vh, 8px) clamp(10px, 3vw, 15px);background-color:var(--color-ui-bg);border-bottom:5px solid var(--color-ui-border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;box-shadow:0 5px 12px rgba(0,0,0,0.4);z-index:var(--z-ui);position:relative;min-height:50px}
         #stats-left,#stats-right{display:flex;align-items:center; gap: clamp(10px, 3vw, 30px); margin-left: 10px; margin-right: clamp(10px, 4vw, 30px); font-size:clamp(0.85em, 2vw, 1.15em);font-weight:bold}
@@ -92,7 +77,7 @@
         .enemy-word span { display: inline-block; transition: color 0.1s linear; color: var(--color-text-light); }
         .enemy-word span.typed { color: var(--color-letter-highlight); font-weight: bold; }
         .enemy.paused .enemy-word{opacity:0.7}
-        .enemy.boss .enemy-word{font-size:clamp(0.95em, 2.3vw, 1.3em);padding:clamp(5px, 1.2vw, 7px) clamp(10px, 2.5vw, 12px);border-width:3px}
+        .enemy.boss .enemy-word{font-size:clamp(0.95em, 2.3vw, 1.3em);padding:clamp(5px, 1.2vw, 7px) clamp(10px, 2.5vw, 12px);border-width:3px;} /* Removed wrap/max-width */
         .enemy.boss .enemy-hp-bar-container { width: clamp(70px, 8vw, 80px); height: clamp(6px, 1.2vh, 8px); }
         .enemy-word.target { background-color: rgba(0, 0, 0, 0.85); color: var(--color-text-light); border-color: var(--color-target); transform: translateX(-50%) scale(1.15); box-shadow: 0 0 12px var(--color-target); z-index: calc(var(--z-words) + 1); }
         .enemy-word.target span { color: var(--color-text-light); }
@@ -142,13 +127,11 @@
 </head>
 <body>
     <div id="app-container">
-        <div id="main-menu" class="screen active"><h1>Typing Knight:<br>Apex</h1><div id="high-score-display">High Score: <span>0</span></div><button id="start-button" class="menu-button" disabled>Loading...</button><button id="how-to-play-button" class="menu-button">How to Play</button><button id="settings-button" class="menu-button">Settings</button><div id="loading-indicator" class="hidden">Loading Assets...</div></div>
+        <div id="main-menu" class="screen active"><h1>Typing Knight:<br>Apex</h1><div id="high-score-display">High Score: <span>0</span></div><button id="start-button" class="menu-button" disabled>Loading...</button><div id="loading-indicator" class="hidden">Loading Assets...</div></div>
         <div id="game-screen" class="screen"><div id="ui-bar"><div id="stats-left"><div id="health-display" title="Health"><span id="health-hearts"></span></div><div id="score-display" title="Score"><span class="score-icon"></span> <span id="score-value">0</span></div></div><div id="stats-right"><div id="wave-display" title="Wave">Wave: <span id="wave-value">1</span></div><div id="streak-display" title="Kill Streak">Streak: <span id="streak-value">x1</span></div></div><button id="pause-menu-button" title="Pause Game">☰</button></div><div id="input-display-area"><span id="current-input-display"></span></div><div id="game-area"><div id="bg-layer-1" class="parallax-bg"></div><div id="bg-layer-2" class="parallax-bg"></div><div id="bg-layer-3" class="parallax-bg"></div><div id="knight"></div><div id="particle-container"></div></div><div id="message-display" class="hidden"></div></div>
         <div id="game-over-screen" class="screen"><h2>Invasion Ended!</h2><div id="final-stats">Final Score: <span id="final-score">0</span><br>Highest Wave: <span id="final-wave">1</span><br>Highest Streak: <span id="final-streak">x1</span><br>Accuracy: <span id="final-accuracy">-%</span></div><button id="play-again-button" class="menu-button">Play Again</button><button id="main-menu-return-button" class="menu-button">Main Menu</button></div>
         <div id="pause-menu" class="screen"><h2>Paused</h2><button id="resume-button" class="menu-button">Resume</button><button id="pause-fullscreen-button" class="menu-button">Toggle Fullscreen</button><button id="pause-quit-button" class="menu-button">Quit to Menu</button></div>
     </div>
-    <div id="how-to-play-overlay" class="overlay"><div class="overlay-content"><span class="overlay-close-button" data-overlay-close="how-to-play-overlay">&times;</span><h2>How to Play</h2><p>Defend the knight from the oncoming horde by typing the words or letters above their heads! Accuracy and speed are key.</p><ul><li>Type the word displayed above an enemy EXACTLY to damage or vanquish them.</li><li>Look for HP bars above enemies with multiple health points.</li><li>Type the single letter displayed on an arrow to destroy it before it hits the knight (plays a hit sound).</li><li>Typed letters for enemies/powerups will highlight in green.</li><li>Each correct letter typed towards a word/powerup plays a 'type' sound.</li><li>Backspace removes the last typed letter for words. Pressing Enter or Space clears your current input.</li><li>Typing the start of a word locks onto the closest matching target (enemy or power-up). Arrows don't need targeting.</li><li>Defeated enemies may drop Power-Ups! Type the power-up word (or tap it on mobile) to activate its effect. Powerups have timers!</li><li>Consecutive kills build a score Multiplier Streak! Don't miss or let enemies/arrows reach the knight. The streak counter pulses.</li><li>Watch out for powerful Bosses on certain waves!</li><li>Enemies getting close will flash red as a warning.</li><li>If the knight is hit, the screen will shake briefly.</li><li>Press ESC or click the ☰ button during gameplay to pause.</li><li>Survive as long as you can and set a new High Score!</li></ul><button class="overlay-button" data-overlay-close="how-to-play-overlay">Got It!</button></div></div>
-    <div id="settings-overlay" class="overlay"><div class="overlay-content"><span class="overlay-close-button" data-overlay-close="settings-overlay">&times;</span><h2>Settings</h2><div class="settings-group"><label for="music-volume">Music Volume</label><input type="range" id="music-volume" min="0" max="1" step="0.05" value="0.3"></div><div class="settings-group"><label for="sfx-volume">Sound Effects Volume</label><input type="range" id="sfx-volume" min="0" max="1" step="0.05" value="0.5"></div><button class="overlay-button" data-overlay-close="settings-overlay">Close</button></div></div>
     <div style="display: none;">
         <input type="text" id="mobile-input-hack" autocapitalize="off" autocorrect="off" spellcheck="false" tabindex="-1">
         <audio id="audio-bgm" loop></audio>
@@ -215,8 +198,8 @@
                 'Knight': { baseHp: 2, baseSpeed: 1.3, score: 20, spritePrefixes: ['bKnight', 'wKnight'], deathSound: 'enemyDeadKnight' },
                 'Rook':   { baseHp: 3, baseSpeed: 1.1, score: 25, spritePrefixes: ['bRook', 'wRook'], deathSound: 'enemyDeadKnight' },
                 'Bishop': { baseHp: 2, baseSpeed: 1.6, score: 30, spritePrefixes: ['bBishop', 'wBishop'], deathSound: 'enemyDeadKnight' },
-                'Queen':  { baseHp: 6, baseSpeed: 1.9, score: 100, spritePrefixes: ['bQueen', 'wQueen'], deathSound: 'enemyDeadBoss', isBoss: true },
-                'King':   { baseHp: 5, baseSpeed: 1.2, score: 150, spritePrefixes: ['bKing', 'wKing'], deathSound: 'enemyDeadBoss', isBoss: true }
+                'Queen':  { baseHp: 1, baseSpeed: 1.9, score: 100, spritePrefixes: ['bQueen', 'wQueen'], deathSound: 'enemyDeadBoss', isBoss: true, requiresSentence: true },
+                'King':   { baseHp: 1, baseSpeed: 1.2, score: 150, spritePrefixes: ['bKing', 'wKing'], deathSound: 'enemyDeadBoss', isBoss: true, requiresSentence: true }
             },
             WAVE_SCALING: {
                 spawnIntervalReduction: 160, minSpawnInterval: 650, baseSpawnInterval: 3300, speedIncrease: 0.065, hpIncreaseFactor: 0.11, baseEnemies: 4, enemiesIncrease: 1.25, wordLengthMinBonus: 0.12, wordLengthMaxBonus: 0.28
@@ -227,6 +210,19 @@
 
         const WORD_LIST_SOURCE = [ "goblin", "attack", "knight", "sword", "shield", "magic", "danger", "quick", "type", "defend", "wave", "score", "castle", "arrow", "forest", "speed", "ogre", "troll", "dragon", "bash", "charge", "block", "enemy", "power", "haste", "invade", "retreat", "valor", "victory", "defeat", "elf", "dwarf", "orc", "beast", "monster", "human", "undead", "skeleton", "zombie", "ghoul", "imp", "demon", "angel", "wizard", "sorcerer", "witch", "warrior", "rogue", "ranger", "cleric", "paladin", "barbarian", "gnome", "sprite", "fairy", "giant", "cyclops", "minotaur", "griffin", "chimera", "strike", "cast", "heal", "dodge", "parry", "flee", "pursue", "summon", "banish", "enchant", "curse", "explore", "sneak", "ambush", "shoot", "throw", "swing", "slash", "stab", "crush", "guard", "protect", "reinforce", "counter", "advance", "flank", "surround", "conquer", "fortify", "axe", "mace", "spear", "dagger", "bow", "crossbow", "staff", "wand", "armor", "helmet", "gauntlets", "boots", "potion", "scroll", "amulet", "ring", "key", "map", "treasure", "gold", "gem", "crystal", "artifact", "relic", "standard", "banner", "catapult", "ram", "siege", "dungeon", "cave", "mountain", "swamp", "desert", "plains", "village", "city", "tower", "keep", "fortress", "ruins", "temple", "shrine", "abyss", "portal", "realm", "kingdom", "empire", "battlefield", "graveyard", "tavern", "inn", "shop", "strength", "agility", "wisdom", "courage", "fear", "chaos", "order", "light", "dark", "shadow", "fire", "water", "earth", "air", "ice", "lightning", "poison", "holy", "arcane", "divine", "ancient", "mythic", "legendary", "epic", "rage", "fury", "focus", "stealth", "cunning", "loyalty", "betrayal", "honor", "glory", "doom", "fate", "destiny", "quest", "mission", "bounty", "reward", "penalty", "brave", "fierce", "mighty", "hidden", "lost", "sacred", "corrupt", "noble", "savage", "wild", "tame", "free", "bound", "about", "above", "across", "action", "active", "actual", "always", "amount", "animal", "answer", "appear", "around", "author", "aware", "balance", "become", "before", "behind", "better", "between", "beyond", "border", "bring", "build", "button", "cable", "camera", "cancel", "carbon", "center", "change", "circle", "clean", "clear", "close", "coffee", "color", "common", "corner", "could", "cover", "create", "credit", "current", "cycle", "daily", "dance", "decide", "define", "degree", "delete", "depend", "detail", "differ", "direct", "divide", "doctor", "dollar", "double", "dream", "drive", "during", "early", "either", "empty", "enough", "enter", "equal", "error", "event", "every", "exact", "except", "exist", "expect", "explain", "extra", "factor", "family", "father", "field", "figure", "final", "floor", "follow", "force", "format", "forward", "friend", "front", "future", "gather", "general", "group", "guide", "happen", "happy", "heavy", "hello", "house", "however", "image", "impact", "import", "indeed", "index", "inform", "input", "inside", "issue", "itself", "jacket", "joint", "judge", "keyboard", "known", "label", "large", "later", "layer", "learn", "leave", "legal", "level", "listen", "little", "local", "logic", "longer", "lower", "lucky", "lunch", "major", "manage", "manual", "margin", "market", "master", "match", "maybe", "measure", "media", "member", "memory", "mention", "message", "metal", "method", "middle", "might", "minor", "minus", "minute", "mirror", "mobile", "model", "modify", "moment", "money", "month", "morning", "mother", "mouse", "movie", "music", "myself", "native", "nearby", "nearly", "network", "never", "noise", "normal", "north", "notice", "number", "object", "occur", "offer", "often", "online", "only", "open", "option", "order", "other", "output", "outside", "owner", "paint", "paper", "parent", "parse", "party", "pause", "peace", "people", "period", "person", "phase", "phone", "photo", "piece", "place", "plant", "please", "point", "policy", "pretty", "press", "price", "print", "prior", "private", "process", "proof", "proper", "public", "query", "quest", "radio", "raise", "range", "reach", "react", "ready", "really", "reason", "record", "refer", "region", "reject", "relate", "remove", "repeat", "reply", "report", "reset", "result", "return", "right", "round", "route", "sample", "scale", "scene", "scope", "screen", "search", "secure", "select", "sense", "series", "server", "service", "session", "setup", "share", "shift", "short", "should", "simple", "since", "single", "skill", "small", "smart", "smile", "solid", "solve", "sound", "south", "space", "speak", "special", "split", "sport", "stack", "stage", "stand", "start", "state", "static", "status", "still", "stock", "store", "story", "stream", "street", "study", "style", "subject", "sugar", "super", "supply", "support", "surely", "surface", "switch", "symbol", "system", "table", "target", "teach", "team", "thank", "their", "theme", "there", "these", "thick", "thing", "think", "third", "those", "though", "three", "through", "title", "today", "token", "total", "touch", "trace", "track", "trade", "train", "trend", "truck", "truly", "trust", "twice", "under", "union", "unique", "until", "update", "upper", "usual", "valid", "value", "video", "virus", "visit", "visual", "voice", "volume", "watch", "while", "white", "whole", "width", "window", "within", "without", "woman", "world", "worry", "worth", "would", "write", "wrong", "yellow", "yield", "young" ];
 
+        const SENTENCE_LIST_SOURCE = [
+            "the king demands your surrender now",
+            "you cannot defeat royal power",
+            "prepare for your final stand intruder",
+            "my reign will last forevermore",
+            "this castle is my sacred domain",
+            "face the might of the true ruler",
+            "your journey ends at my command",
+            "swift justice for the defiant knight",
+            "the queen sends her regards before doom",
+            "victory belongs only to the crown"
+        ];
+
         const ALPHABET = 'abcdefghijklmnopqrstuvwxyz';
         const GAME_STATES = { LOADING: 'loading', MENU: 'menu', STARTING_WAVE: 'startingWave', PLAYING: 'playing', PAUSED: 'paused', WAVE_COMPLETE: 'waveComplete', GAMEOVER: 'gameover' };
 
@@ -235,8 +231,8 @@
         const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
 
         class AudioManager {
-             constructor(elements, settingsElements) { this.elements = elements; this.settingsElements = settingsElements; this.musicVolume = 0.3; this.sfxVolume = 0.5; this.isMuted = false; this.assetsLoaded = false; this.isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0; }
-             initVolumes() { const savedMusicVol = localStorage.getItem('typingKnight_musicVolume'); const savedSfxVol = localStorage.getItem('typingKnight_sfxVolume'); this.musicVolume = savedMusicVol !== null ? parseFloat(savedMusicVol) : this.musicVolume; this.sfxVolume = savedSfxVol !== null ? parseFloat(savedSfxVol) : this.sfxVolume; if(this.settingsElements.musicVolume) this.settingsElements.musicVolume.value = this.musicVolume; if(this.settingsElements.sfxVolume) this.settingsElements.sfxVolume.value = this.sfxVolume; if(this.elements.bgm) this.elements.bgm.volume = this.musicVolume; }
+             constructor(elements) { this.elements = elements; this.musicVolume = 0.3; this.sfxVolume = 0.5; this.isMuted = false; this.assetsLoaded = false; this.isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0; }
+             initVolumes() { const savedMusicVol = localStorage.getItem('typingKnight_musicVolume'); const savedSfxVol = localStorage.getItem('typingKnight_sfxVolume'); this.musicVolume = savedMusicVol !== null ? parseFloat(savedMusicVol) : this.musicVolume; this.sfxVolume = savedSfxVol !== null ? parseFloat(savedSfxVol) : this.sfxVolume; if(this.elements.bgm) this.elements.bgm.volume = this.musicVolume; }
              setMusicVolume(volume) { this.musicVolume = Number(volume); if (this.elements.bgm) this.elements.bgm.volume = this.musicVolume; localStorage.setItem('typingKnight_musicVolume', this.musicVolume.toString()); }
              setSfxVolume(volume) { this.sfxVolume = Number(volume); localStorage.setItem('typingKnight_sfxVolume', this.sfxVolume.toString()); }
              _playSound(audioElement, volume, loop = false) { if (!audioElement || !this.assetsLoaded || this.isMuted) return; try { audioElement.volume = volume; audioElement.loop = loop; if (!loop) { audioElement.currentTime = 0; } audioElement.play().catch((e)=>{}); } catch (error) { console.warn("Audio play error:", error); } }
@@ -244,7 +240,7 @@
              stop(soundName) { const element = this.elements[soundName]; if (element) { try { element.pause(); element.currentTime = 0; } catch(e){ console.warn("Audio stop error:", e); } } }
              stopAllSfx() { Object.entries(this.elements).forEach(([key, element]) => { if (key !== 'bgm' && element && !element.loop) { try { element.pause(); element.currentTime = 0; } catch (e) {} } }); }
              setPauseState(isPaused) { Object.values(this.elements).forEach(el => { if(el) { try { if(isPaused && !el.paused) { if (el.loop) el.pause(); else el.pause(); } else if (!isPaused && el.paused && el.loop) { el.play().catch(()=>{}); } } catch(e){} } }); }
-             loadAssets() { return new Promise((resolve, reject) => { const assetKeys = Object.keys(AUDIO_FILES); let loadedCount = 0; let errorCount = 0; const totalAssets = assetKeys.length; let timedOut = false; if(totalAssets === 0) { this.assetsLoaded = true; resolve(); return; } const timeoutDuration = 15000; const checkCompletion = () => { if (timedOut) return; if (loadedCount + errorCount === totalAssets) { this.assetsLoaded = true; console.log(`Audio loaded: ${loadedCount} success, ${errorCount} errors.`); resolve(); clearTimeout(loadTimeout); } }; const onAssetLoad = (key) => { loadedCount++; checkCompletion(); }; const onAssetError = (key, e) => { console.warn(`Failed to load audio: ${key}`, e); errorCount++; checkCompletion(); }; const loadTimeout = setTimeout(() => { if (!this.assetsLoaded) { timedOut = true; console.warn(`Audio loading timed out after ${timeoutDuration}ms.`); this.assetsLoaded = true; reject(new Error("Audio loading timed out")); } }, timeoutDuration); assetKeys.forEach(key => { const element = this.elements[key]; const src = AUDIO_FILES[key]; if (element && src) { element.src = src; element.load(); element.addEventListener('loadeddata', () => onAssetLoad(key), { once: true }); element.addEventListener('error', (e) => onAssetError(key, e), { once: true }); } else { console.warn(`Audio element or src missing for key: ${key}`); errorCount++; checkCompletion(); } }); }); }
+             loadAssets() { return new Promise((resolve, reject) => { const assetKeys = Object.keys(AUDIO_FILES); let loadedCount = 0; let errorCount = 0; const totalAssets = assetKeys.length; let timedOut = false; if(totalAssets === 0) { this.assetsLoaded = true; resolve(); return; } const timeoutDuration = 15000; const checkCompletion = () => { if (timedOut) return; if (loadedCount + errorCount === totalAssets) { this.assetsLoaded = true; resolve(); clearTimeout(loadTimeout); } }; const onAssetLoad = (key) => { loadedCount++; checkCompletion(); }; const onAssetError = (key, e) => { console.warn(`Failed to load audio: ${key}`, e); errorCount++; checkCompletion(); }; const loadTimeout = setTimeout(() => { if (!this.assetsLoaded) { timedOut = true; console.warn(`Audio loading timed out after ${timeoutDuration}ms.`); this.assetsLoaded = true; reject(new Error("Audio loading timed out")); } }, timeoutDuration); assetKeys.forEach(key => { const element = this.elements[key]; const src = AUDIO_FILES[key]; if (element && src) { element.src = src; element.load(); element.addEventListener('loadeddata', () => onAssetLoad(key), { once: true }); element.addEventListener('error', (e) => onAssetError(key, e), { once: true }); } else { console.warn(`Audio element or src missing for key: ${key}`); errorCount++; checkCompletion(); } }); }); }
         }
 
         class ParticleManager {
@@ -258,8 +254,6 @@
         class UIManager {
              constructor(game, dom) { this.game = game; this.dom = dom; this.streakPulseTimeout = null;}
              showScreen(screenId) { Object.values(this.dom.screens).forEach(screen => screen?.classList.remove('active')); this.dom.screens[screenId]?.classList.add('active'); this.dom.game.screen?.classList.toggle('playing', screenId === 'game'); }
-             showOverlay(overlayId) { this.dom.overlays[overlayId]?.classList.add('active'); }
-             hideOverlay(overlayId) { this.dom.overlays[overlayId]?.classList.remove('active'); }
              updateGameUI(player, wave) {
                  if(!this.dom.game.scoreValue || !this.dom.game.waveValue || !this.dom.game.streakValue || !this.dom.game.healthHearts) return;
                  this.dom.game.scoreValue.textContent = player.score;
@@ -318,13 +312,13 @@
         }
 
         class Enemy {
-             constructor(id, type, wave, gameAreaWidth, dom) { this.id = id; this.config = CONFIG.ENEMY_CONFIG[type]; this.dom = dom; if (!this.config) { console.error(`Invalid enemy type: ${type}`); this.config = CONFIG.ENEMY_CONFIG['Goblin']; type = 'Goblin'; } this.type = type; this.isBoss = this.config.isBoss || false; this.maxHp = Math.max(1, Math.round(this.config.baseHp + (this.config.baseHp * (wave - 1) * CONFIG.WAVE_SCALING.hpIncreaseFactor))); this.hp = this.maxHp; this.speed = this.config.baseSpeed * (1 + (wave - 1) * CONFIG.WAVE_SCALING.speedIncrease); this.scoreValue = this.config.score; const spriteName = this.config.spritePrefixes[Math.floor(Math.random() * this.config.spritePrefixes.length)]; this.spriteUrl = `sprites/${spriteName}.png`; this.deathSound = this.config.deathSound; this.element = this.createElement(); this.wordElement = this.element.querySelector('.enemy-word'); this.hpBarFill = this.element.querySelector('.enemy-hp-bar-fill'); this.element.style.backgroundImage = `url('${this.spriteUrl}')`; const baseBottom = 40 + (this.isBoss ? 5 : 0); const verticalVariance = 25; const randomBottom = baseBottom + (Math.random() * verticalVariance) - (verticalVariance / 2); this.element.style.bottom = `${clamp(randomBottom, 5, 100)}px`; this.xPosition = gameAreaWidth + Math.random() * 50 + (this.isBoss ? 70 : 25); this.element.style.left = `${this.xPosition}px`; this.isDying = false; this.isFrozen = false; this.freezeTimeout = null; this.letterSpans = []; this.word = ''; this.wordLower = ''; this.warningState = false; }
-             createElement() { const el = document.createElement('div'); el.className = `enemy ${this.isBoss ? 'boss' : ''}`; el.id = `enemy-${this.id}`; const wordEl = document.createElement('div'); wordEl.className = 'enemy-word'; el.appendChild(wordEl); if (this.maxHp > 1) { const hpBarContainer = document.createElement('div'); hpBarContainer.className = 'enemy-hp-bar-container'; const hpBarFill = document.createElement('div'); hpBarFill.className = 'enemy-hp-bar-fill'; hpBarContainer.appendChild(hpBarFill); el.appendChild(hpBarContainer); } return el; }
-             setWord(word) { this.word = word; this.wordLower = word.toLowerCase(); if(this.wordElement) { this.wordElement.innerHTML = ''; this.letterSpans = []; word.split('').forEach(char => { const span = document.createElement('span'); span.textContent = char; this.wordElement.appendChild(span); this.letterSpans.push(span); }); } }
+             constructor(id, type, wave, gameAreaWidth, dom) { this.id = id; this.config = CONFIG.ENEMY_CONFIG[type]; this.dom = dom; if (!this.config) { console.error(`Invalid enemy type: ${type}`); this.config = CONFIG.ENEMY_CONFIG['Goblin']; type = 'Goblin'; } this.type = type; this.isBoss = this.config.isBoss || false; this.requiresSentence = this.config.requiresSentence || false; this.maxHp = this.requiresSentence ? 1 : Math.max(1, Math.round(this.config.baseHp + (this.config.baseHp * (wave - 1) * CONFIG.WAVE_SCALING.hpIncreaseFactor))); this.hp = this.maxHp; this.speed = this.config.baseSpeed * (1 + (wave - 1) * CONFIG.WAVE_SCALING.speedIncrease); this.scoreValue = this.config.score; const spriteName = this.config.spritePrefixes[Math.floor(Math.random() * this.config.spritePrefixes.length)]; this.spriteUrl = `sprites/${spriteName}.png`; this.deathSound = this.config.deathSound; this.element = this.createElement(); this.wordElement = this.element.querySelector('.enemy-word'); this.hpBarFill = this.element.querySelector('.enemy-hp-bar-fill'); this.element.style.backgroundImage = `url('${this.spriteUrl}')`; const baseBottom = 40 + (this.isBoss ? 5 : 0); const verticalVariance = 25; const randomBottom = baseBottom + (Math.random() * verticalVariance) - (verticalVariance / 2); this.element.style.bottom = `${clamp(randomBottom, 5, 100)}px`; this.xPosition = gameAreaWidth + Math.random() * 50 + (this.isBoss ? 70 : 25); this.element.style.left = `${this.xPosition}px`; this.isDying = false; this.isFrozen = false; this.freezeTimeout = null; this.letterSpans = []; this.word = ''; this.wordLower = ''; this.warningState = false; }
+             createElement() { const el = document.createElement('div'); el.className = `enemy ${this.isBoss ? 'boss' : ''}`; el.id = `enemy-${this.id}`; const wordEl = document.createElement('div'); wordEl.className = 'enemy-word'; el.appendChild(wordEl); if (!this.requiresSentence && this.maxHp > 1) { const hpBarContainer = document.createElement('div'); hpBarContainer.className = 'enemy-hp-bar-container'; const hpBarFill = document.createElement('div'); hpBarFill.className = 'enemy-hp-bar-fill'; hpBarContainer.appendChild(hpBarFill); el.appendChild(hpBarContainer); } return el; }
+             setWord(text) { this.word = text; this.wordLower = text.toLowerCase(); if(this.wordElement) { this.wordElement.innerHTML = ''; this.letterSpans = []; text.split('').forEach(char => { const span = document.createElement('span'); span.textContent = char === ' ' ? '\u00A0' : char; this.wordElement.appendChild(span); this.letterSpans.push(span); }); } }
              update(deltaTime, knightDefenseLine, warningLine, game) { if (this.isDying || this.isFrozen || game.state === GAME_STATES.PAUSED) return; const distance = this.speed * (deltaTime / (1000 / 60)); this.xPosition -= distance; if(this.element) this.element.style.left = `${this.xPosition}px`; if (this.xPosition <= knightDefenseLine) { game.handleEnemyReachedKnight(this); return; } const isInWarning = this.xPosition <= warningLine; if (isInWarning !== this.warningState) { this.warningState = isInWarning; this.element?.classList.toggle('warning', isInWarning); } }
              spawn() { if (!this.dom.game.gameArea || !this.element) return; try { this.dom.game.gameArea.appendChild(this.element); requestAnimationFrame(() => { this.element?.classList.add('spawned'); }); } catch (e) { console.error("Error spawning enemy:", e); } }
-             takeDamage(amount = 1, game) { if (this.isDying || this.hp <= 0) return false; this.hp -= amount; if (this.hpBarFill) { const hpPercent = Math.max(0, (this.hp / this.maxHp) * 100); this.hpBarFill.style.width = hpPercent + '%'; } if (this.hp <= 0) { return true; } else { this.element?.classList.add('hit'); setTimeout(() => this.element?.classList.remove('hit'), 200); game.assignNewWordToEnemy(this); return false; } }
-             die(killedByPlayer, game) { if (this.isDying) return; this.isDying = true; this.element?.classList.add('dying'); this.element?.classList.remove('warning'); this.wordElement?.remove(); this.element.querySelector('.enemy-hp-bar-container')?.remove(); clearTimeout(this.freezeTimeout); game.particleManager?.emit('death', this.xPosition + (this.element?.offsetWidth || 0) / 2, (this.element?.offsetTop || 0) + (this.element?.offsetHeight || 0) / 2); if(killedByPlayer && game.audioManager) { game.audioManager.play(this.deathSound); if (Math.random() < CONFIG.POWERUP_CHANCE) { game.spawnPowerUp(this.xPosition + (this.element?.offsetWidth || 0) / 2, (this.element?.offsetTop || 0) + (this.element?.offsetHeight || 0) / 2); } } setTimeout(() => { this.element?.remove(); }, 500); }
+             takeDamage(amount = 1, game) { if (this.isDying || this.hp <= 0 || this.requiresSentence) return false; this.hp -= amount; if (this.hpBarFill) { const hpPercent = Math.max(0, (this.hp / this.maxHp) * 100); this.hpBarFill.style.width = hpPercent + '%'; } if (this.hp <= 0) { return true; } else { this.element?.classList.add('hit'); setTimeout(() => this.element?.classList.remove('hit'), 200); game.assignNewWordToEnemy(this); return false; } }
+             die(killedByPlayer, game) { if (this.isDying) return; this.isDying = true; this.element?.classList.add('dying'); this.element?.classList.remove('warning'); this.wordElement?.remove(); this.element.querySelector('.enemy-hp-bar-container')?.remove(); clearTimeout(this.freezeTimeout); game.particleManager?.emit('death', this.xPosition + (this.element?.offsetWidth || 0) / 2, (this.element?.offsetTop || 0) + (this.element?.offsetHeight || 0) / 2); if(killedByPlayer && game.audioManager) { game.audioManager.play(this.deathSound); if (Math.random() < CONFIG.POWERUP_CHANCE && !this.requiresSentence) { game.spawnPowerUp(this.xPosition + (this.element?.offsetWidth || 0) / 2, (this.element?.offsetTop || 0) + (this.element?.offsetHeight || 0) / 2); } } setTimeout(() => { this.element?.remove(); }, 500); }
              freeze(duration) { if(this.isDying) return; if(this.isBoss) duration *= 0.6; this.isFrozen = true; this.element?.style.setProperty('filter', 'brightness(0.7) saturate(0) contrast(1.2) drop-shadow(3px 3px 3px rgba(0,0,0,0.5))'); this.element?.classList.remove('warning'); this.wordElement?.style.setProperty('border-color', 'var(--color-freeze)'); this.wordElement?.style.setProperty('color', 'var(--color-freeze)'); clearTimeout(this.freezeTimeout); this.freezeTimeout = setTimeout(() => this.unfreeze(), duration); }
              unfreeze() { clearTimeout(this.freezeTimeout); this.isFrozen = false; this.element?.style.removeProperty('filter'); this.wordElement?.style.removeProperty('border-color'); this.wordElement?.style.removeProperty('color'); }
         }
@@ -334,7 +328,7 @@
              createElement() { const el = document.createElement('div'); el.className = 'powerup'; el.style.transformOrigin = 'center center'; const wordEl = document.createElement('div'); wordEl.className = 'powerup-word'; const timerEl = document.createElement('div'); timerEl.className = 'powerup-timer'; el.appendChild(wordEl); el.appendChild(timerEl); return el; }
              updateTimer(currentTime) { if (this.isDying || !this.timerElement || !this.isVisible || this.game.state === GAME_STATES.PAUSED) return; const timeElapsed = currentTime - this.spawnTime; const timeLeftMs = Math.max(0, this.lifetime - timeElapsed); this.timerElement.textContent = `${(timeLeftMs / 1000).toFixed(1)}s`; if (timeLeftMs <= 0) { this.remove(false, true); } }
              remove(collected = false, expired = false) { if (this.isDying) return; this.isDying = true; this.element?.removeEventListener('click', this.clickHandler); this.element?.removeEventListener('touchstart', this.touchHandler); this.element?.remove(); this.game?.removePowerUp(this.id, collected); }
-             activate() { if (this.game.state !== GAME_STATES.PLAYING || this.isDying || !this.game.audioManager) return; this.game.audioManager.play('powerupGet'); const centerX = this.element.offsetLeft + this.element.offsetWidth / 2; const centerY = this.element.offsetTop + this.element.offsetHeight / 2; const particleType = `powerup-${this.type.toLowerCase()}`; this.game.particleManager?.emit(particleType, centerX, centerY); switch (this.type) { case 'HEAL': this.game.player.heal(1); this.game.uiManager?.updateGameUI(this.game.player, this.game.wave); this.game.audioManager.play('powerupHeal'); break; case 'BOMB': this.game.enemies.slice().forEach(enemy => { if (!enemy.isDying && !enemy.isBoss) { const killed = enemy.takeDamage(100, this.game); if (killed) { this.game.handleEnemyKilled(enemy, true); } } }); this.game.audioManager.play('powerupBomb'); break; case 'FREEZE': this.game.enemies.forEach(enemy => { if (!enemy.isDying) enemy.freeze(4000); }); this.game.audioManager.play('powerupFreeze'); break; } this.remove(true); }
+             activate() { if (this.game.state !== GAME_STATES.PLAYING || this.isDying || !this.game.audioManager) return; this.game.audioManager.play('powerupGet'); const centerX = this.element.offsetLeft + this.element.offsetWidth / 2; const centerY = this.element.offsetTop + this.element.offsetHeight / 2; const particleType = `powerup-${this.type.toLowerCase()}`; this.game.particleManager?.emit(particleType, centerX, centerY); switch (this.type) { case 'HEAL': this.game.player.heal(1); this.game.uiManager?.updateGameUI(this.game.player, this.game.wave); this.game.audioManager.play('powerupHeal'); break; case 'BOMB': this.game.enemies.slice().forEach(enemy => { if (!enemy.isDying) { const killed = enemy.requiresSentence ? true : enemy.takeDamage(100, this.game); if (killed) { this.game.handleEnemyKilled(enemy, true); } } }); this.game.audioManager.play('powerupBomb'); break; case 'FREEZE': this.game.enemies.forEach(enemy => { if (!enemy.isDying) enemy.freeze(4000); }); this.game.audioManager.play('powerupFreeze'); break; } this.remove(true); }
         }
 
         class Arrow {
@@ -376,6 +370,7 @@
                 this.powerups = [];
                 this.arrows = [];
                 this.availableWords = [];
+                this.availableSentences = [];
                 this.gameLoopTimerId = null;
                 this.spawnTimerId = null;
                 this.nextEnemyId = 0;
@@ -403,7 +398,7 @@
                 if (!this.validateDOMCache()) { throw new Error("Critical DOM elements missing!"); }
                 this.isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-                this.audioManager = new AudioManager(this.dom.audioElements, this.dom.settings);
+                this.audioManager = new AudioManager(this.dom.audioElements);
                 this.uiManager = new UIManager(this, this.dom);
                 this.particleManager = new ParticleManager(this.dom.game.particleContainer);
 
@@ -427,7 +422,7 @@
             validateDOMCache() {
                 let allFound = true;
                 const check = (el, name) => { if (!el) { console.error(`DOM element missing: ${name}`); allFound = false; } };
-                check(this.dom.appContainer, 'appContainer'); check(this.dom.screens.menu, 'screens.menu'); check(this.dom.screens.game, 'screens.game'); check(this.dom.screens.gameOver, 'screens.gameOver'); check(this.dom.screens.pause, 'screens.pause'); check(this.dom.game.gameArea, 'game.gameArea'); check(this.dom.game.knight, 'game.knight'); check(this.dom.game.inputDisplay, 'game.inputDisplay'); check(this.dom.game.inputDisplayArea, 'game.inputDisplayArea'); check(this.dom.game.particleContainer, 'game.particleContainer'); check(this.dom.buttons.start, 'buttons.start'); check(this.dom.settings.musicVolume, 'settings.musicVolume'); check(this.dom.settings.sfxVolume, 'settings.sfxVolume'); check(this.dom.buttons.pauseMenu, 'buttons.pauseMenu'); check(this.dom.mobileInput, 'mobileInput');
+                check(this.dom.appContainer, 'appContainer'); check(this.dom.screens.menu, 'screens.menu'); check(this.dom.screens.game, 'screens.game'); check(this.dom.screens.gameOver, 'screens.gameOver'); check(this.dom.screens.pause, 'screens.pause'); check(this.dom.game.gameArea, 'game.gameArea'); check(this.dom.game.knight, 'game.knight'); check(this.dom.game.inputDisplay, 'game.inputDisplay'); check(this.dom.game.inputDisplayArea, 'game.inputDisplayArea'); check(this.dom.game.particleContainer, 'game.particleContainer'); check(this.dom.buttons.start, 'buttons.start'); check(this.dom.buttons.pauseMenu, 'buttons.pauseMenu'); check(this.dom.mobileInput, 'mobileInput');
                 for(const key in this.dom.audioElements) { check(this.dom.audioElements[key], `audioElements.${key}`); }
                 return allFound;
             }
@@ -522,23 +517,7 @@
                 this.dom.buttons.start.onclick = () => { this.audioManager?.play('select'); this.startNewGame(); };
                 this.dom.buttons.playAgain.onclick = () => { this.audioManager?.play('select'); this.startNewGame(); };
                 this.dom.buttons.mainMenuReturn.onclick = () => { this.audioManager?.play('select'); this.setState(GAME_STATES.MENU); };
-                this.dom.buttons.howToPlay.onclick = () => { this.audioManager?.play('select'); this.uiManager?.showOverlay('how-to-play-overlay'); };
-                this.dom.buttons.settings.onclick = () => { this.audioManager?.play('select'); this.uiManager?.showOverlay('settings-overlay'); };
                 this.dom.buttons.pauseFullscreen.onclick = () => { this.audioManager?.play('select'); this.toggleFullscreen(); };
-
-                this.dom.buttons.overlayClose.forEach(btn => {
-                    const overlayId = btn.dataset.overlayClose;
-                    if (overlayId) {
-                        btn.onclick = () => {
-                             this.audioManager?.play('select');
-                             this.uiManager?.hideOverlay(overlayId);
-                        };
-                    }
-                });
-
-                this.dom.settings.musicVolume.oninput = (e) => this.audioManager?.setMusicVolume(e.target.value);
-                this.dom.settings.sfxVolume.oninput = (e) => this.audioManager?.setSfxVolume(e.target.value);
-                this.dom.settings.sfxVolume.onchange = () => this.audioManager?.play('coin');
                 this.dom.buttons.resume.onclick = () => { this.togglePause(); };
                 this.dom.buttons.pauseQuit.onclick = () => { this.audioManager?.play('select'); if (this.state === GAME_STATES.PAUSED) this.togglePause(); this.setState(GAME_STATES.MENU); };
                 this.dom.buttons.pauseMenu.onclick = () => { this.togglePause(); };
@@ -602,7 +581,18 @@
                  if (this.availableWords.length < 50) this.resetWordList();
                  return word;
             }
+             getRandomSentence() {
+                 if (this.availableSentences.length === 0) {
+                     if (SENTENCE_LIST_SOURCE.length > 0) { this.resetSentenceList(); }
+                     else { console.error("Sentence list exhausted!"); return "SENTENCE ERROR"; }
+                 }
+                 const randomIndex = Math.floor(Math.random() * this.availableSentences.length);
+                 const sentence = this.availableSentences[randomIndex];
+                 this.availableSentences.splice(randomIndex, 1);
+                 return sentence;
+             }
             resetWordList() { if (WORD_LIST_SOURCE.length > 0) { this.availableWords = [...WORD_LIST_SOURCE]; } }
+            resetSentenceList() { if (SENTENCE_LIST_SOURCE.length > 0) { this.availableSentences = [...SENTENCE_LIST_SOURCE]; } }
 
             startNewGame() {
                 if (this.state === GAME_STATES.PLAYING || this.state === GAME_STATES.STARTING_WAVE) return;
@@ -611,6 +601,7 @@
                 this.player.reset();
                 this.cleanupGameElements();
                 this.resetWordList();
+                this.resetSentenceList();
                 this.nextEnemyId = 0; this.nextPowerUpId = 0; this.nextArrowId = 0;
                 this.uiManager?.updateGameUI(this.player, this.wave);
                 this.uiManager?.hideMessage();
@@ -638,7 +629,16 @@
                  let interval = Math.max(minInterval, baseInterval - reduction);
                  if(this.isBossWave && this.enemiesSpawnedThisWave === 0) interval *= 1.5;
 
-                 this.spawnTimerId = setTimeout(() => { if (this.state === GAME_STATES.PLAYING) { this.spawnEnemy(); } }, interval);
+                 this.spawnTimerId = setTimeout(() => {
+                     // Re-check state and count *inside* timeout callback
+                     if (this.state === GAME_STATES.PLAYING && this.enemiesSpawnedThisWave < this.enemiesToSpawnThisWave) {
+                         this.spawnEnemy();
+                     } else {
+                          // Clear just in case state changed or count reached unexpectedly
+                          clearTimeout(this.spawnTimerId);
+                          this.spawnTimerId = null;
+                     }
+                 }, interval);
             }
             spawnEnemy() {
                 if(this.state !== GAME_STATES.PLAYING || this.enemiesSpawnedThisWave >= this.enemiesToSpawnThisWave) return;
@@ -649,11 +649,20 @@
                 else { const normalTypes = Object.keys(CONFIG.ENEMY_CONFIG).filter(t => !CONFIG.ENEMY_CONFIG[t].isBoss); enemyType = normalTypes.length > 0 ? normalTypes[Math.floor(Math.random() * normalTypes.length)] : 'Goblin'; }
                 try {
                     const enemy = new Enemy(this.nextEnemyId, enemyType, this.wave, gameAreaWidth, this.dom);
-                    const word = this.getRandomWord(this.wave);
-                    if (word === "ERROR") { this.setState(GAME_STATES.GAMEOVER); return; }
-                    enemy.setWord(word); enemy.spawn(); this.enemies.push(enemy);
+                    let textToType;
+                    if (enemy.requiresSentence) {
+                        textToType = this.getRandomSentence();
+                         if (textToType === "SENTENCE ERROR") { this.setState(GAME_STATES.GAMEOVER); return; }
+                    } else {
+                        textToType = this.getRandomWord(this.wave);
+                         if (textToType === "ERROR") { this.setState(GAME_STATES.GAMEOVER); return; }
+                    }
+                    enemy.setWord(textToType); enemy.spawn(); this.enemies.push(enemy);
                 } catch (e) { console.error("Error creating enemy:", e); }
-                if (this.enemiesSpawnedThisWave < this.enemiesToSpawnThisWave) { this.scheduleNextSpawn(); }
+                // Ensure next spawn is scheduled *only* if more enemies are needed
+                if (this.enemiesSpawnedThisWave < this.enemiesToSpawnThisWave) {
+                     this.scheduleNextSpawn();
+                }
             }
             spawnPowerUp(x, y) {
                 if (this.state !== GAME_STATES.PLAYING || !this.dom.game.gameArea) return;
@@ -666,9 +675,9 @@
             removePowerUp(id, collected) { const index = this.powerups.findIndex(p => p.id === id); if (index > -1) { if (this.currentTypingTarget === this.powerups[index]) { this.clearTarget(); } this.powerups.splice(index, 1); } }
             spawnArrow() { if (this.state !== GAME_STATES.PLAYING || !this.dom.game.gameArea) return; this.nextArrowId++; try { const arrow = new Arrow(this.nextArrowId, this); this.arrows.push(arrow); } catch(e) { console.error("Error creating arrow:", e); } }
             removeArrow(id) { const index = this.arrows.findIndex(a => a.id === id); if (index > -1) { this.arrows.splice(index, 1); } }
-            assignNewWordToEnemy(enemy) { if (!enemy || enemy.isDying) return; const newWord = this.getRandomWord(this.wave); if(newWord !== "ERROR") enemy.setWord(newWord); else { this.setState(GAME_STATES.GAMEOVER); return; } if(this.currentTypingTarget === enemy) { this.uiManager?.updateLetterHighlight(enemy, 0); this.clearInputBuffer(); this.clearTarget(false); } }
+            assignNewWordToEnemy(enemy) { if (!enemy || enemy.isDying || enemy.requiresSentence) return; const newWord = this.getRandomWord(this.wave); if(newWord !== "ERROR") enemy.setWord(newWord); else { this.setState(GAME_STATES.GAMEOVER); return; } if(this.currentTypingTarget === enemy) { this.uiManager?.updateLetterHighlight(enemy, 0); this.clearInputBuffer(); this.clearTarget(false); } }
 
-            handleMobileInput(event) { if (this.state !== GAME_STATES.PLAYING || !event.target) return; const typedChar = event.target.value.slice(-1).toLowerCase(); event.target.value = ''; if (typedChar && typedChar.match(/[a-z0-9]/i)) { this.handleKeyPress(typedChar); } }
+            handleMobileInput(event) { if (this.state !== GAME_STATES.PLAYING || !event.target) return; const typedChar = event.target.value.slice(-1).toLowerCase(); event.target.value = ''; if (typedChar && (typedChar.match(/[a-z0-9]/i) || typedChar === ' ')) { this.handleKeyPress(typedChar); } }
             handleGlobalKeyPress(event) {
                 if (event.target instanceof HTMLInputElement && event.target !== this.dom.mobileInput) return;
                 if (this.isMobile && event.target === this.dom.mobileInput && event.key !== 'Backspace') return;
@@ -680,11 +689,11 @@
                 if (this.state !== GAME_STATES.PLAYING) return;
                 const lowerKey = key.toLowerCase();
                 if (key === 'Backspace') { if (this.currentInput.length > 0) { this.currentInput = this.currentInput.slice(0, -1); this.processCurrentInput(); } }
-                else if (key === 'Enter' || key === ' ') { this.clearInputBuffer(); this.clearTarget(); }
-                else if (lowerKey.length === 1 && ALPHABET.includes(lowerKey)) {
-                    const arrowHit = this.tryHitArrow(lowerKey);
+                else if (key === 'Enter') { this.clearInputBuffer(); this.clearTarget(); }
+                else if ((lowerKey.length === 1 && ALPHABET.includes(lowerKey)) || (lowerKey === ' ' && this.currentTypingTarget?.requiresSentence)) {
+                    const arrowHit = (lowerKey !== ' ') ? this.tryHitArrow(lowerKey) : false;
                     if (!arrowHit) {
-                        const potentialInput = this.currentInput + lowerKey;
+                        const potentialInput = this.currentInput + (lowerKey === ' ' ? ' ' : lowerKey);
                         const isValidPrefix = [...this.enemies, ...this.powerups].some(item => item && !item.isDying && item.wordLower.startsWith(potentialInput));
                         if (isValidPrefix || (this.currentTypingTarget && this.currentTypingTarget.wordLower.startsWith(potentialInput))) {
                             this.currentInput = potentialInput; this.audioManager?.play('type'); this.processCurrentInput(); this.player.recordTyping(true);
@@ -718,21 +727,21 @@
                 } return hit;
             }
             processCurrentInput() {
-                 const currentInputLower = this.currentInput.toLowerCase();
-                 this.uiManager?.updateInputDisplay(this.currentInput, !!this.currentTypingTarget);
-                 if (currentInputLower === '') { this.clearTarget(); return; }
+                 const currentInputLower = this.currentInput.toLowerCase(); // Keep using lowercase for matching logic
+                 this.uiManager?.updateInputDisplay(this.currentInput, !!this.currentTypingTarget); // Display original case
+                 if (this.currentInput === '') { this.clearTarget(); return; }
                  let bestMatch = null; let minDistance = Infinity;
                  if (this.currentTypingTarget && !this.currentTypingTarget.isDying && this.currentTypingTarget.wordLower.startsWith(currentInputLower)) { bestMatch = this.currentTypingTarget; }
                  else { const candidates = [...this.enemies, ...this.powerups].filter(item => item && !item.isDying && item.element && item.wordLower.startsWith(currentInputLower)); candidates.forEach(item => { const itemX = item.element.offsetLeft; if (itemX < minDistance) { minDistance = itemX; bestMatch = item; } }); }
                  if (bestMatch) {
                      if (this.currentTypingTarget !== bestMatch) { this.setTarget(bestMatch); }
-                     if (this.currentTypingTarget) { this.uiManager?.updateLetterHighlight(this.currentTypingTarget, currentInputLower.length); if (currentInputLower === this.currentTypingTarget.wordLower) { this.handleWordCompletion(); } }
+                     if (this.currentTypingTarget) { this.uiManager?.updateLetterHighlight(this.currentTypingTarget, this.currentInput.length); if (this.currentInput === this.currentTypingTarget.word) { this.handleWordCompletion(); } } // Use exact case for completion check
                  } else {
                      this.handleMistype();
                  }
             }
-            handleWordCompletion() { if (!this.currentTypingTarget || this.state !== GAME_STATES.PLAYING) return; this.audioManager?.play('shoot'); let completedTarget = this.currentTypingTarget; this.clearInputBuffer(); this.clearTarget(); if (completedTarget instanceof Enemy) { this.handleEnemyTyped(completedTarget); } else if (completedTarget instanceof PowerUp) { this.handlePowerUpTyped(completedTarget); } }
-            handleEnemyTyped(enemy) { if (!enemy || enemy.isDying) return; const killed = enemy.takeDamage(1, this); if (killed) { this.handleEnemyKilled(enemy, true); } else { this.audioManager?.play('enemyHit'); this.particleManager?.emit('hit', enemy.xPosition + (enemy.element?.offsetWidth || 0) / 2, (enemy.element?.offsetTop || 0) + (enemy.element?.offsetHeight || 0) / 2); } }
+            handleWordCompletion() { if (!this.currentTypingTarget || this.state !== GAME_STATES.PLAYING) return; this.audioManager?.play('shoot'); let completedTarget = this.currentTypingTarget; this.clearInputBuffer(); this.clearTarget(); if (completedTarget instanceof Enemy) { if (completedTarget.requiresSentence) { this.handleEnemyKilled(completedTarget, true); } else { this.handleEnemyTyped(completedTarget); } } else if (completedTarget instanceof PowerUp) { this.handlePowerUpTyped(completedTarget); } }
+            handleEnemyTyped(enemy) { if (!enemy || enemy.isDying || enemy.requiresSentence) return; const killed = enemy.takeDamage(1, this); if (killed) { this.handleEnemyKilled(enemy, true); } else { this.audioManager?.play('enemyHit'); this.particleManager?.emit('hit', enemy.xPosition + (enemy.element?.offsetWidth || 0) / 2, (enemy.element?.offsetTop || 0) + (enemy.element?.offsetHeight || 0) / 2); } }
             handleEnemyKilled(enemy, byPlayerAction) {
                  if (!enemy || enemy.isDying) return;
                  const wasTarget = this.currentTypingTarget === enemy;
@@ -797,16 +806,14 @@
              return {
                 appContainer: $('#app-container'),
                 screens: { menu: $('#main-menu'), game: $('#game-screen'), gameOver: $('#game-over-screen'), pause: $('#pause-menu') },
-                buttons: { start: $('#start-button'), howToPlay: $('#how-to-play-button'), settings: $('#settings-button'), playAgain: $('#play-again-button'), mainMenuReturn: $('#main-menu-return-button'), overlayClose: $$('[data-overlay-close]'), resume: $('#resume-button'), pauseQuit: $('#pause-quit-button'), pauseMenu: $('#pause-menu-button'), pauseFullscreen: $('#pause-fullscreen-button') },
-                overlays: { howToPlay: $('#how-to-play-overlay'), settings: $('#settings-overlay'), },
-                settings: { musicVolume: $('#music-volume'), sfxVolume: $('#sfx-volume'), },
+                buttons: { start: $('#start-button'), playAgain: $('#play-again-button'), mainMenuReturn: $('#main-menu-return-button'), resume: $('#resume-button'), pauseQuit: $('#pause-quit-button'), pauseMenu: $('#pause-menu-button'), pauseFullscreen: $('#pause-fullscreen-button') },
                 game: { screen: $('#game-screen'), uiBar: $('#ui-bar'), scoreValue: $('#score-value'), waveValue: $('#wave-value'), healthHearts: $('#health-hearts'), streakValue: $('#streak-value'), inputDisplayArea: $('#input-display-area'), inputDisplay: $('#current-input-display'), gameArea: $('#game-area'), knight: $('#knight'), messageDisplay: $('#message-display'), particleContainer: $('#particle-container'), },
                 gameOver: { finalScore: $('#final-score'), finalWave: $('#final-wave'), finalStreak: $('#final-streak'), finalAccuracy: $('#final-accuracy'), },
                 highScoreDisplay: $('#high-score-display'),
                 loadingIndicator: $('#loading-indicator'),
                 mobileInput: $('#mobile-input-hack'),
                 audioElements: { bgm: $('#audio-bgm'), coin: $('#audio-sfx-coin'), enemyHit: $('#audio-sfx-enemy-hit'), error: $('#audio-sfx-error'), gameOver: $('#audio-sfx-game-over'), playerDie: $('#audio-sfx-player-die'), playerHurt: $('#audio-sfx-player-hurt'), powerupSpawn: $('#audio-sfx-powerup-spawn'), powerupGet: $('#audio-sfx-powerup-get'), powerupBomb: $('#audio-sfx-powerup-bomb'), powerupFreeze: $('#audio-sfx-powerup-freeze'), powerupHeal: $('#audio-sfx-powerup-heal'), enemyDeadGoblin: $('#audio-sfx-enemy-dead-goblin'), enemyDeadKnight: $('#audio-sfx-enemy-dead-knight'), enemyDeadBoss: $('#audio-sfx-enemy-dead-boss'), hit: $('#audio-sfx-hit'), move: $('#audio-sfx-move'), select: $('#audio-sfx-select'), shoot: $('#audio-sfx-shoot'), startBeep: $('#audio-sfx-start-beep'), success: $('#audio-sfx-success'), streak: $('#audio-sfx-streak'), waveComplete: $('#audio-sfx-wave-complete'), arrowHit: $('#audio-sfx-arrow-hit'), arrowMiss: $('#audio-sfx-arrow-miss'), arrowSpawn: $('#audio-sfx-arrow-spawn'), type: $('#audio-sfx-type') }
-            };
+             };
         }
 
         window.addEventListener('DOMContentLoaded', () => {
