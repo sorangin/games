@@ -146,15 +146,13 @@ body {
 .content-area {
     max-width: var(--container-width); /* Content centered */
     margin: 0 auto; /* Center content */
-    padding-top: calc(var(--base-spacing) * 2); /* Add some space below sticky header */
+    padding: calc(var(--base-spacing) * 2) calc(var(--base-spacing) * 1.5); /* Add padding */
 }
 
-/* ---=== Hero Section Styles Removed ===--- */
 
-
-/* ---=== Game Sections ===--- */
+/* ---=== Game Sections (Index Page) ===--- */
 .game-section {
-    padding: calc(var(--base-spacing) * 3) calc(var(--base-spacing) * 1.5); /* Padding inside section */
+    padding: calc(var(--base-spacing) * 3) 0; /* Adjust padding, left/right handled by content-area */
     margin-top: calc(var(--base-spacing) * 4); /* Space BETWEEN sections */
 }
 /* Remove excessive top margin from the very first section */
@@ -162,18 +160,17 @@ body {
     margin-top: calc(var(--base-spacing) * 2);
 }
 
-/* Optional: Style the new development section distinctively if desired */
-/* .development-games { */
-    /* Add specific background or borders here */
-/* } */
-
 .prototype-section {
-    background-color: rgba(42, 43, 53, 0.5); /* Slightly different background */
+    background-color: rgba(42, 43, 53, 0.5);
     border-top: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
-    /* margin-top is handled by .game-section rule */
-    padding-top: calc(var(--base-spacing) * 4); /* More padding for section with bg */
+    padding-top: calc(var(--base-spacing) * 4); /* More vertical padding for section with bg */
     padding-bottom: calc(var(--base-spacing) * 4);
+    /* Add horizontal padding if removing from .content-area for full-width bg */
+    /* padding-left: calc(var(--base-spacing) * 1.5); */
+    /* padding-right: calc(var(--base-spacing) * 1.5); */
+    margin-left: calc(var(--base-spacing) * -1.5); /* Extend bg if needed */
+    margin-right: calc(var(--base-spacing) * -1.5); /* Extend bg if needed */
 }
 
 .section-title {
@@ -209,15 +206,14 @@ body {
 }
 
 
-/* ---=== Game Grid ===--- */
+/* ---=== Game Grid (Index Page) ===--- */
 .game-grid {
     display: grid;
-    /* Responsive grid: Adjust minmax(300px, ...) for desired card size */
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: calc(var(--base-spacing) * 2);
 }
 
-/* ---=== Game Card Styling ===--- */
+/* ---=== Game Card Styling (Index Page) ===--- */
 .game-card {
     background-color: var(--card-background);
     border-radius: var(--border-radius);
@@ -227,40 +223,39 @@ body {
     display: flex;
     flex-direction: column;
     box-shadow: 0 4px 15px var(--shadow-color);
-    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; /* Keep hover transitions */
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
     position: relative;
     border: 1px solid transparent;
 
     /* --- Start hidden for animation --- */
     opacity: 0;
     transform: translateY(30px);
-    will-change: transform, opacity; /* Optimize for animation */
+    will-change: transform, opacity;
     /* --- End start hidden --- */
 }
 
 .game-card:hover {
-    transform: translateY(-8px) scale(1.02); /* Adjust hover transform origin */
+    transform: translateY(-8px) scale(1.02);
     box-shadow: 0 10px 30px var(--shadow-color);
     border-color: var(--accent-color);
-    /* Opacity and non-hover transform handled by animation */
 }
 
 .card-image-container {
     position: relative;
     overflow: hidden;
-    aspect-ratio: 16 / 9; /* Maintain consistent image aspect ratio */
+    aspect-ratio: 16 / 9;
 }
 
 .game-image {
     display: block;
     width: 100%;
     height: 100%;
-    object-fit: cover; /* Cover the container, might crop */
+    object-fit: cover;
     transition: transform 0.4s ease, opacity 0.4s ease;
 }
 
 .game-card:hover .game-image {
-    transform: scale(1.05); /* Slight zoom on hover */
+    transform: scale(1.05);
 }
 
 .image-overlay {
@@ -269,12 +264,12 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0); /* Keep transparent - no dimming */
+    background-color: rgba(0, 0, 0, 0); /* Keep transparent */
     display: flex;
     align-items: center;
     justify-content: center;
     opacity: 0;
-    transition: opacity 0.3s ease; /* Only transition opacity */
+    transition: opacity 0.3s ease;
 }
 
 .game-card:hover .image-overlay {
@@ -286,7 +281,7 @@ body {
     font-size: 3rem;
     transform: scale(0.8);
     opacity: 0;
-    transition: transform 0.3s ease 0.1s, opacity 0.3s ease 0.1s; /* Delay icon appearance */
+    transition: transform 0.3s ease 0.1s, opacity 0.3s ease 0.1s;
 }
 
 .game-card:hover .play-icon {
@@ -294,16 +289,15 @@ body {
     opacity: 1;
 }
 
-
 .card-content {
     padding: calc(var(--base-spacing) * 1.2);
     display: flex;
     flex-direction: column;
-    flex-grow: 1; /* Allow content to fill remaining space */
+    flex-grow: 1;
 }
 
 .game-title {
-    font-family: var(--font-primary); /* Use Poppins for title for readability */
+    font-family: var(--font-primary);
     font-size: 1.3rem;
     font-weight: 600;
     margin-bottom: calc(var(--base-spacing) * 0.5);
@@ -315,11 +309,11 @@ body {
     color: var(--text-muted);
     line-height: 1.5;
     margin-bottom: calc(var(--base-spacing) * 1);
-    flex-grow: 1; /* Push tags to the bottom */
+    flex-grow: 1;
 }
 
 .game-tags {
-    margin-top: auto; /* Pushes tags to the bottom */
+    margin-top: auto;
     display: flex;
     flex-wrap: wrap;
     gap: calc(var(--base-spacing) * 0.5);
@@ -342,14 +336,13 @@ body {
 
 .tag-dev {
     background-color: var(--dev-color);
-    color: var(--background-color); /* Dark text on light green/teal */
-     /* Or use var(--text-color) if your --dev-color is dark */
+    color: var(--background-color); /* Dark text on light teal */
 }
 
 
-/* ---=== Footer ===--- */
+/* ---=== Footer (Shared) ===--- */
 .site-footer {
-    background-color: #16171d; /* Slightly darker footer */
+    background-color: #16171d;
     padding: calc(var(--base-spacing) * 2.5) calc(var(--base-spacing) * 1.5);
     margin-top: calc(var(--base-spacing) * 4);
     border-top: 1px solid var(--border-color);
@@ -363,7 +356,7 @@ body {
     flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    gap: calc(var(--base-spacing) * 1.5); /* Ensure some space */
+    gap: calc(var(--base-spacing) * 1.5);
 }
 
 .footer-logo {
@@ -381,52 +374,39 @@ body {
 }
 
 .footer-info {
-    text-align: center;
+    text-align: left;
     font-size: 0.9rem;
-    /* Allow flexbox to handle alignment */
-    flex-grow: 1; /* Let info take available space if needed */
-    text-align: left; /* Align text left when space allows */
+    flex-grow: 1;
 }
-@media (max-width: 768px) {
-    .footer-info { text-align: center; } /* Center text when stacked */
-}
-
 .footer-info p {
     margin-bottom: 5px;
 }
 
-
 .footer-donate {
     text-align: center;
-    margin-top: 0; /* Remove default margin */
+    margin-top: 0;
 }
-
 .footer-donate .donate-text {
     font-size: 0.9rem;
     color: var(--text-muted);
     margin-bottom: calc(var(--base-spacing) * 0.5);
 }
-
 .footer-donate a {
     display: inline-block;
     transition: transform 0.2s ease;
 }
-
 .footer-donate img {
-    height: 60px; /* Donation image size */
+    height: 60px;
     width: auto;
     vertical-align: middle;
 }
-
 .footer-donate a:hover {
     transform: scale(1.05);
 }
 
-
 .footer-social {
-     margin-top: 0; /* Remove default margin */
+     margin-top: 0;
 }
-
 .footer-social a {
     color: var(--text-muted);
     font-size: 1.4rem;
@@ -434,16 +414,15 @@ body {
     transition: color 0.3s ease, transform 0.3s ease;
 }
 .footer-social a:first-child {
-    margin-left: 0; /* Remove margin from first social icon */
+    margin-left: 0;
 }
-
 .footer-social a:hover {
     color: var(--accent-color);
     transform: scale(1.1);
 }
 
 
-/* ---=== Back to Top Button ===--- */
+/* ---=== Back to Top Button (Shared) ===--- */
 #back-to-top {
     position: fixed;
     bottom: 20px;
@@ -465,19 +444,248 @@ body {
     align-items: center;
     justify-content: center;
 }
-
 #back-to-top.show {
     opacity: 1;
     visibility: visible;
 }
-
 #back-to-top:hover {
     background-color: var(--light-accent);
     transform: scale(1.1);
 }
 
+/* ---=== Card Fade-In Animation Definition (Shared) ===--- */
+@keyframes cardFadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 
-/* ---=== Responsive Adjustments ===--- */
+
+/* =========================================== */
+/* ===   STYLES FOR GAME DETAIL PAGES      === */
+/* =========================================== */
+
+.game-detail-page .game-detail-content {
+    /* Add padding specific to the article content if needed */
+    /* padding: var(--base-spacing); */
+    background-color: rgba(42, 43, 53, 0.3); /* Optional subtle bg */
+    border-radius: var(--border-radius);
+    padding: calc(var(--base-spacing) * 1.5) calc(var(--base-spacing) * 2);
+}
+
+.game-detail-page .game-detail-header {
+    text-align: center;
+    margin-bottom: 2.5rem; /* Increased spacing */
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1.5rem;
+}
+
+.game-detail-page .game-detail-header h1 {
+    font-family: var(--font-display); /* Use display font */
+    font-size: clamp(2.2rem, 6vw, 3.2rem); /* Make title larger */
+    margin-bottom: 0.5rem;
+    color: var(--text-color); /* Ensure bright color */
+}
+
+.game-detail-page .release-year {
+    font-size: 0.9em;
+    color: var(--text-muted);
+    font-weight: normal;
+    display: block; /* Put year on its own line or adjust */
+    margin-bottom: 0.5rem;
+}
+
+.game-detail-page .game-status {
+    color: var(--dev-color); /* Use the dev color */
+    font-weight: bold;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+}
+.game-detail-page .game-status i {
+    margin-right: 0.5em;
+}
+
+.game-detail-page .game-detail-tags {
+    margin-top: 1rem;
+     display: flex;
+     flex-wrap: wrap;
+     justify-content: center; /* Center tags in the header */
+     gap: calc(var(--base-spacing) * 0.75); /* Adjust tag gap */
+}
+/* Use regular tags within detail pages */
+.game-detail-page .game-detail-tags .tag {
+    font-size: 0.8rem; /* Slightly larger tags */
+}
+
+
+.game-detail-page section {
+    /* Common spacing between sections on detail page */
+    margin-bottom: 3rem; /* Increased spacing */
+}
+
+.game-detail-page h2 {
+    /* Style for section titles (Trailer, Description, etc.) */
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 4vw, 1.9rem); /* Adjusted size */
+    margin-bottom: 1.5rem; /* More space below heading */
+    border-bottom: 2px solid var(--accent-color);
+    padding-bottom: 0.4rem;
+    display: inline-block;
+    color: var(--text-color); /* Ensure bright color */
+}
+
+.game-detail-page .video-placeholder {
+    background-color: var(--card-background);
+    border: 1px solid var(--border-color);
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-muted);
+    aspect-ratio: 16 / 9; /* Standard video ratio */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--border-radius);
+    font-size: 1.1rem;
+}
+/* Style actual iframe when added */
+.game-detail-page iframe {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: none; /* Remove iframe default border */
+     border-radius: var(--border-radius);
+}
+
+.game-detail-page .game-description-full p {
+    margin-bottom: 1em;
+    line-height: 1.7; /* Slightly more line height for readability */
+    font-size: 1.05rem;
+}
+
+.game-detail-page .screenshot-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: calc(var(--base-spacing) * 1.5); /* Increased gap */
+}
+
+.game-detail-page .screenshot-grid img {
+    width: 100%;
+    height: auto;
+    border-radius: var(--border-radius);
+    border: 2px solid var(--border-color); /* Slightly thicker border */
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    cursor: pointer; /* Indicate potential lightbox */
+}
+.game-detail-page .screenshot-grid img:hover {
+     transform: scale(1.04); /* Slightly more zoom */
+     box-shadow: 0 8px 20px var(--shadow-color);
+     border-color: var(--accent-color);
+}
+
+.game-detail-page .game-features ul {
+    list-style: none;
+    padding-left: 0;
+    columns: 2; /* Try 2 columns for features if space allows */
+    column-gap: 2rem;
+}
+/* Single column on smaller screens */
+@media (max-width: 600px) {
+    .game-detail-page .game-features ul {
+        columns: 1;
+    }
+}
+
+.game-detail-page .game-features li {
+    margin-bottom: 0.85rem; /* Slightly more space */
+    font-size: 1rem;
+    display: flex;
+    align-items: flex-start;
+    break-inside: avoid; /* Prevent items breaking across columns */
+}
+
+.game-detail-page .game-features li i.fa-check { /* Target only check icon */
+    color: var(--accent-color);
+    margin-right: 0.8em;
+    margin-top: 0.2em;
+    flex-shrink: 0;
+}
+
+/* Use general CTA button styles, add specific state for disabled */
+.cta-button {
+    display: inline-block;
+    background-color: var(--accent-color);
+    color: var(--background-color);
+    padding: calc(var(--base-spacing) * 0.8) calc(var(--base-spacing) * 2);
+    border-radius: 50px; /* Pill shape */
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: background-color 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+    border: 2px solid var(--accent-color);
+    cursor: pointer;
+}
+.cta-button:hover {
+    background-color: var(--light-accent);
+    border-color: var(--light-accent);
+    transform: translateY(-3px);
+}
+.cta-button i {
+    margin-left: 8px;
+}
+
+
+.game-detail-page .game-download p {
+    margin-bottom: 1.5rem; /* Space above button */
+}
+
+.game-detail-page .game-download .cta-button.disabled {
+    background-color: var(--prototype-color); /* Grey out */
+    border-color: var(--prototype-color);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    pointer-events: none;
+}
+.game-detail-page .game-download .cta-button.disabled:hover {
+    background-color: var(--prototype-color); /* Keep grey */
+    border-color: var(--prototype-color);
+    transform: none; /* No lift */
+}
+
+.game-detail-page .back-link-section {
+     margin-top: 3.5rem; /* More space above */
+     text-align: center;
+     border-top: 1px solid var(--border-color);
+     padding-top: 2rem; /* More space below */
+}
+
+.game-detail-page .back-link {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: color 0.3s ease;
+}
+.game-detail-page .back-link i {
+     margin-right: 0.5em;
+     transition: transform 0.3s ease;
+}
+.game-detail-page .back-link:hover {
+    color: var(--accent-color);
+}
+.game-detail-page .back-link:hover i {
+    transform: translateX(-3px); /* Slight arrow move */
+}
+
+
+/* =========================================== */
+/* ===   RESPONSIVE ADJUSTMENTS (SHARED)   === */
+/* =========================================== */
 @media (max-width: 768px) {
     html {
         font-size: 15px;
@@ -487,7 +695,7 @@ body {
          height: auto;
          padding-top: calc(var(--base-spacing)*0.5);
          padding-bottom: calc(var(--base-spacing)*0.5);
-         position: static; /* Consider changing from sticky on mobile if layout breaks */
+         position: static;
     }
      .header-content {
         flex-direction: column;
@@ -500,18 +708,20 @@ body {
     }
 
     .content-area {
-         padding-top: var(--base-spacing);
+         padding: var(--base-spacing); /* Simpler padding on mobile */
     }
     .game-section {
-        padding: calc(var(--base-spacing) * 2) var(--base-spacing);
-        margin-top: calc(var(--base-spacing) * 3); /* Adjust section spacing */
+        padding: calc(var(--base-spacing) * 2) 0; /* No horizontal padding here */
+        margin-top: calc(var(--base-spacing) * 3);
     }
-    #main-games {
-         margin-top: var(--base-spacing); /* First section spacing */
-    }
-    .prototype-section {
+     .prototype-section {
         padding-top: calc(var(--base-spacing) * 3);
         padding-bottom: calc(var(--base-spacing) * 3);
+        margin-left: calc(var(--base-spacing) * -1); /* Adjust negative margin */
+        margin-right: calc(var(--base-spacing) * -1);
+    }
+    #main-games {
+         margin-top: var(--base-spacing);
     }
 
     .game-grid {
@@ -521,15 +731,19 @@ body {
 
     .footer-content {
         flex-direction: column;
-        gap: calc(var(--base-spacing) * 1.5); /* Consistent gap */
+        gap: calc(var(--base-spacing) * 1.5);
     }
-    .footer-info { order: 1; text-align: center;} /* Center info text when stacked */
+    .footer-info { order: 1; text-align: center;}
     .footer-donate { order: 2; }
     .footer-social { order: 3; }
      .footer-social a {
          margin: 0 calc(var(--base-spacing) * 0.75);
      }
 
+     /* Detail page adjustments */
+     .game-detail-page .game-detail-content {
+        padding: var(--base-spacing);
+     }
 }
 
 @media (max-width: 480px) {
@@ -540,15 +754,17 @@ body {
         font-size: 1.3rem;
     }
     .game-grid {
-         grid-template-columns: 1fr; /* Single column layout */
+         grid-template-columns: 1fr;
     }
     .game-section {
-        padding: calc(var(--base-spacing) * 1.5) var(--base-spacing);
-         margin-top: calc(var(--base-spacing) * 2.5);
+        padding: calc(var(--base-spacing) * 1.5) 0;
+        margin-top: calc(var(--base-spacing) * 2.5);
     }
      .prototype-section {
         padding-top: calc(var(--base-spacing) * 2.5);
         padding-bottom: calc(var(--base-spacing) * 2.5);
+        margin-left: calc(var(--base-spacing) * -1);
+        margin-right: calc(var(--base-spacing) * -1);
     }
     #main-games {
          margin-top: var(--base-spacing);
@@ -561,17 +777,12 @@ body {
         bottom: 15px;
         right: 15px;
     }
-}
 
-
-/* ---=== Card Fade-In Animation Definition ===--- */
-@keyframes cardFadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
+     /* Detail page adjustments */
+    .game-detail-page .screenshot-grid {
+         grid-template-columns: 1fr; /* Single column screenshots */
+     }
+    .game-detail-page .game-features ul {
+        columns: 1; /* Force single column */
     }
 }
