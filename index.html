@@ -21,7 +21,7 @@
 
     <!-- SEO Meta Tags (Optional but recommended) -->
     <meta name="description" content="Explore the collection of unique indie games developed by Sora Games. Play strategy, puzzle, action, and experimental titles.">
-    <meta name="keywords" content="Sora Games, indie games, web games, html5 games, strategy games, puzzle games, browser games">
+    <meta name="keywords" content="Sora Games, indie games, web games, html5 games, strategy games, puzzle games, browser games, in development">
 
 </head>
 <body>
@@ -43,34 +43,33 @@
 
     <main class="content-area">
 
-        <!-- Section 1: Main Games -->
+        <!-- Section 1: Featured Creations -->
         <section id="main-games" class="game-section featured-games">
             <h2 class="section-title">Featured Creations</h2>
             <div class="game-grid">
 
-                <!-- Game Card Example (Repeat for each game) -->
-                <a href="rota/index.html" class="game-card" data-tags="Strategy, Simulation">
+                <!-- Rota Card -->
+                <a href="rota/index.html" class="game-card" data-tags="Survival, Arcade">
                     <div class="card-image-container">
                         <img src="images/rota_screenshot.png"
                              alt="Revenge of the Ants Gameplay"
                              class="game-image"
                              data-static-src="images/rota_screenshot.png"
                              data-gif-src="images/rota_anim.gif">
-                        <div class="image-overlay">
-                            <i class="fas fa-play play-icon"></i>
-                        </div>
+                        <div class="image-overlay"><i class="fas fa-play play-icon"></i></div>
                     </div>
                     <div class="card-content">
                         <h3 class="game-title">Revenge of the Ants</h3>
                         <p class="game-description">Giant ants are out for revenge! Defend your kingdom as a valiant knight, swiping left and right to stop the relentless swarm from breaching your castle. Just try to ignore your useless King.</p>
                         <div class="game-tags">
-                        <span class="tag">Survival</span>
+                            <span class="tag">Survival</span>
                             <span class="tag">Arcade</span>
                         </div>
                     </div>
                 </a>
 
-                <a href="KnightsGambit/index.html" class="game-card" data-tags="Strategy, Puzzle, Turn-Based">
+                <!-- Knight's Gambit Card -->
+                <a href="KnightsGambit/index.html" class="game-card" data-tags="Strategy, Turn-Based">
                     <div class="card-image-container">
                         <img src="images/knights_vs_goblins_screenshot.png"
                              alt="Knight's Gambit Gameplay"
@@ -89,7 +88,8 @@
                     </div>
                 </a>
 
-                <a href="KingsfallChess/index.html" class="game-card" data-tags="Strategy, Chess, Board Game">
+                <!-- Kingsfall Chess Card -->
+                <a href="KingsfallChess/index.html" class="game-card" data-tags="Strategy, Chess">
                      <div class="card-image-container">
                          <img src="images/chess_screenshot.png"
                               alt="Kingsfall Chess Gameplay"
@@ -108,7 +108,8 @@
                     </div>
                  </a>
 
-                 <a href="tcg.html" class="game-card" data-tags="Card Game, Strategy, TCG">
+                 <!-- Risen Realms Card -->
+                 <a href="tcg.html" class="game-card" data-tags="Card Game, Strategy">
                      <div class="card-image-container">
                          <img src="images/tcg_screenshot.png"
                               alt="Risen Realms Card Game Gameplay"
@@ -126,25 +127,136 @@
                          </div>
                      </div>
                  </a>
-                 <!-- Add other main games using the same structure -->
 
             </div><!-- End .game-grid -->
         </section> <!-- End Featured Games -->
 
-        <!-- Section 2: Prototypes & Experiments -->
+
+        <!-- ================================= -->
+        <!-- == START: In Development Section == -->
+        <!-- ================================= -->
+        <section id="in-development" class="game-section development-games">
+            <h2 class="section-title">Upcoming Adventures</h2>
+            <p class="section-subtitle">Current projects in active development. Click for more details!</p>
+            <div class="game-grid">
+
+                <!-- Yoink the King Card -->
+                <a href="yoink-the-king.html" class="game-card" data-tags="Strategy, Multiplayer, Action, In-Development">
+                    <div class="card-image-container">
+                        <!-- !!! IMPORTANT: Replace 'placeholder-dev.png' with an actual image if available !!! -->
+                        <img src="images/placeholder-dev.png"
+                             alt="Yoink the King - In Development"
+                             class="game-image">
+                        <div class="image-overlay">
+                            <i class="fas fa-info-circle play-icon"></i> <!-- Info icon -->
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="game-title">Yoink the King [2018]</h3>
+                        <p class="game-description">Arrows, swords, and kidnapped kings... Dive into a hilariously chaotic strategy game where you control a swordsman and archer to outsmart opponents online or against the computer. Sneak through enemy bases by land, air, or underground to capture their king!</p>
+                        <div class="game-tags">
+                            <span class="tag tag-dev">In Development</span>
+                            <span class="tag">Strategy</span>
+                            <span class="tag">Multiplayer</span>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Frostfire Card -->
+                <a href="frostfire.html" class="game-card" data-tags="In-Development"> <!-- Add genre tags if known -->
+                    <div class="card-image-container">
+                        <img src="images/placeholder-dev.png" alt="Frostfire - In Development" class="game-image">
+                        <div class="image-overlay"><i class="fas fa-info-circle play-icon"></i></div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="game-title">Frostfire [2010]</h3>
+                        <p class="game-description">Details coming soon for this exciting new project...</p>
+                        <div class="game-tags">
+                            <span class="tag tag-dev">In Development</span>
+                            <!-- <span class="tag">Genre</span> -->
+                        </div>
+                    </div>
+                </a>
+
+                 <!-- Small World Card -->
+                <a href="small-world.html" class="game-card" data-tags="In-Development">
+                    <div class="card-image-container">
+                        <img src="images/placeholder-dev.png" alt="Small World - In Development" class="game-image">
+                        <div class="image-overlay"><i class="fas fa-info-circle play-icon"></i></div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="game-title">Small World [2010]</h3>
+                        <p class="game-description">Stay tuned for more information about this upcoming title.</p>
+                         <div class="game-tags">
+                            <span class="tag tag-dev">In Development</span>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- The Return Card -->
+                <a href="the-return.html" class="game-card" data-tags="In-Development">
+                    <div class="card-image-container">
+                        <img src="images/placeholder-dev.png" alt="The Return - In Development" class="game-image">
+                        <div class="image-overlay"><i class="fas fa-info-circle play-icon"></i></div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="game-title">The Return [2010]</h3>
+                        <p class="game-description">More details will be revealed soon for this project.</p>
+                         <div class="game-tags">
+                            <span class="tag tag-dev">In Development</span>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- The Shattered Card -->
+                <a href="the-shattered.html" class="game-card" data-tags="In-Development">
+                    <div class="card-image-container">
+                        <img src="images/placeholder-dev.png" alt="The Shattered - In Development" class="game-image">
+                        <div class="image-overlay"><i class="fas fa-info-circle play-icon"></i></div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="game-title">The Shattered [2010]</h3>
+                        <p class="game-description">Information about this game is currently under wraps.</p>
+                         <div class="game-tags">
+                            <span class="tag tag-dev">In Development</span>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Ninja Arena Card -->
+                <a href="ninja-arena.html" class="game-card" data-tags="In-Development, Action"> <!-- Example genre tag -->
+                    <div class="card-image-container">
+                        <img src="images/placeholder-dev.png" alt="Ninja Arena - In Development" class="game-image">
+                        <div class="image-overlay"><i class="fas fa-info-circle play-icon"></i></div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="game-title">Ninja Arena [2011]</h3>
+                        <p class="game-description">Prepare for ninja combat! More details coming soon...</p>
+                         <div class="game-tags">
+                            <span class="tag tag-dev">In Development</span>
+                            <span class="tag">Action</span>
+                        </div>
+                    </div>
+                </a>
+
+            </div> <!-- End .game-grid -->
+        </section> <!-- End In Development Section -->
+        <!-- ================================= -->
+        <!-- == END: In Development Section == -->
+        <!-- ================================= -->
+
+
+        <!-- Section 3: Prototypes & Experiments -->
         <section id="prototypes" class="game-section prototype-section">
             <h2 class="section-title">Prototypes & Experiments</h2>
             <p class="section-subtitle">Playground for new ideas and works-in-progress.</p>
              <div class="game-grid">
 
+                 <!-- Medieval Math Card -->
                  <a href="MedievalMath.html" class="game-card prototype-card" data-tags="Educational, Math, Puzzle">
                      <div class="card-image-container">
-                         <img src="images/medieval_math_screenshot.png"
-                              alt="Medieval Math Screenshot"
-                              class="game-image"
-                              data-static-src="images/medieval_math_screenshot.png"
-                              data-gif-src="images/medieval_math_anim.gif">
-                         <div class="image-overlay"><i class="fas fa-flask play-icon"></i></div> <!-- Flask icon for experiments -->
+                         <img src="images/medieval_math_screenshot.png" alt="Medieval Math Screenshot" class="game-image" data-static-src="images/medieval_math_screenshot.png" data-gif-src="images/medieval_math_anim.gif">
+                         <div class="image-overlay"><i class="fas fa-flask play-icon"></i></div> <!-- Flask icon -->
                      </div>
                      <div class="card-content">
                          <h3 class="game-title">Medieval Math</h3>
@@ -156,13 +268,10 @@
                      </div>
                  </a>
 
+                 <!-- Goblin Typing Invasion Card -->
                  <a href="GoblinTypingInvasion.html" class="game-card prototype-card" data-tags="Typing, Educational, Action">
                      <div class="card-image-container">
-                         <img src="images/goblin_typing_invasion_screenshot.png"
-                              alt="Goblin Typing Invasion Screenshot"
-                              class="game-image"
-                              data-static-src="images/goblin_typing_invasion_screenshot.png"
-                              data-gif-src="images/goblin_typing_invasion_anim.gif">
+                         <img src="images/goblin_typing_invasion_screenshot.png" alt="Goblin Typing Invasion Screenshot" class="game-image" data-static-src="images/goblin_typing_invasion_screenshot.png" data-gif-src="images/goblin_typing_invasion_anim.gif">
                          <div class="image-overlay"><i class="fas fa-flask play-icon"></i></div>
                      </div>
                      <div class="card-content">
@@ -175,13 +284,10 @@
                      </div>
                  </a>
 
-                 <a href="GoblinSiegeDefense.html" class="game-card prototype-card" data-tags="Defense, Strategy, Action">
+                 <!-- Goblin Siege Defense Card -->
+                 <a href="GoblinSiegeDefense.html" class="game-card prototype-card" data-tags="Defense, Action, Prototype">
                     <div class="card-image-container">
-                        <img src="images/goblin_siege_defense_screenshot.png"
-                             alt="Goblin Siege Defense Screenshot"
-                             class="game-image"
-                             data-static-src="images/goblin_siege_defense_screenshot.png"
-                             data-gif-src="images/goblin_siege_defense_anim.gif">
+                        <img src="images/goblin_siege_defense_screenshot.png" alt="Goblin Siege Defense Screenshot" class="game-image" data-static-src="images/goblin_siege_defense_screenshot.png" data-gif-src="images/goblin_siege_defense_anim.gif">
                         <div class="image-overlay"><i class="fas fa-flask play-icon"></i></div>
                     </div>
                     <div class="card-content">
@@ -194,13 +300,10 @@
                     </div>
                 </a>
 
-                 <a href="PyroKnightDash.html" class="game-card prototype-card" data-tags="Action, Platformer, Endless Runner">
+                 <!-- Pyro Knight Dash Card -->
+                 <a href="PyroKnightDash.html" class="game-card prototype-card" data-tags="Action, Platformer, Endless Runner, Prototype">
                     <div class="card-image-container">
-                        <img src="images/pyro_knight_dash_screenshot.png"
-                             alt="Pyro Knight Dash Screenshot"
-                             class="game-image"
-                             data-static-src="images/pyro_knight_dash_screenshot.png"
-                             data-gif-src="images/pyro_knight_dash_anim.gif">
+                        <img src="images/pyro_knight_dash_screenshot.png" alt="Pyro Knight Dash Screenshot" class="game-image" data-static-src="images/pyro_knight_dash_screenshot.png" data-gif-src="images/pyro_knight_dash_anim.gif">
                         <div class="image-overlay"><i class="fas fa-flask play-icon"></i></div>
                     </div>
                     <div class="card-content">
@@ -214,13 +317,10 @@
                     </div>
                 </a>
 
-                 <a href="ASCII.html" class="game-card prototype-card" data-tags="Roguelike, ASCII, Turn-Based">
+                 <!-- ASCII Roguelike Card -->
+                 <a href="ASCII.html" class="game-card prototype-card" data-tags="Roguelike, ASCII, Turn-Based, Prototype">
                     <div class="card-image-container">
-                        <img src="images/ascii_screenshot.png"
-                             alt="ASCII Roguelike Screenshot"
-                             class="game-image"
-                             data-static-src="images/ascii_screenshot.png"
-                             data-gif-src="images/ascii_anim.gif">
+                        <img src="images/ascii_screenshot.png" alt="ASCII Roguelike Screenshot" class="game-image" data-static-src="images/ascii_screenshot.png" data-gif-src="images/ascii_anim.gif">
                         <div class="image-overlay"><i class="fas fa-flask play-icon"></i></div>
                     </div>
                     <div class="card-content">
@@ -233,13 +333,10 @@
                     </div>
                 </a>
 
-                <a href="ColorCascade.html" class="game-card prototype-card" data-tags="Puzzle, Match-3, Casual">
+                <!-- Color Cascade Card -->
+                <a href="ColorCascade.html" class="game-card prototype-card" data-tags="Puzzle, Casual, Prototype">
                     <div class="card-image-container">
-                        <img src="images/color_cascade_screenshot.png"
-                             alt="Color Cascade Screenshot"
-                             class="game-image"
-                             data-static-src="images/color_cascade_screenshot.png"
-                             data-gif-src="images/color_cascade_anim.gif">
+                        <img src="images/color_cascade_screenshot.png" alt="Color Cascade Screenshot" class="game-image" data-static-src="images/color_cascade_screenshot.png" data-gif-src="images/color_cascade_anim.gif">
                         <div class="image-overlay"><i class="fas fa-flask play-icon"></i></div>
                     </div>
                     <div class="card-content">
@@ -251,7 +348,6 @@
                         </div>
                     </div>
                 </a>
-                <!-- Add other prototype games -->
 
             </div> <!-- End .game-grid -->
         </section> <!-- End Prototypes -->
@@ -278,7 +374,7 @@
                     <img src="images/donate.png" alt="PayPal Donate Button">
                 </a>
             </div>
-            
+
             <div class="footer-social">
                 <!-- Add social media links here if you have them -->
                 <!-- <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a> -->
