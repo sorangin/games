@@ -77,7 +77,7 @@
         .enemy-word span { display: inline-block; transition: color 0.1s linear; color: var(--color-text-light); }
         .enemy-word span.typed { color: var(--color-letter-highlight); font-weight: bold; }
         .enemy.paused .enemy-word{opacity:0.7}
-        .enemy.boss .enemy-word{font-size:clamp(0.95em, 2.3vw, 1.3em);padding:clamp(5px, 1.2vw, 7px) clamp(10px, 2.5vw, 12px);border-width:3px;} /* Removed wrap/max-width */
+        .enemy.boss .enemy-word{font-size:clamp(0.95em, 2.3vw, 1.3em);padding:clamp(5px, 1.2vw, 7px) clamp(10px, 2.5vw, 12px);border-width:3px;}
         .enemy.boss .enemy-hp-bar-container { width: clamp(70px, 8vw, 80px); height: clamp(6px, 1.2vh, 8px); }
         .enemy-word.target { background-color: rgba(0, 0, 0, 0.85); color: var(--color-text-light); border-color: var(--color-target); transform: translateX(-50%) scale(1.15); box-shadow: 0 0 12px var(--color-target); z-index: calc(var(--z-words) + 1); }
         .enemy-word.target span { color: var(--color-text-light); }
@@ -422,7 +422,7 @@
             validateDOMCache() {
                 let allFound = true;
                 const check = (el, name) => { if (!el) { console.error(`DOM element missing: ${name}`); allFound = false; } };
-                check(this.dom.appContainer, 'appContainer'); check(this.dom.screens.menu, 'screens.menu'); check(this.dom.screens.game, 'screens.game'); check(this.dom.screens.gameOver, 'screens.gameOver'); check(this.dom.screens.pause, 'screens.pause'); check(this.dom.game.gameArea, 'game.gameArea'); check(this.dom.game.knight, 'game.knight'); check(this.dom.game.inputDisplay, 'game.inputDisplay'); check(this.dom.game.inputDisplayArea, 'game.inputDisplayArea'); check(this.dom.game.particleContainer, 'game.particleContainer'); check(this.dom.buttons.start, 'buttons.start'); check(this.dom.buttons.pauseMenu, 'buttons.pauseMenu'); check(this.dom.mobileInput, 'mobileInput');
+                check(this.dom.appContainer, 'appContainer'); check(this.dom.screens.menu, 'screens.menu'); check(this.dom.screens.game, 'screens.game'); check(this.dom.screens.gameOver, 'screens.gameOver'); check(this.dom.screens.pause, 'screens.pause'); check(this.dom.game.screen, 'game.screen'); check(this.dom.game.gameArea, 'game.gameArea'); check(this.dom.game.knight, 'game.knight'); check(this.dom.game.inputDisplay, 'game.inputDisplay'); check(this.dom.game.inputDisplayArea, 'game.inputDisplayArea'); check(this.dom.game.particleContainer, 'game.particleContainer'); check(this.dom.buttons.start, 'buttons.start'); check(this.dom.buttons.pauseMenu, 'buttons.pauseMenu'); check(this.dom.mobileInput, 'mobileInput');
                 for(const key in this.dom.audioElements) { check(this.dom.audioElements[key], `audioElements.${key}`); }
                 return allFound;
             }
@@ -530,13 +530,15 @@
 
                 if (this.isMobile) {
                     const focusHandler = (e) => {
-                         if (this.state === GAME_STATES.PLAYING) {
+                         // Only prevent default if the target isn't already interactive (like a button)
+                         if (!(e.target instanceof HTMLButtonElement) && this.state === GAME_STATES.PLAYING) {
                               e.preventDefault();
                               this.focusMobileInput();
                          }
                     };
-                    this.dom.game.inputDisplayArea?.addEventListener('touchstart', focusHandler, { passive: false });
-                    this.dom.game.gameArea?.addEventListener('touchstart', focusHandler, { passive: false });
+                    // Attach listener to the game screen container
+                    this.dom.game.screen?.addEventListener('touchstart', focusHandler, { passive: false });
+
                     this.dom.mobileInput?.addEventListener('input', (e) => this.handleMobileInput(e));
                     this.dom.mobileInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') e.preventDefault(); });
                     this.dom.mobileInput?.addEventListener('blur', () => {});
@@ -630,11 +632,9 @@
                  if(this.isBossWave && this.enemiesSpawnedThisWave === 0) interval *= 1.5;
 
                  this.spawnTimerId = setTimeout(() => {
-                     // Re-check state and count *inside* timeout callback
                      if (this.state === GAME_STATES.PLAYING && this.enemiesSpawnedThisWave < this.enemiesToSpawnThisWave) {
                          this.spawnEnemy();
                      } else {
-                          // Clear just in case state changed or count reached unexpectedly
                           clearTimeout(this.spawnTimerId);
                           this.spawnTimerId = null;
                      }
@@ -659,7 +659,6 @@
                     }
                     enemy.setWord(textToType); enemy.spawn(); this.enemies.push(enemy);
                 } catch (e) { console.error("Error creating enemy:", e); }
-                // Ensure next spawn is scheduled *only* if more enemies are needed
                 if (this.enemiesSpawnedThisWave < this.enemiesToSpawnThisWave) {
                      this.scheduleNextSpawn();
                 }
@@ -685,29 +684,76 @@
                 if (this.state === GAME_STATES.PLAYING) { if (event.ctrlKey || event.altKey || event.metaKey) return; event.preventDefault(); this.handleKeyPress(event.key); }
                 else if (this.state === GAME_STATES.PAUSED && event.key === 'Escape') { event.preventDefault(); this.togglePause(); }
             }
+
             handleKeyPress(key) {
                 if (this.state !== GAME_STATES.PLAYING) return;
+
                 const lowerKey = key.toLowerCase();
-                if (key === 'Backspace') { if (this.currentInput.length > 0) { this.currentInput = this.currentInput.slice(0, -1); this.processCurrentInput(); } }
-                else if (key === 'Enter') { this.clearInputBuffer(); this.clearTarget(); }
-                else if ((lowerKey.length === 1 && ALPHABET.includes(lowerKey)) || (lowerKey === ' ' && this.currentTypingTarget?.requiresSentence)) {
-                    const arrowHit = (lowerKey !== ' ') ? this.tryHitArrow(lowerKey) : false;
-                    if (!arrowHit) {
-                        const potentialInput = this.currentInput + (lowerKey === ' ' ? ' ' : lowerKey);
-                        const isValidPrefix = [...this.enemies, ...this.powerups].some(item => item && !item.isDying && item.wordLower.startsWith(potentialInput));
-                        if (isValidPrefix || (this.currentTypingTarget && this.currentTypingTarget.wordLower.startsWith(potentialInput))) {
-                            this.currentInput = potentialInput; this.audioManager?.play('type'); this.processCurrentInput(); this.player.recordTyping(true);
-                        } else { this.handleMistype(); }
+
+                if (key === 'Backspace') {
+                    if (this.currentInput.length > 0) {
+                        this.currentInput = this.currentInput.slice(0, -1);
+                        this.processCurrentInput();
+                    }
+                } else if (key === 'Enter') {
+                     // Allow enter to clear input/target, but not space unless it's needed for a sentence
+                    this.clearInputBuffer();
+                    this.clearTarget();
+                } else if ((lowerKey.length === 1 && ALPHABET.includes(lowerKey)) || (lowerKey === ' ' && this.currentTypingTarget?.requiresSentence)) {
+                    const character = (lowerKey === ' ' ? ' ' : lowerKey); // Get the actual character (space or letter)
+                    const potentialInput = this.currentInput + character;
+                    const potentialInputLower = potentialInput.toLowerCase();
+
+                    if (this.currentTypingTarget) {
+                        // Prioritize current target
+                        if (this.currentTypingTarget.wordLower.startsWith(potentialInputLower)) {
+                            // Correct character for the target
+                            this.currentInput = potentialInput;
+                            this.audioManager?.play('type');
+                            this.processCurrentInput(); // Handles highlighting and completion
+                            this.player.recordTyping(true);
+                        } else {
+                            // Incorrect character for the current target
+                            this.handleMistype();
+                        }
+                    } else {
+                        // No current target, check arrows first (only if it's a letter)
+                        const arrowHit = (character !== ' ') ? this.tryHitArrow(character) : false;
+
+                        if (!arrowHit) {
+                            // Arrow not hit, or space was pressed. Check if this starts a new target.
+                             const isValidPrefix = [...this.enemies, ...this.powerups].some(item => item && !item.isDying && item.wordLower.startsWith(potentialInputLower));
+                            if (isValidPrefix) {
+                                this.currentInput = potentialInput;
+                                this.audioManager?.play('type');
+                                this.processCurrentInput(); // Should acquire a target now
+                                this.player.recordTyping(true);
+                            } else {
+                                // Doesn't start a valid target
+                                this.handleMistype();
+                            }
+                        }
+                        // If arrowHit was true, tryHitArrow handled score/streak etc. Input buffer was NOT cleared by tryHitArrow.
                     }
                 } else if (lowerKey.length === 1 && lowerKey.match(/[0-9]/)) {
+                    // Handle numbers (cannot be arrows)
                     const potentialInput = this.currentInput + lowerKey;
-                    const isValidPrefix = [...this.enemies, ...this.powerups].some(item => item && !item.isDying && item.wordLower.startsWith(potentialInput));
-                     if (isValidPrefix || (this.currentTypingTarget && this.currentTypingTarget.wordLower.startsWith(potentialInput))) {
-                         this.currentInput = potentialInput; this.audioManager?.play('type'); this.processCurrentInput(); this.player.recordTyping(true);
-                     } else { this.handleMistype(); }
-                 }
-                 if (this.isMobile) { this.focusMobileInput(); }
+                    const potentialInputLower = potentialInput.toLowerCase();
+                    const isValidPrefix = [...this.enemies, ...this.powerups].some(item => item && !item.isDying && item.wordLower.startsWith(potentialInputLower));
+                    if (isValidPrefix || (this.currentTypingTarget && this.currentTypingTarget.wordLower.startsWith(potentialInputLower))) {
+                        this.currentInput = potentialInput;
+                        this.audioManager?.play('type');
+                        this.processCurrentInput();
+                        this.player.recordTyping(true);
+                    } else {
+                        this.handleMistype();
+                    }
+                }
+
+                if (this.isMobile) { this.focusMobileInput(); }
             }
+
+
             handleMistype() {
                 this.audioManager?.play('error');
                 this.player.recordTyping(false);
@@ -715,29 +761,53 @@
                     this.uiManager?.updateGameUI(this.player, this.wave);
                 }
             }
+
             tryHitArrow(letter) {
-                let hit = false; let closestArrow = null; let minDistance = Infinity;
-                this.arrows.forEach(arrow => { if (!arrow.isDying && arrow.letter === letter) { if (arrow.lastX < minDistance) { minDistance = arrow.lastX; closestArrow = arrow; } } });
+                let hit = false;
+                let closestArrow = null;
+                let minDistance = Infinity;
+                this.arrows.forEach(arrow => {
+                    if (!arrow.isDying && arrow.letter === letter) {
+                        if (arrow.lastX < minDistance) {
+                            minDistance = arrow.lastX;
+                            closestArrow = arrow;
+                        }
+                    }
+                });
                 if (closestArrow) {
-                    this.audioManager?.play('hit'); closestArrow.hit();
-                    this.player.addScore(CONFIG.ARROW_SCORE); this.player.increaseStreak();
+                    this.audioManager?.play('hit');
+                    closestArrow.hit(); // Handles particles, sound, removal timer
+                    this.player.addScore(CONFIG.ARROW_SCORE);
+                    this.player.increaseStreak();
                     this.uiManager?.updateGameUI(this.player, this.wave);
-                    this.player.recordTyping(true); hit = true;
-                    this.clearInputBuffer(); this.clearTarget();
-                } return hit;
+                    this.player.recordTyping(true); // Count arrow typing as correct
+                    hit = true;
+                    // Intentionally DO NOT clear input/target here
+                }
+                return hit;
             }
+
             processCurrentInput() {
-                 const currentInputLower = this.currentInput.toLowerCase(); // Keep using lowercase for matching logic
-                 this.uiManager?.updateInputDisplay(this.currentInput, !!this.currentTypingTarget); // Display original case
+                 const currentInputLower = this.currentInput.toLowerCase();
+                 this.uiManager?.updateInputDisplay(this.currentInput, !!this.currentTypingTarget);
                  if (this.currentInput === '') { this.clearTarget(); return; }
                  let bestMatch = null; let minDistance = Infinity;
                  if (this.currentTypingTarget && !this.currentTypingTarget.isDying && this.currentTypingTarget.wordLower.startsWith(currentInputLower)) { bestMatch = this.currentTypingTarget; }
                  else { const candidates = [...this.enemies, ...this.powerups].filter(item => item && !item.isDying && item.element && item.wordLower.startsWith(currentInputLower)); candidates.forEach(item => { const itemX = item.element.offsetLeft; if (itemX < minDistance) { minDistance = itemX; bestMatch = item; } }); }
                  if (bestMatch) {
                      if (this.currentTypingTarget !== bestMatch) { this.setTarget(bestMatch); }
-                     if (this.currentTypingTarget) { this.uiManager?.updateLetterHighlight(this.currentTypingTarget, this.currentInput.length); if (this.currentInput === this.currentTypingTarget.word) { this.handleWordCompletion(); } } // Use exact case for completion check
+                     if (this.currentTypingTarget) {
+                         this.uiManager?.updateLetterHighlight(this.currentTypingTarget, this.currentInput.length);
+                         if (currentInputLower === this.currentTypingTarget.wordLower) { // Compare lowercase for completion
+                             this.handleWordCompletion();
+                         }
+                     }
                  } else {
-                     this.handleMistype();
+                      // Only trigger mistype if we *had* a target but the input no longer matches its start
+                      if (this.currentTypingTarget && !this.currentTypingTarget.wordLower.startsWith(currentInputLower)) {
+                           this.handleMistype();
+                      }
+                      // If no target, and input doesn't match start of anything, do nothing (Backspace might have cleared it)
                  }
             }
             handleWordCompletion() { if (!this.currentTypingTarget || this.state !== GAME_STATES.PLAYING) return; this.audioManager?.play('shoot'); let completedTarget = this.currentTypingTarget; this.clearInputBuffer(); this.clearTarget(); if (completedTarget instanceof Enemy) { if (completedTarget.requiresSentence) { this.handleEnemyKilled(completedTarget, true); } else { this.handleEnemyTyped(completedTarget); } } else if (completedTarget instanceof PowerUp) { this.handlePowerUpTyped(completedTarget); } }
