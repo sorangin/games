@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ASCII RPG Adventure v2</title>
+    <title>ASCII Adventure - Roguelike</title>
     <style>
-        /* Basic Reset & Body Styling */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -15,7 +14,7 @@
         html, body {
             width: 100%;
             height: 100%;
-            overflow: hidden; /* Prevent scrolling outside game area */
+            overflow: hidden;
             background-color: #111;
             color: #eee;
             font-family: 'Courier New', Courier, monospace;
@@ -24,53 +23,46 @@
             align-items: center;
         }
 
-        /* Game Container - Manages overall scaling and centering */
         #game-container {
-            position: relative; /* Needed for absolute positioning of buttons */
-            width: 100vmin; /* Use max viewport dimension */
+            position: relative;
+            width: 100vmin;
             height: 100vmin;
             max-width: 100%;
             max-height: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
-             /* background: #333; */ /* Optional: visualize container */
         }
 
-        /* Game Screen - Maintains aspect ratio */
         #game-screen {
-             /* Base Aspect ratio, adjust if viewWidth/viewHeight changes significantly */
-            aspect-ratio: 25 / 18; /* Approx based on viewWidth / (viewHeight + UI Height factor) */
-            width: 100%; /* Fill the container */
-            height: 100%; /* Fill the container */
+            aspect-ratio: 25 / 19; /* Adjusted aspect ratio slightly for more UI space */
+            width: 100%;
+            height: 100%;
             background-color: #000;
             border: 2px solid #555;
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* Hide anything spilling out */
-            image-rendering: pixelated; /* Keep text sharp on scaling */
-             /* Font size will be set by JS */
+            overflow: hidden;
+            image-rendering: pixelated;
         }
 
-        /* Game Areas */
         #map-display {
             flex-grow: 1;
             background-color: #1a1a1a;
-            padding: 1vmin; /* Use vmin for padding relative to container */
-            white-space: pre; /* Crucial for ASCII layout */
-            overflow: hidden; /* Hide map overflow */
-            line-height: 1.0; /* Tighter line spacing for grid look, adjusted by JS */
-            position: relative; /* For player positioning */
+            padding: 1vmin;
+            white-space: pre;
+            overflow: hidden;
+            line-height: 1.0;
+            position: relative;
             color: #ccc;
-            /* Font size is dynamically set by JS */
-            font-family: 'Courier New', Courier, monospace; /* Ensure font */
-             will-change: font-size; /* Hint for performance */
+            font-family: 'Courier New', Courier, monospace;
+            will-change: font-size;
         }
 
         #ui-panel {
-            height: auto; /* Adjust height based on content */
-            min-height: 6em; /* Ensure minimum space for UI, relative to base font size */
-            font-size: 1.5vmin; /* UI font size relative to viewport */
+            height: auto;
+            min-height: 7em; /* Increased height */
+            font-size: 1.4vmin; /* Adjusted font size slightly */
             background-color: #222;
             border-top: 2px solid #555;
             padding: 0.5em 1em;
@@ -79,18 +71,18 @@
             justify-content: space-between;
         }
 
-         #status-line, #status-line-2 {
+         #status-line, #status-line-2, #status-line-3 { /* Added third status line */
              display: flex;
              justify-content: space-between;
-             flex-wrap: wrap; /* Allow wrapping on small UI */
+             flex-wrap: wrap;
              gap: 1em;
              margin-bottom: 0.3em;
              font-weight: bold;
          }
-         #status-line span, #status-line-2 span { padding: 0 0.5em; }
+         #status-line span, #status-line-2 span, #status-line-3 span { padding: 0 0.5em; }
          #hp-bar {
             display: inline-block;
-            min-width: 5em; /* Ensure bar has some width */
+            min-width: 5em;
             background-color: #500;
             border: 1px solid #a00;
             vertical-align: middle;
@@ -113,25 +105,22 @@
              transition: width 0.3s ease;
          }
 
-
         #message-log {
-            height: 3.5em; /* Show ~3 lines based on UI font size */
-            overflow-y: scroll; /* Allow scrolling for messages */
+            height: 3em; /* Adjusted height slightly */
+            overflow-y: scroll;
             border: 1px dashed #444;
             padding: 0.3em;
             margin-top: 0.5em;
-            font-size: 0.9em; /* Slightly smaller than status */
+            font-size: 0.9em;
             line-height: 1.2;
             color: #bbb;
         }
         #message-log p { margin: 0; padding: 0; }
 
 
-        /* Mobile Controls */
         #mobile-controls {
             position: absolute;
             bottom: 10px;
-            /* Adjust positioning and size as needed */
             left: 50%;
             transform: translateX(-50%);
             display: grid;
@@ -140,22 +129,22 @@
                 "left . right"
                 ". down .";
             gap: 8px;
-            width: clamp(120px, 30vmin, 200px); /* Responsive size */
+            width: clamp(120px, 30vmin, 200px);
             opacity: 0.75;
             z-index: 10;
         }
 
         #mobile-controls button {
             font-family: 'Courier New', Courier, monospace;
-            font-size: clamp(1.2em, 5vmin, 2em); /* Responsive font size */
+            font-size: clamp(1.2em, 5vmin, 2em);
             background-color: #444;
             color: #eee;
             border: 1px solid #888;
             border-radius: 8px;
-            padding: 0; /* Remove padding */
-            aspect-ratio: 1/1; /* Make buttons square */
-            touch-action: manipulation; /* Improve touch responsiveness */
-            display: flex; /* Center icon */
+            padding: 0;
+            aspect-ratio: 1/1;
+            touch-action: manipulation;
+            display: flex;
             justify-content: center;
             align-items: center;
         }
@@ -168,7 +157,7 @@
         #btn-left { grid-area: left; }
         #btn-right { grid-area: right; }
 
-        /* Fullscreen Button */
+
         #fullscreen-button {
              position: absolute;
              top: clamp(5px, 1.5vmin, 15px);
@@ -194,27 +183,32 @@
             background-color: rgba(80, 80, 80, 0.9);
         }
 
-        /* ASCII Character Styles */
         .player { color: yellow; font-weight: bold; }
         .wall { color: #888; }
-        .floor { color: #555; } /* Slightly darker floor */
+        .floor { color: #555; }
         .water { color: #36f; }
         .tree { color: #2a4; }
         .monster { color: red; font-weight: bold; animation: blink 1s step-end infinite; }
-        .monster-orc { color: orangered; font-weight: bold; animation: blink 0.8s step-end infinite; } /* Orc color */
+        .monster-orc { color: orangered; font-weight: bold; animation: blink 0.8s step-end infinite; }
+        .monster-boss { color: magenta; font-weight: bold; animation: blink 0.5s step-end infinite; } /* Boss Style */
         .item { color: cyan; font-weight: bold; animation: blink 1.5s step-end infinite; }
         .heal { color: limegreen; font-weight: bold; }
-        .door { color: orange; }
+        .door { color: #d9a400; }
+        .key { color: #d9a400; font-weight: bold; animation: blink 1.2s step-end infinite alternate; } /* Key style */
+        .gold { color: gold; font-weight: bold; animation: blink 1.8s step-end infinite;} /* Gold style */
+        .attack-boost { color: #ff69b4; font-weight: bold; animation: blink 1s step-end infinite alternate; } /* Attack boost style */
+        .trap { color: #8b0000; }
+
 
         @keyframes blink {
             50% { opacity: 0.3; }
         }
 
-        /* Combat Overlay */
-         #combat-overlay {
+        /* --- Overlays --- */
+        .overlay {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            background-color: rgba(0, 0, 0, 0.9); /* Darker overlay */
+            background-color: rgba(0, 0, 0, 0.9);
             z-index: 50;
             display: none; /* Hidden by default */
             flex-direction: column;
@@ -222,9 +216,47 @@
             align-items: center;
             padding: 20px;
             text-align: center;
-            font-size: 1.8vmin; /* Base font size for combat */
+            font-size: 1.8vmin;
+            color: #eee;
         }
-        #combat-log {
+        .overlay.active {
+            display: flex; /* Show when active */
+        }
+
+        .overlay-title {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .overlay-text {
+             font-size: 1.2em;
+             margin-bottom: 25px;
+             max-width: 80%;
+        }
+         .overlay-stats p {
+             margin: 5px 0;
+             font-size: 1.1em;
+         }
+         .overlay-stats { margin-bottom: 30px; }
+
+        .overlay button {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.1em;
+            padding: 10px 20px;
+            margin-top: 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            min-width: 150px;
+        }
+        .overlay button:hover { background-color: #45a049; }
+        .overlay button:disabled { background-color: #333; color: #777; cursor: not-allowed;}
+
+
+        /* Combat Overlay Specifics */
+        #combat-overlay #combat-log {
             width: 90%;
             height: 50%;
             border: 1px solid #666;
@@ -232,17 +264,15 @@
             overflow-y: auto;
             padding: 10px;
             background-color: #111;
-            font-size: 0.9em; /* Slightly smaller than overlay base */
-             white-space: normal; /* Allow wrapping */
+            font-size: 0.9em;
+             white-space: normal;
              line-height: 1.3;
         }
-         #combat-log p { margin-bottom: 0.3em;}
-
-        #combat-stats { font-size: 0.95em; margin-bottom: 10px; }
-
-        #combat-actions button {
+         #combat-overlay #combat-log p { margin-bottom: 0.3em;}
+         #combat-overlay #combat-stats { font-size: 0.95em; margin-bottom: 10px; }
+         #combat-overlay #combat-actions button {
             font-family: 'Courier New', Courier, monospace;
-            font-size: 1em; /* Relative to combat overlay font size */
+            font-size: 1em;
             padding: 8px 15px;
             margin: 0 5px;
             background-color: #444;
@@ -251,9 +281,13 @@
             border-radius: 3px;
             cursor: pointer;
         }
-         #combat-actions button:hover { background-color: #666; }
-         #combat-actions button:disabled { background-color: #333; color: #777; cursor: not-allowed;}
-         #combat-result { margin-top: 10px; font-weight: bold; font-size: 1.1em;}
+         #combat-overlay #combat-actions button:hover { background-color: #666; }
+         #combat-overlay #combat-actions button:disabled { background-color: #333; color: #777; cursor: not-allowed;}
+         #combat-overlay #combat-result { margin-top: 10px; font-weight: bold; font-size: 1.1em;}
+
+         /* Victory Overlay Specifics */
+         #victory-overlay .overlay-title { color: gold; }
+
 
     </style>
 </head>
@@ -262,19 +296,24 @@
         <div id="game-screen">
             <div id="map-display"></div>
             <div id="ui-panel">
-                <div id="status-line">
+                 <div id="status-line">
                      <span id="player-level">Lvl: 1</span>
                      <span id="player-hp">HP: 10/10
                          <span id="hp-bar"><span id="hp-bar-fill" style="width: 100%;"></span></span>
                      </span>
                      <span id="player-attack">Atk: 2</span>
-                     <span id="player-items">Potions: 0</span>
                 </div>
                  <div id="status-line-2">
-                     <span id="player-xp">XP: 0/10
+                      <span id="player-xp">XP: 0/10
                          <span id="xp-bar"><span id="xp-bar-fill" style="width: 0%;"></span></span>
                      </span>
+                     <span id="player-items">Potions: 0</span>
+                     <span id="player-keys">Keys: 0</span> <!-- New UI Element -->
+                     <span id="player-gold">Gold: 0</span>  <!-- New UI Element -->
+                 </div>
+                 <div id="status-line-3">
                      <span id="player-pos">Pos: (0, 0)</span>
+                     <span id="monster-count">Monsters: ?</span> <!-- New UI Element -->
                  </div>
                 <div id="message-log">
                     <p>Loading...</p>
@@ -282,8 +321,8 @@
             </div>
 
             <!-- Combat Overlay -->
-            <div id="combat-overlay">
-                <h3 id="combat-title">Combat!</h3>
+            <div id="combat-overlay" class="overlay">
+                <h3 id="combat-title" class="overlay-title" style="font-size: 1.8em; color:orangered;">Combat!</h3>
                 <div id="combat-log"></div>
                 <div id="combat-stats">
                     <p>Player HP: <span id="combat-player-hp"></span> | Monster HP: <span id="combat-monster-hp"></span></p>
@@ -295,6 +334,18 @@
                 </div>
                  <div id="combat-result" style="margin-top: 10px; font-weight: bold;"></div>
             </div>
+
+             <!-- Victory Overlay -->
+             <div id="victory-overlay" class="overlay">
+                 <h2 class="overlay-title">VICTORY!</h2>
+                 <p class="overlay-text">You have cleared the dungeon of all monsters!</p>
+                 <div class="overlay-stats">
+                     <p>Final Level: <span id="victory-level">1</span></p>
+                     <p>Gold Collected: <span id="victory-gold">0</span></p>
+                     <p>Potions Remaining: <span id="victory-potions">0</span></p>
+                 </div>
+                 <button id="restart-button">Play Again</button>
+             </div>
 
         </div>
 
@@ -317,7 +368,6 @@
     </div>
 
     <script>
-        // --- DOM Elements ---
         const gameContainer = document.getElementById('game-container');
         const gameScreen = document.getElementById('game-screen');
         const mapDisplay = document.getElementById('map-display');
@@ -330,7 +380,10 @@
         const playerAttackDisplay = document.getElementById('player-attack');
         const playerPosDisplay = document.getElementById('player-pos');
         const playerItemsDisplay = document.getElementById('player-items');
-        const uiPanel = document.getElementById('ui-panel'); // Get UI panel for font size reference
+        const playerKeysDisplay = document.getElementById('player-keys'); // New UI element ref
+        const playerGoldDisplay = document.getElementById('player-gold'); // New UI element ref
+        const monsterCountDisplay = document.getElementById('monster-count'); // New UI element ref
+        const uiPanel = document.getElementById('ui-panel');
 
         const combatOverlay = document.getElementById('combat-overlay');
         const combatTitle = document.getElementById('combat-title');
@@ -343,63 +396,71 @@
         const combatFleeBtn = document.getElementById('combat-flee');
         const combatResult = document.getElementById('combat-result');
 
-        // --- Game Constants ---
-        const SAVE_KEY = 'asciiRpgSaveData';
-        // Viewport settings (how much of the map is shown)
-        const VIEW_WIDTH = 25; // Target number of characters horizontally
-        const VIEW_HEIGHT = 15; // Target number of lines vertically
+        const victoryOverlay = document.getElementById('victory-overlay'); // New Overlay ref
+        const victoryLevel = document.getElementById('victory-level');
+        const victoryGold = document.getElementById('victory-gold');
+        const victoryPotions = document.getElementById('victory-potions');
+        const restartButton = document.getElementById('restart-button');
 
-        // --- Game State ---
+        const SAVE_KEY = 'asciiRpgSaveData'; // Changed save key for compatibility break
+        const VIEW_WIDTH = 25;
+        const VIEW_HEIGHT = 15;
+
         let player = {
-            x: 2,
-            y: 2,
-            hp: 10,
-            maxHp: 10,
-            attack: 2,
-            potions: 0,
+            x: 1, y: 2,
+            hp: 15, // Slightly more HP to start
+            maxHp: 15,
+            attack: 3, // Slightly more attack
+            potions: 1, // Start with one potion
+            keys: 0,    // New property
+            gold: 0,    // New property
             level: 1,
             xp: 0,
-            xpToNextLevel: 10 // XP needed for level 2
+            xpToNextLevel: 15 // Slightly higher XP requirement
         };
 
-        let monster = null; // Holds current monster data during combat
-        let gameState = 'map'; // 'map', 'combat', 'paused'
-        let baseMapData = []; // Original map layout
-        let currentMapData = []; // Map state including cleared monsters/items
+        let monster = null;
+        let gameState = 'map'; // map, combat, endingCombat, gameOver, won
+        let isPlayerTurn = true;
+        let currentMapData = [];
+        let totalMonsters = 0; // Track initial monster count
+        let monstersRemaining = 0; // Track remaining monsters
 
-        // --- Map Definition ---
-        // #: Wall, .: Floor, ~: Water, T: Tree, M: Goblin, O: Orc, *: Potion, H: Heal
+        // *** Revamped Map with New Elements ***
+        // D = Door, k = Key, $ = Gold, A = Attack Boost, ^ = Trap, B = Boss (optional)
         const initialMap = [
-            "##############################",
-            "#............#####...........#",
-            "#@...........#***#.......O...#",
-            "#....T.......#####...........#",
-            "#....T.~~..........#######...#",
-            "#......~~..........#.....#...#",
-            "#..................#..M..#...#",
-            "#....######........#.....#...#",
-            "#....# M O#........#######...#",
-            "#....# H *#..................#",
-            "#....######....M.............#",
-            "#............................#",
-            "#.......#########............#",
-            "#.......#.......#...T.T......#",
-            "#.......#...O...#...T.T......#",
-            "#.......#.......#............#",
-            "#.......#########............#",
-            "#............*...M...........#",
-            "##############################"
+        // 0         1         2         3
+        // 0123456789012345678901234567890
+            "##############################", // 0
+            "#..$.........#...#....^...♀..#", // 1 Trap added
+            "#&.........*...*.#.......O..$#", // 2 Potions spread out
+            "#....T...........#...........#", // 3 Door added, Key added
+            "#....T.~~..........#######...#", // 4
+            "#...$..~~..........#.♀...#...#", // 5
+            "#..^...............#..M..#...#", // 6 Trap added
+            "#....#######.......#.....#...#", // 7
+            "#....# M O.D.......####D##...#", // 8 Door added
+            "#....# H A.#........$........#", // 9 Attack Boost (A) added
+            "#....#######...M......^......#", // 10 Trap added
+            "#............................#", // 11 Key added
+            "#.......#########......$.....#", // 12
+            "#.......#....♀..#...T.T......#", // 13 Orc removed, added path
+            "#.......#...O...#...T.T...####", // 14 Orc moved, leads to 'Boss' Area
+            "#.......#.......#.....$...#..#", // 15 Path to Boss Area, Key added
+            "#.......###.#####.....####B$.#", // 16 Boss 'B' (optional, treat as Orc for now), Gold
+            "#.........*......M...........#", // 17
+            "##############################"  // 18
         ];
+        // *** End of Map ***
 
         const mapWidth = initialMap[0].length;
         const mapHeight = initialMap.length;
 
-
-        // --- Helper Functions ---
-        function logMessage(message, color = '#eee') {
+        function logMessage(message, color = '#eee', important = false) {
             const p = document.createElement('p');
-            p.textContent = `> ${message}`; // Add prompt character
+            p.textContent = `> ${message}`;
             p.style.color = color;
+            if (important) p.style.fontWeight = 'bold';
             messageLog.appendChild(p);
             messageLog.scrollTop = messageLog.scrollHeight;
             while (messageLog.children.length > 50) {
@@ -417,34 +478,49 @@
 
         function getTile(x, y, mapSource = currentMapData) {
             if (x < 0 || x >= mapWidth || y < 0 || y >= mapHeight || !mapSource[y]) {
-                return '#'; // Treat out of bounds as wall
+                return '#';
             }
-            return mapSource[y][x] || '#'; // Default to wall if character is missing
+            if (typeof mapSource[y] === 'string' && x < mapSource[y].length) {
+                return mapSource[y][x];
+            }
+            return '#';
         }
 
         function setTile(x, y, tile) {
             if (x >= 0 && x < mapWidth && y >= 0 && y < mapHeight && currentMapData[y]) {
-                 // Need to convert string row to array, modify, then back to string
                  let row = currentMapData[y].split('');
-                 if (row[x] !== tile) { // Only modify if different
+                 if (row[x] !== tile) {
                      row[x] = tile;
                      currentMapData[y] = row.join('');
-                     return true; // Indicate change occurred
+                     return true;
                  }
             }
-            return false; // Indicate no change
+            return false;
         }
 
-        // --- Saving and Loading ---
+        function countMonsters(mapData) {
+            let count = 0;
+            for (let y = 0; y < mapHeight; y++) {
+                for (let x = 0; x < mapWidth; x++) {
+                    const tile = mapData[y][x];
+                    if (tile === 'M' || tile === 'O' || tile === 'B') { // Include Boss if implemented
+                        count++;
+                    }
+                }
+            }
+            return count;
+        }
+
+
         function saveGame() {
              try {
                  const saveData = {
-                     player: player,
-                     map: currentMapData // Save the current state of the map
+                     player: JSON.parse(JSON.stringify(player)),
+                     map: currentMapData.map(row => row),
+                     monstersRemaining: monstersRemaining // Save remaining count
                  };
                  localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
                  console.log("Game saved.");
-                 // Optional: logMessage("Game progress saved.", "lightblue");
              } catch (e) {
                  console.error("Failed to save game:", e);
                  logMessage("Error: Could not save game progress.", "red");
@@ -456,72 +532,94 @@
                  const savedData = localStorage.getItem(SAVE_KEY);
                  if (savedData) {
                      const parsedData = JSON.parse(savedData);
-                     // Basic validation
-                     if (parsedData.player && parsedData.map && parsedData.map.length === mapHeight) {
+                     if (parsedData.player && parsedData.player.keys !== undefined && parsedData.player.gold !== undefined &&
+                         parsedData.map && Array.isArray(parsedData.map) && parsedData.map.length === mapHeight &&
+                         typeof parsedData.map[0] === 'string' && parsedData.map[0].length === mapWidth &&
+                         parsedData.monstersRemaining !== undefined)
+                     {
                          player = parsedData.player;
                          currentMapData = parsedData.map;
-                         console.log("Game loaded.");
+                         monstersRemaining = parsedData.monstersRemaining; // Load remaining count
+                         totalMonsters = countMonsters(initialMap); // Recalculate total based on initial map
+                         console.log("Game loaded from save.");
                          logMessage("Save data loaded successfully!", "lightgreen");
+                         updateMonsterCountDisplay(); // Update UI after loading
                          return true;
                      } else {
-                          console.warn("Invalid save data found.");
-                          localStorage.removeItem(SAVE_KEY); // Clear invalid data
+                          console.warn("Invalid or incompatible save data found. Starting new game.");
+                          localStorage.removeItem(SAVE_KEY);
                      }
+                 } else {
+                     console.log("No save data found. Starting new game.");
                  }
              } catch (e) {
-                 console.error("Failed to load game:", e);
+                 console.error("Failed to load or parse save game:", e);
                  logMessage("Error loading saved game. Starting fresh.", "orange");
-                 localStorage.removeItem(SAVE_KEY); // Clear potentially corrupted data
+                 localStorage.removeItem(SAVE_KEY);
              }
-             // If load failed or no save exists, initialize
              initializeNewGame();
              return false;
          }
 
+
           function initializeNewGame() {
              console.log("Initializing new game state.");
-             // Deep copy initial map to baseMapData and currentMapData
-             baseMapData = initialMap.map(row => row);
              currentMapData = initialMap.map(row => row);
 
-             // Find player start position '@' from initial map and place player
+             player = { // Reset player fully
+                x: 1, y: 2, hp: 15, maxHp: 15, attack: 3, potions: 1,
+                keys: 0, gold: 0, level: 1, xp: 0, xpToNextLevel: 15
+             };
+
              let foundStart = false;
              for (let y = 0; y < mapHeight; y++) {
-                 const x = initialMap[y].indexOf('@');
+                 const x = initialMap[y].indexOf('&');
                  if (x !== -1) {
                      player.x = x;
                      player.y = y;
-                     setTile(x, y, '.'); // Replace '@' with floor on the map
+                     setTile(x, y, '.');
                      foundStart = true;
                      break;
                  }
              }
-             if (!foundStart) { // Fallback if no '@' in map
-                 console.error("Player start '@' not found in map! Defaulting to (1,1).");
-                 player.x = 1;
-                 player.y = 1;
-             }
+             if (!foundStart) console.error("Player start '&' not found!");
 
-             // Reset player stats to default (in case load failed mid-way)
-             player.hp = 10;
-             player.maxHp = 10;
-             player.attack = 2;
-             player.potions = 0;
-             player.level = 1;
-             player.xp = 0;
-             player.xpToNextLevel = 10;
+             totalMonsters = countMonsters(initialMap); // Count monsters on the new map
+             monstersRemaining = totalMonsters;
+             updateMonsterCountDisplay();
 
-             logMessage("Welcome to ASCII RPG! Use Arrow Keys or Tap Controls.", "cyan");
+             gameState = 'map'; // Ensure correct state
+             victoryOverlay.classList.remove('active'); // Ensure victory overlay is hidden
+             combatOverlay.classList.remove('active'); // Ensure combat overlay is hidden
+
+
+             logMessage("Welcome to the ASCII Dungeon!", "cyan", true);
          }
 
+        function updateMonsterCountDisplay() {
+            monsterCountDisplay.textContent = `Monsters: ${monstersRemaining}/${totalMonsters}`;
+        }
 
-        // --- Rendering ---
+        function checkWinCondition() {
+            if (monstersRemaining <= 0 && gameState !== 'won') {
+                gameState = 'won';
+                victoryLevel.textContent = player.level;
+                victoryGold.textContent = player.gold;
+                victoryPotions.textContent = player.potions;
+                victoryOverlay.classList.add('active');
+                logMessage("YOU ARE VICTORIOUS!", "gold", true);
+            }
+        }
+
+
         function renderGame() {
-            if (!currentMapData || currentMapData.length === 0) {
-                 console.error("Attempted to render with invalid map data.");
+            if (gameState === 'won') { // Don't render map if won
+                 mapDisplay.innerHTML = ''; // Clear map display
                  return;
              }
-            // Render Map Viewport
+             if (!currentMapData || currentMapData.length === 0) return;
+
+
             let mapView = '';
             let startX = Math.max(0, Math.min(player.x - Math.floor(VIEW_WIDTH / 2), mapWidth - VIEW_WIDTH));
             let startY = Math.max(0, Math.min(player.y - Math.floor(VIEW_HEIGHT / 2), mapHeight - VIEW_HEIGHT));
@@ -532,9 +630,9 @@
                     let mapY = startY + y;
 
                     if (mapX === player.x && mapY === player.y) {
-                        mapView += '<span class="player">@</span>';
+                        mapView += '<span class="player">&</span>';
                     } else {
-                         let tile = getTile(mapX, mapY); // Use currentMapData via getTile
+                         let tile = getTile(mapX, mapY);
                          let tileClass = '';
                          switch(tile) {
                              case '#': tileClass = 'wall'; break;
@@ -542,10 +640,16 @@
                              case '~': tileClass = 'water'; break;
                              case 'T': tileClass = 'tree'; break;
                              case 'M': tileClass = 'monster'; break;
-                             case 'O': tileClass = 'monster-orc'; break; // Orc style
+                             case 'O': tileClass = 'monster-orc'; break;
+                             case 'B': tileClass = 'monster-boss'; break; // Boss Style
                              case '*': tileClass = 'item'; break;
                              case 'H': tileClass = 'heal'; break;
-                             default: tileClass = 'floor'; tile = '.'; // Treat unknown as floor
+                             case 'D': tileClass = 'door'; break;     // Door Style
+                             case '♀': tileClass = 'key'; break;      // Key Style
+                             case '$': tileClass = 'gold'; break;     // Gold Style
+                             case 'A': tileClass = 'attack-boost'; break; // Attack Boost Style
+                             case '^': tileClass = 'trap'; break;     // Trap Style
+                             default: tileClass = 'floor'; tile = '.';
                          }
                          mapView += `<span class="${tileClass}">${tile}</span>`;
                     }
@@ -554,112 +658,163 @@
             }
             mapDisplay.innerHTML = mapView;
 
-            // Render UI
             let hpPercentage = Math.max(0, (player.hp / player.maxHp) * 100);
             let xpPercentage = Math.max(0, (player.xp / player.xpToNextLevel) * 100);
 
             playerLevelDisplay.textContent = `Lvl: ${player.level}`;
-            playerHpDisplay.innerHTML = `HP: ${player.hp}/${player.maxHp} <span id="hp-bar"><span id="hp-bar-fill"></span></span>`;
-            document.getElementById('hp-bar-fill').style.width = `${hpPercentage}%`; // Re-select needed after innerHTML
+            const hpBarContainer = playerHpDisplay.querySelector('#hp-bar');
+            playerHpDisplay.textContent = `HP: ${player.hp}/${player.maxHp} `;
+            if (hpBarContainer) {
+                 playerHpDisplay.appendChild(hpBarContainer);
+                 const hpFill = hpBarContainer.querySelector('#hp-bar-fill');
+                 if(hpFill) hpFill.style.width = `${hpPercentage}%`;
+            }
 
             playerAttackDisplay.textContent = `Atk: ${player.attack}`;
             playerItemsDisplay.textContent = `Potions: ${player.potions}`;
+            playerKeysDisplay.textContent = `Keys: ${player.keys}`; // Update Keys UI
+            playerGoldDisplay.textContent = `Gold: ${player.gold}`; // Update Gold UI
 
-            playerXpDisplay.innerHTML = `XP: ${player.xp}/${player.xpToNextLevel} <span id="xp-bar"><span id="xp-bar-fill"></span></span>`;
-            document.getElementById('xp-bar-fill').style.width = `${xpPercentage}%`; // Re-select
+             const xpBarContainer = playerXpDisplay.querySelector('#xp-bar');
+             playerXpDisplay.textContent = `XP: ${player.xp}/${player.xpToNextLevel} `;
+             if(xpBarContainer){
+                 playerXpDisplay.appendChild(xpBarContainer);
+                 const xpFill = xpBarContainer.querySelector('#xp-bar-fill');
+                 if(xpFill) xpFill.style.width = `${xpPercentage}%`;
+             }
 
             playerPosDisplay.textContent = `Pos: (${player.x}, ${player.y})`;
+            updateMonsterCountDisplay(); // Keep monster count updated
 
-
-             // Show/Hide Combat Overlay
-            combatOverlay.style.display = (gameState === 'combat') ? 'flex' : 'none';
+            combatOverlay.classList.toggle('active', gameState === 'combat'); // Use classList.toggle
+            // Victory overlay is handled separately in checkWinCondition
         }
 
-        // --- Dynamic Font Size Adjustment ---
+
          function adjustFontSize() {
              const mapRect = mapDisplay.getBoundingClientRect();
-             if (mapRect.width === 0 || mapRect.height === 0) return; // Not visible yet
-
-             // Calculate font size based on fitting VIEW_WIDTH characters horizontally
+             if (mapRect.width === 0 || mapRect.height === 0) return;
              const fontWidth = mapRect.width / VIEW_WIDTH;
-             // Calculate font size based on fitting VIEW_HEIGHT lines vertically
              const fontHeight = mapRect.height / VIEW_HEIGHT;
-
-             // Use the smaller dimension to ensure content fits without overflow
-             // Multiply by a factor (e.g., 1.6-1.8) because font size isn't exactly char width/height
-             // This factor might need tweaking based on font choice and desired density
-             const targetFontSize = Math.min(fontWidth * 1.7, fontHeight * 0.9); // Adjusted factors
-
+             const targetFontSize = Math.max(1, Math.min(fontWidth * 1.65, fontHeight * 0.95));
              mapDisplay.style.fontSize = `${targetFontSize}px`;
-             mapDisplay.style.lineHeight = `1.0`; // Keep lines tight
+             mapDisplay.style.lineHeight = `1.0`;
 
-            // Optionally adjust UI font size relative to map font size or keep it based on vmin
-            // uiPanel.style.fontSize = `${targetFontSize * 0.6}px`; // Example relative UI size
+             const uiFontSize = Math.max(8, 1.4 * Math.min(window.innerWidth, window.innerHeight) / 100);
+             uiPanel.style.fontSize = `${uiFontSize}px`;
          }
 
-        // --- Player Movement and Interaction ---
+
         function movePlayer(dx, dy) {
-            if (gameState !== 'map') return;
+            if (gameState !== 'map') return; // Only allow movement in map state
 
             let newX = player.x + dx;
             let newY = player.y + dy;
 
             let targetTile = getTile(newX, newY);
+            let blocked = false;
+            let blockMessage = "Blocked!";
 
-            // Check for collisions
+             // --- Collision and Static Interaction Checks ---
              if (targetTile === '#' || targetTile === '~' || targetTile === 'T') {
-                logMessage("Blocked!", "#ff8888");
-                return;
+                blocked = true;
+                if(targetTile === '~') blockMessage = "The water is too deep to cross.";
+                if(targetTile === 'T') blockMessage = "A sturdy tree blocks the path.";
+            } else if (targetTile === 'D') { // Locked Door
+                if (player.keys > 0) {
+                    player.keys--;
+                    logMessage("Used a key to unlock the door.", "gold");
+                    setTile(newX, newY, '.'); // Change door to floor
+                    targetTile = '.'; // Allow movement onto the new floor tile
+                    saveGame(); // Save key usage and map change
+                } else {
+                    blocked = true;
+                    blockMessage = "The door is locked. You need a key.";
+                }
             }
 
-            // Interactions
+            if(blocked) {
+                 logMessage(blockMessage, "#ff8888");
+                 return; // Stop processing if blocked
+             }
+
+            // --- Dynamic Interactions (Items, Monsters, Traps) ---
             let interactionOccurred = false;
             let shouldMove = true;
             let shouldSave = false;
 
-            if (targetTile === '*') {
+            if (targetTile === '*') { // Potion
                 player.potions++;
-                logMessage("Found a potion!", "#aaffaa");
-                 if (setTile(newX, newY, '.')) { // Update map state
-                     shouldSave = true;
-                 }
+                logMessage("Found a health potion!", "#aaffaa");
+                 if (setTile(newX, newY, '.')) shouldSave = true;
                  interactionOccurred = true;
-            } else if (targetTile === 'M' || targetTile === 'O') { // Check for both monster types
-                logMessage(`A wild ${targetTile === 'M' ? 'Goblin' : 'Orc'} appears!`, "#ffaaaa");
-                startCombat(newX, newY, targetTile); // Pass position and type
-                shouldMove = false; // Don't move onto tile until combat is won
-                interactionOccurred = true; // Prevent default move message
-            } else if (targetTile === 'H') {
+            } else if (targetTile === '♀') { // Key
+                player.keys++;
+                logMessage("Found a key!", "gold");
+                 if (setTile(newX, newY, '.')) shouldSave = true;
+                 interactionOccurred = true;
+             } else if (targetTile === '$') { // Gold
+                 let amount = 1 + Math.floor(Math.random() * 5); // Random gold amount 1-5
+                 player.gold += amount;
+                 logMessage(`Found ${amount} gold! Total: ${player.gold}`, "gold");
+                 if (setTile(newX, newY, '.')) shouldSave = true;
+                 interactionOccurred = true;
+             } else if (targetTile === 'A') { // Attack Boost
+                 player.attack++;
+                 logMessage("Found a Strength Scroll! Attack +1", "#ff69b4", true);
+                 if (setTile(newX, newY, '.')) shouldSave = true;
+                 interactionOccurred = true;
+            } else if (targetTile === 'H') { // Heal Spot
                  if (player.hp < player.maxHp) {
                      const healed = player.maxHp - player.hp;
                      player.hp = player.maxHp;
-                     logMessage(`You rest and restore ${healed} HP.`, "#aaffaa");
-                     shouldSave = true; // Save after healing
+                     logMessage(`Rested at the spring. Restored ${healed} HP.`, "#aaffaa");
                  } else {
-                     logMessage("You are already at full health.");
+                     logMessage("Rested, but already at full health.");
                  }
+                 if (setTile(newX, newY, '.')) shouldSave = true; // Consume heal spot
                  interactionOccurred = true;
+             } else if (targetTile === '^') { // Trap
+                 let trapDamage = 1 + Math.floor(Math.random() * 3); // Damage 1-3
+                 player.hp = Math.max(0, player.hp - trapDamage);
+                 logMessage(`Stepped on a trap! Took ${trapDamage} damage.`, "#ff4444", true);
+                 if (setTile(newX, newY, '.')) shouldSave = true; // Remove trap after triggering
+                 interactionOccurred = true;
+                 if (player.hp <= 0) { // Check for death from trap
+                      logMessage("You succumbed to the trap!", "red", true);
+                      gameState = 'gameOver';
+                      // Optional: Add a specific Game Over screen/logic here
+                      setTimeout(() => { // Delay to show message
+                          logMessage("GAME OVER. Refresh page to restart from last save.", 'red', true);
+                      }, 1500);
+                      shouldMove = false; // Don't move if dead
+                 }
+            } else if (targetTile === 'M' || targetTile === 'O' || targetTile === 'B') { // Monster / Boss
+                let monsterName = 'Goblin';
+                if (targetTile === 'O') monsterName = 'Orc';
+                if (targetTile === 'B') monsterName = 'Dungeon Guardian'; // Boss Name
+                logMessage(`A wild ${monsterName} appears!`, "#ffaaaa");
+                startCombat(newX, newY, targetTile);
+                shouldMove = false; // Combat starts, don't move onto tile yet
+                interactionOccurred = true;
             }
 
-            // Update player position if allowed
-            if (shouldMove) {
+            // --- Update Player Position ---
+            if (shouldMove && gameState === 'map') { // Double check state before moving
                  player.x = newX;
                  player.y = newY;
-                 if (!interactionOccurred && targetTile === '.') {
-                     // Maybe add floor description later? logMessage("Moved.");
-                 }
             }
 
-            renderGame(); // Re-render after potential changes
+            // --- Final Render and Save ---
+            renderGame(); // Render updates position and map changes
 
             if (shouldSave) {
-                 saveGame(); // Save state after picking up items, healing etc.
+                 saveGame(); // Save state if an item was picked up, trap triggered, etc.
             }
         }
 
-        // --- XP and Leveling System ---
         function gainXP(amount) {
-            if (gameState === 'gameOver') return;
+            if (gameState === 'gameOver' || gameState === 'won' || !Number.isInteger(amount) || amount <= 0) return;
             player.xp += amount;
             logMessage(`You gained ${amount} XP.`, 'cyan');
             let leveledUp = false;
@@ -668,223 +823,226 @@
                 levelUp();
                 leveledUp = true;
             }
-            if (leveledUp) saveGame(); // Save after leveling up
-            renderGame(); // Update XP bar etc.
+            if (leveledUp) {
+                saveGame();
+            } else {
+                renderGame();
+            }
         }
+
 
         function levelUp() {
             player.level++;
-            // Increase stats (example: +5 Max HP, +1 Attack)
             player.maxHp += 5;
-            player.hp = player.maxHp; // Fully heal on level up
+            player.hp = player.maxHp;
             player.attack += 1;
-            // Increase XP requirement for next level (example: exponential)
             player.xpToNextLevel = Math.floor(player.xpToNextLevel * 1.6);
-            logMessage(`LEVEL UP! You reached level ${player.level}!`, 'yellow', true); // Highlight
+            logMessage(`LEVEL UP! Reached level ${player.level}!`, 'yellow', true);
              logMessage(`Max HP +5, Attack +1. HP Restored.`, 'lime');
-            // Play sound effect here if audio is added
+            renderGame();
         }
 
-        // --- Combat System ---
          function startCombat(monsterX, monsterY, monsterType) {
+             if (gameState !== 'map') return; // Prevent starting combat in wrong state
+
             gameState = 'combat';
             combatLog.innerHTML = '';
             combatResult.textContent = '';
-            combatAttackBtn.disabled = false;
-            combatPotionBtn.disabled = false;
-            combatFleeBtn.disabled = false;
 
-            // Define monster stats based on type
             switch (monsterType) {
-                case 'O': // Orc
-                     monster = {
-                         x: monsterX, y: monsterY, type: monsterType,
-                         name: "Orc", hp: 15, maxHp: 15, attack: 3, xp: 12
-                     };
+                case 'O':
+                     monster = { x: monsterX, y: monsterY, type: monsterType, name: "Orc", hp: 15, maxHp: 15, attack: 3, xp: 12 };
                      break;
-                 case 'M': // Goblin (default)
+                 case 'B': // Boss Stats
+                     monster = { x: monsterX, y: monsterY, type: monsterType, name: "Dungeon Guardian", hp: 40, maxHp: 40, attack: 5, xp: 50 };
+                     break;
+                 case 'M':
                  default:
-                     monster = {
-                         x: monsterX, y: monsterY, type: monsterType,
-                         name: "Goblin", hp: 8, maxHp: 8, attack: 2, xp: 5
-                     };
+                     monster = { x: monsterX, y: monsterY, type: monsterType, name: "Goblin", hp: 8, maxHp: 8, attack: 2, xp: 5 };
                      break;
             }
 
+            isPlayerTurn = true;
             combatTitle.textContent = `Combat vs ${monster.name}!`;
             combatLogMessage(`Encountered a ${monster.name}!`, 'yellow');
             updateCombatUI();
-            renderGame(); // Show combat overlay
+            updateCombatButtonStates();
+            renderGame();
         }
 
         function updateCombatUI() {
-            if (!monster) return;
+            if (!monster || gameState !== 'combat') return;
             combatPlayerHp.textContent = `${player.hp}/${player.maxHp}`;
             combatMonsterHp.textContent = `${monster.hp}/${monster.maxHp}`;
-            combatPotionBtn.disabled = (player.potions <= 0 || player.hp === player.maxHp);
-            combatPotionBtn.textContent = `Use Potion (${player.potions})`;
         }
 
-        function playerTurn(action) {
-             if (gameState !== 'combat' || !monster || monster.hp <= 0 || player.hp <= 0) return;
+        function updateCombatButtonStates() {
+            const combatActive = gameState === 'combat' && player.hp > 0 && monster && monster.hp > 0;
+            const enabled = combatActive && isPlayerTurn;
+            combatAttackBtn.disabled = !enabled;
+            combatFleeBtn.disabled = !enabled;
+            const potionEnabled = enabled && player.potions > 0 && player.hp < player.maxHp;
+            combatPotionBtn.disabled = !potionEnabled;
+            combatPotionBtn.textContent = `Use Potion (${player.potions})`;
+         }
 
+
+        function playerTurn(action) {
+             if (gameState !== 'combat' || !isPlayerTurn || !monster || monster.hp <= 0 || player.hp <= 0) return;
+             isPlayerTurn = false;
+             updateCombatButtonStates();
              combatResult.textContent = '';
-             let monsterTurnDelayed = true; // Assume monster gets a turn unless action prevents it
+             let monsterWillAttack = true;
 
              switch(action) {
                 case 'attack':
-                    let playerDamage = Math.max(0, player.attack + Math.floor(Math.random() * 3) - 1); // Dmg = Atk + (0 to 2) - 1
+                    let playerDamage = Math.max(0, player.attack + Math.floor(Math.random() * 3) - 1);
                     monster.hp = Math.max(0, monster.hp - playerDamage);
                     combatLogMessage(`You attack the ${monster.name} for ${playerDamage} damage.`);
                     break;
                 case 'potion':
                     if (player.potions > 0 && player.hp < player.maxHp) {
-                        let healAmount = Math.floor(player.maxHp * 0.5); // Heal 50%
-                        let actualHeal = Math.min(healAmount, player.maxHp - player.hp); // Don't overheal
+                        let healAmount = Math.floor(player.maxHp * 0.5);
+                        let actualHeal = Math.min(healAmount, player.maxHp - player.hp);
                         player.hp += actualHeal;
                         player.potions--;
                         combatLogMessage(`Used potion, restored ${actualHeal} HP.`, '#aaffaa');
-                        saveGame(); // Save potion usage
-                    } else if (player.potions <= 0) {
-                         combatLogMessage("You have no potions!", '#ffcc00');
-                         monsterTurnDelayed = false; // Failed action, no monster turn delay needed
+                        saveGame();
                     } else {
-                        combatLogMessage("Your HP is already full!", '#ffcc00');
-                         monsterTurnDelayed = false; // Failed action
+                         combatLogMessage(player.potions <= 0 ? "You have no potions!" : "Your HP is already full!", '#ffcc00');
+                         monsterWillAttack = false;
+                         isPlayerTurn = true;
                     }
                     break;
                 case 'flee':
-                    let fleeChance = 0.5; // 50% chance
+                    let fleeChance = 0.5; // Boss might be harder to flee from? Add logic if needed.
                     if (Math.random() < fleeChance) {
                         combatLogMessage("You successfully fled!", '#aaffaa');
-                        endCombat(false); // Fled
-                        return; // Exit immediately, no monster turn
+                        endCombat(false);
+                        return;
                     } else {
                         combatLogMessage("You failed to flee!", '#ffaaaa');
-                        // Flee fail, monster gets turn
                     }
                     break;
              }
 
              updateCombatUI();
 
-             // Check Monster Status immediately after player action
              if (monster.hp <= 0) {
                 combatLogMessage(`You defeated the ${monster.name}!`, 'lime');
                 combatResult.textContent = "Victory!";
                 combatResult.style.color = 'lime';
-                gainXP(monster.xp); // Award XP
-                endCombat(true); // Victory
-                return; // Exit, no monster turn
+                monstersRemaining--; // Decrement remaining count
+                updateMonsterCountDisplay();
+                gainXP(monster.xp);
+                endCombat(true); // Pass true for victory
+                return;
             }
 
-             // Monster's Turn (if alive and player action didn't end combat/fail)
-             if (monsterTurnDelayed) {
-                 combatAttackBtn.disabled = true; // Disable player actions during monster turn
-                 combatPotionBtn.disabled = true;
-                 combatFleeBtn.disabled = true;
-
-                 setTimeout(() => {
-                     monsterAttack();
-                     // Re-enable buttons after monster attack (if combat not over)
-                      if (gameState === 'combat' && player.hp > 0) {
-                         combatAttackBtn.disabled = false;
-                         updateCombatUI(); // Updates potion button state too
-                         combatFleeBtn.disabled = false;
-                     }
-                 }, 700); // 700ms delay
+             if (monsterWillAttack) {
+                 setTimeout(() => monsterAttack(), 700);
              } else {
-                 // If player action failed (no potion, full hp), don't delay monster turn if it gets one
-                 // Currently, failed actions don't grant monster a free turn, might change logic
+                 updateCombatButtonStates(); // Re-enable buttons if player turn repeats
              }
         }
 
          function monsterAttack() {
-             if (gameState !== 'combat' || !monster || monster.hp <= 0 || player.hp <= 0) return;
-
+             if (gameState !== 'combat' || isPlayerTurn || !monster || monster.hp <= 0 || player.hp <= 0) return;
              let monsterDamage = Math.max(0, monster.attack + Math.floor(Math.random() * 3) - 1);
              player.hp = Math.max(0, player.hp - monsterDamage);
              combatLogMessage(`The ${monster.name} attacks you for ${monsterDamage} damage.`, '#ffaaaa');
-
              updateCombatUI();
-             renderGame(); // Update main UI HP bar
+             renderGame();
 
-             // Check Player Status
              if (player.hp <= 0) {
                  combatLogMessage("You have been defeated!", 'red');
                  combatResult.textContent = "Game Over!";
                  combatResult.style.color = 'red';
                  endCombat(false, true); // Defeat, game over
+             } else {
+                  isPlayerTurn = true;
+                  updateCombatButtonStates();
              }
          }
 
 
         function endCombat(victory, gameOver = false) {
-             combatAttackBtn.disabled = true;
-             combatPotionBtn.disabled = true;
-             combatFleeBtn.disabled = true;
-             let combatEndedState = gameOver ? 'gameOver' : 'map';
+             gameState = 'endingCombat';
+             isPlayerTurn = false;
+             updateCombatButtonStates();
+             let nextGameState = gameOver ? 'gameOver' : 'map';
+             let delay = victory ? 1500 : 1000;
 
-            if (victory && monster) {
-                 // Remove monster from map state only on victory
-                 if(setTile(monster.x, monster.y, '.')) { // Replace with floor
-                    // Move player onto the cleared tile AFTER combat ends
-                    player.x = monster.x;
-                    player.y = monster.y;
-                 }
-                 saveGame(); // Save map change and potential XP gain
-            }
+             let monsterJustDefeated = null; // Store ref to defeated monster
+             if (victory && monster) {
+                 monsterJustDefeated = monster;
+             }
 
              setTimeout(() => {
-                 gameState = combatEndedState;
-                 monster = null;
-                 renderGame(); // Hide overlay, update map/player position
-                 if (!gameOver) {
-                    logMessage("Combat finished.", 'gray');
-                 } else {
-                    logMessage("GAME OVER. Refresh page to restart from last save.", 'red', true);
-                     // Could add a restart button or mechanism here
+                 gameState = nextGameState;
+                 isPlayerTurn = true;
+                 monster = null; // Clear current combat monster
+                 combatLog.innerHTML = '';
+                 combatResult.textContent = '';
+
+                 if (victory && monsterJustDefeated) {
+                    // Now safely modify the map and player position
+                    if(setTile(monsterJustDefeated.x, monsterJustDefeated.y, '.')) {
+                        player.x = monsterJustDefeated.x;
+                        player.y = monsterJustDefeated.y;
+                    }
+                    saveGame(); // Save map change and player pos
+                    checkWinCondition(); // Check if this was the last monster
                  }
 
-             }, victory ? 1500 : 1000); // Slightly longer pause on victory
+                 renderGame();
+
+                 if (gameOver) {
+                    logMessage("GAME OVER. Refresh page to restart from last save.", 'red', true);
+                 } else if (gameState !== 'won'){ // Don't show 'combat finished' if game was won
+                    logMessage("Combat finished.", 'gray');
+                 }
+
+             }, delay);
         }
 
 
-        // --- Input Handling ---
         function handleKeyDown(event) {
-            if (gameState === 'map') {
+             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+                 event.preventDefault();
+             }
+
+             if (gameState === 'map') {
                 switch (event.key) {
                     case 'ArrowUp': case 'w': case 'W': movePlayer(0, -1); break;
                     case 'ArrowDown': case 's': case 'S': movePlayer(0, 1); break;
                     case 'ArrowLeft': case 'a': case 'A': movePlayer(-1, 0); break;
                     case 'ArrowRight': case 'd': case 'D': movePlayer(1, 0); break;
-                    // Debug / Cheats (Optional)
-                    // case 'p': player.potions++; renderGame(); break;
-                    // case 'x': gainXP(player.xpToNextLevel - player.xp); break; // Level up
-                    // case 'k': player.hp=1; renderGame(); break; // Near death
                 }
             } else if (gameState === 'combat') {
-                 switch (event.key) {
-                     case '1': case 'A': case 'a': combatAttackBtn.click(); break;
-                     case '2': case 'P': case 'p': combatPotionBtn.click(); break;
-                     case '3': case 'F': case 'f': combatFleeBtn.click(); break;
+                 if (isPlayerTurn) {
+                     switch (event.key) {
+                         case '1': case 'A': case 'a': combatAttackBtn.click(); break;
+                         case '2': case 'P': case 'p': combatPotionBtn.click(); break;
+                         case '3': case 'F': case 'f': combatFleeBtn.click(); break;
+                     }
                  }
-            }
+            } else if (gameState === 'won') {
+                 if (event.key === 'Enter' || event.key === ' ') {
+                     restartButton.click(); // Allow restarting with Enter/Space on win screen
+                 }
+             }
         }
 
-        // --- Fullscreen ---
         const fullscreenButton = document.getElementById('fullscreen-button');
         const fullscreenIcon = fullscreenButton.querySelector('svg path:first-of-type');
         const fullscreenEnterIconPath = "M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zm-3-12V5h3v2h-3z";
         const fullscreenExitIconPath = "M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z";
 
-        function toggleFullScreen() {
-            // Use document.documentElement for requesting fullscreen on the whole page
-            // which often works better with dynamic content scaling than a specific div.
+        function toggleFullScreen() { /* Function unchanged */
             const elementToFullscreen = document.documentElement;
-
             if (!document.fullscreenElement) {
-                 if (elementToFullscreen.requestFullscreen) elementToFullscreen.requestFullscreen();
+                 if (elementToFullscreen.requestFullscreen) elementToFullscreen.requestFullscreen().catch(err => console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`));
                  else if (elementToFullscreen.webkitRequestFullscreen) elementToFullscreen.webkitRequestFullscreen();
                  else if (elementToFullscreen.mozRequestFullScreen) elementToFullscreen.mozRequestFullScreen();
                  else if (elementToFullscreen.msRequestFullscreen) elementToFullscreen.msRequestFullscreen();
@@ -896,7 +1054,7 @@
             }
         }
 
-        function updateFullscreenIcon() {
+        function updateFullscreenIcon() { /* Function unchanged */
              if (document.fullscreenElement) {
                  fullscreenIcon.setAttribute('d', fullscreenExitIconPath);
                  fullscreenButton.title = "Exit Fullscreen";
@@ -906,58 +1064,48 @@
              }
         }
 
-        // --- Event Listeners ---
         document.addEventListener('keydown', handleKeyDown);
         fullscreenButton.addEventListener('click', toggleFullScreen);
         document.addEventListener('fullscreenchange', updateFullscreenIcon);
-        document.addEventListener('webkitfullscreenchange', updateFullscreenIcon); // Safari
-        document.addEventListener('mozfullscreenchange', updateFullscreenIcon); // Firefox
-        document.addEventListener('MSFullscreenChange', updateFullscreenIcon); // IE/Edge
+        document.addEventListener('webkitfullscreenchange', updateFullscreenIcon);
+        document.addEventListener('mozfullscreenchange', updateFullscreenIcon);
+        document.addEventListener('MSFullscreenChange', updateFullscreenIcon);
 
-        // Mobile Controls
         document.getElementById('btn-up').addEventListener('click', () => movePlayer(0, -1));
         document.getElementById('btn-down').addEventListener('click', () => movePlayer(0, 1));
         document.getElementById('btn-left').addEventListener('click', () => movePlayer(-1, 0));
         document.getElementById('btn-right').addEventListener('click', () => movePlayer(1, 0));
 
-        // Combat Buttons
         combatAttackBtn.addEventListener('click', () => playerTurn('attack'));
         combatPotionBtn.addEventListener('click', () => playerTurn('potion'));
         combatFleeBtn.addEventListener('click', () => playerTurn('flee'));
 
-        // Resize Observer for Font Scaling
+        restartButton.addEventListener('click', () => {
+            initializeNewGame();
+            renderGame();
+        });
+
+
          const resizeObserver = new ResizeObserver(entries => {
-             // We are observing the mapDisplay, but font size affects layout,
-             // so we might need a slight delay or ensure it runs after layout stabilizes.
-             // requestAnimationFrame helps wait for the next paint cycle.
              window.requestAnimationFrame(() => {
                  adjustFontSize();
-                 // Re-render might be needed if font size drastically changes other elements
-                 // renderGame(); // Usually not needed unless UI elements depend heavily on map font size
              });
          });
 
-
-        // --- Initial Game Setup ---
         window.onload = () => {
-             messageLog.innerHTML = ''; // Clear "Loading..."
-             if (!loadGame()) {
-                 // If loadGame returned false, it already called initializeNewGame
-                 // Log initial welcome messages here if needed outside initialize
-             }
-             adjustFontSize(); // Initial font size calculation
-             renderGame(); // Initial render
-             resizeObserver.observe(mapDisplay); // Start observing map display for size changes
+             messageLog.innerHTML = '';
+             loadGame();
+             adjustFontSize();
+             renderGame();
+             resizeObserver.observe(gameScreen);
          };
 
-         // Optional: Adjust font on orientation change for mobile specifically
          window.addEventListener('orientationchange', () => {
              setTimeout(() => {
                  adjustFontSize();
-                 // renderGame(); // Might be needed if orientation change affects UI layout significantly
-             }, 100); // Short delay after orientation change
+                 renderGame();
+             }, 150);
          });
-
 
     </script>
 </body>
