@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pyro Knight Dash</title>
     <style>
-        /* --- CSS (No changes) --- */
         body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #1a1a2e; overflow: hidden; color: white; font-family: 'Courier New', Courier, monospace; }
         #game-container { position: relative; width: 800px; height: 600px; overflow: hidden; box-shadow: 0 0 15px rgba(0, 0, 0, 0.7); background-color: #0f0f1a; }
         #gameCanvas { display: block; width: 100%; height: 100%; background-color: #5c94fc; image-rendering: pixelated; image-rendering: crisp-edges; }
@@ -36,7 +35,6 @@
     </div>
 
     <script>
-        // --- DOM Elements ---
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const gameContainer = document.getElementById('game-container');
@@ -47,107 +45,166 @@
         const boostDisplay = document.getElementById('boost-display');
         const audioContainer = document.getElementById('audio-container');
 
-        // --- Game Configuration ---
         const GAME_WIDTH = 800; const GAME_HEIGHT = 600;
         canvas.width = GAME_WIDTH; canvas.height = GAME_HEIGHT;
         const GRAVITY = 0.55; const BASE_PLAYER_SPEED = 4.8; const JUMP_FORCE = 12.5;
         const PLAYER_MAX_HEALTH = 3; const PLAYER_INVULNERABILITY_DURATION = 1200;
         const FIREBALL_SPEED = 8; const BASE_GOBLIN_SPEED = 1.2;
-        // --- CAMERA CONFIGURATION ---
         const CAMERA_PLAYER_SCREEN_X_RATIO = 0.3;
-        // --- End Camera Config ---
+        const CAMERA_SMOOTH_FACTOR = 0.08;
         const OFFSCREEN_BUFFER = 200; const GENERATION_DISTANCE = GAME_WIDTH * 1.5;
         const SPEED_BOOST_MULTIPLIER = 1.5; const SPEED_BOOST_DURATION = 8000;
         const MAGIC_BOLT_SPEED = 5; const ROOK_SPEED = 0.8; const ROOK_HEALTH = 2;
         const PARTICLE_GRAVITY = 0.1;
         const COYOTE_TIME_DURATION = 80;
         const JUMP_BUFFER_DURATION = 100;
+        const ENEMY_HIT_FLASH_DURATION = 100;
 
-        // --- World Gen Tuning (No changes) ---
         const GROUND_Y = GAME_HEIGHT - 60; const GROUND_THICKNESS = 60; const PLATFORM_THICKNESS = 20; const MIN_GROUND_WIDTH = 250; const MAX_GROUND_WIDTH = 550; const MIN_FLOAT_WIDTH = 75; const MAX_FLOAT_WIDTH = 170; const MIN_GAP = 50; const MAX_GAP = 135; const MIN_FLOAT_Y = GAME_HEIGHT - 280; const MAX_FLOAT_Y = GAME_HEIGHT - 90; const MAX_Y_DELTA_UP = 70; const GROUND_PROBABILITY = 0.60; const GOBLIN_SPAWN_CHANCE = 0.35; const ROOK_SPAWN_CHANCE = 0.15; const BISHOP_SPAWN_CHANCE = 0.10; const MIN_ENEMY_SPACING = 200; const MIN_PLATFORM_WIDTH_FOR_ENEMY = 90; const COIN_SPAWN_CHANCE = 0.50; const POWERUP_SPAWN_CHANCE = 0.05; const COIN_VALUE = 5; const ROOK_SCORE = 25; const BISHOP_SCORE = 35;
+        const HIGH_SCORE_KEY = 'pyroKnightDashHighScore';
 
-        // --- Asset Loading & Audio (No changes) ---
-        const assets = { knight:null,goblin:null,fireball:null,coin:null,rook:null,bishop:null,speedBoost:null,magicBolt:null };
-        const assetSources = { knight:'sprites/Knight.png',goblin:'sprites/Goblin.png',fireball:'sprites/sFireball1.png',coin:'sprites/coin.png',rook:'sprites/bRook.png',bishop:'sprites/wBishop.png',speedBoost:'sprites/wQueen.png',magicBolt:'sprites/sFireball1.png' };
+        const assets = { knight:null,goblin:null,fireball:null,coin:null,rook:null,bishop:null,speedBoost:null,magicBolt:null, bgSky: null, bgHills: null, bgGround: null };
+        const assetSources = {
+            knight:'sprites/Knight.png',goblin:'sprites/Goblin.png',fireball:'sprites/sFireball1.png',coin:'sprites/coin.png',
+            rook:'sprites/bRook.png',bishop:'sprites/wBishop.png',speedBoost:'sprites/wQueen.png',magicBolt:'sprites/sFireball1.png',
+            bgSky: 'sprites/background_sky.png', bgHills: 'sprites/background_hills.png', bgGround: 'sprites/background_ground.png'
+        };
         const htmlAudioElements = {};
         const audioSources = { jump: 'audio/jump.wav', shoot: 'audio/shoot.wav', coin: 'audio/coin.wav', powerup: 'audio/powerup.wav', playerHurt: 'audio/player_hurt.wav', playerDie: 'audio/player_die.wav', enemyHit: 'audio/enemy_hit.wav', start: 'audio/start_beep.wav', bgm: 'audio/bgm.mp3' };
         let assetsLoaded = 0; let totalAssetsToLoad = Object.keys(assetSources).length + Object.keys(audioSources).length; let gameReady = false; let loadError = false; let assetsLoadingStarted = false; let userInteracted = false;
         function showMessage(text, isError = false, isPause = false) { messageOverlay.innerHTML = text; messageOverlay.classList.remove('hidden', 'error', 'paused'); if (isError) messageOverlay.classList.add('error'); else if (isPause) messageOverlay.classList.add('paused'); messageOverlay.style.cursor = (gameState === 'ready' || gameState === 'gameOver') ? 'pointer' : 'default'; }
         function hideMessage() { messageOverlay.classList.add('hidden'); }
-        function assetLoadedCallback(assetName, isAudio = false) { if (loadError) return; assetsLoaded++; if (assetsLoaded >= totalAssetsToLoad) { console.log("All assets loaded."); gameReady = true; gameState = 'ready'; showMessage("Press Any Key or Click/Tap to Start"); } else { if (gameState === 'loading') { showMessage(`Loading assets... (${assetsLoaded}/${totalAssetsToLoad})`); } } }
+        function assetLoadedCallback(assetName, isAudio = false) { if (loadError) return; assetsLoaded++; if (assetsLoaded >= totalAssetsToLoad) { console.log("All assets loaded."); gameReady = true; gameState = 'ready'; showMessage(`High Score: ${highScore}<br>Press Any Key or Click/Tap to Start`); } else { if (gameState === 'loading') { showMessage(`Loading assets... (${assetsLoaded}/${totalAssetsToLoad})`); } } }
         function assetErrorCallback(assetName, event, isAudio = false) { if (loadError && messageOverlay.classList.contains('error')) return; const type = isAudio ? 'audio' : 'image'; console.error(`!!! Error loading ${type}: ${assetName}`, event); let errorMsg = `ERROR LOADING ${type.toUpperCase()}: "${assetName}"<br>Check console (F12) & file path/name.<br>Make sure file exists and path is correct.<br>Refresh after fixing.`; showMessage(errorMsg, true); loadError = true; assetsLoaded = -9999; }
-        function loadAssets() { if (assetsLoadingStarted || loadError) return; assetsLoadingStarted = true; console.log("Starting asset loading..."); loadError = false; assetsLoaded = 0; totalAssetsToLoad = Object.keys(assetSources).length + Object.keys(audioSources).length; showMessage(`Loading assets... (0/${totalAssetsToLoad})`); let imagesToLoad = Object.keys(assetSources).length; if (imagesToLoad === 0) console.log("No images to load."); for (const key in assetSources) { assets[key] = new Image(); assets[key].onload = () => assetLoadedCallback(key, false); assets[key].onerror = (e) => assetErrorCallback(key, e, false); assets[key].src = assetSources[key]; } let audioToLoad = Object.keys(audioSources).length; if (audioToLoad === 0) console.log("No audio files defined."); for (const key in audioSources) { const audioElement = new Audio(); audioElement.id = `audio_${key}`; audioElement.preload = 'auto'; audioElement.addEventListener('canplaythrough', () => assetLoadedCallback(key, true), { once: true }); audioElement.addEventListener('error', (e) => assetErrorCallback(key, e, true), { once: true }); audioElement.src = audioSources[key]; htmlAudioElements[key] = audioElement; audioContainer.appendChild(audioElement); } if (assetsLoaded >= totalAssetsToLoad) { console.log("Asset loading effectively complete."); gameReady = true; gameState = 'ready'; showMessage("Press Any Key or Click/Tap to Start"); } }
-        function playHtmlSound(key, volume = 1.0) { if (!userInteracted) return; const audioElement = htmlAudioElements[key]; if (audioElement) { audioElement.volume = volume; audioElement.currentTime = 0; const playPromise = audioElement.play(); if (playPromise !== undefined) { playPromise.catch(error => { console.warn(`Audio play failed for ${key}:`, error); }); } } else { console.warn(`Audio element not found for key: ${key}`); } }
-        function loopHtmlSound(key, volume = 1.0) { if (!userInteracted) return; const audioElement = htmlAudioElements[key]; if (audioElement) { audioElement.volume = volume; audioElement.loop = true; const playPromise = audioElement.play(); if (playPromise !== undefined) { playPromise.catch(error => { console.warn(`Audio loop failed for ${key}:`, error); }); } } else { console.warn(`Audio element not found for key: ${key}`); } }
+        function loadAssets() { if (assetsLoadingStarted || loadError) return; assetsLoadingStarted = true; loadError = false; assetsLoaded = 0; totalAssetsToLoad = Object.keys(assetSources).length + Object.keys(audioSources).length; showMessage(`Loading assets... (0/${totalAssetsToLoad})`); let imagesToLoad = Object.keys(assetSources).length; if (imagesToLoad === 0) console.log("No images to load."); for (const key in assetSources) { assets[key] = new Image(); assets[key].onload = () => assetLoadedCallback(key, false); assets[key].onerror = (e) => assetErrorCallback(key, e, false); assets[key].src = assetSources[key]; } let audioToLoad = Object.keys(audioSources).length; if (audioToLoad === 0) console.log("No audio files defined."); for (const key in audioSources) { const audioElement = new Audio(); audioElement.id = `audio_${key}`; audioElement.preload = 'auto'; audioElement.addEventListener('canplaythrough', () => assetLoadedCallback(key, true), { once: true }); audioElement.addEventListener('error', (e) => assetErrorCallback(key, e, true), { once: true }); audioElement.src = audioSources[key]; htmlAudioElements[key] = audioElement; audioContainer.appendChild(audioElement); } if (assetsLoaded >= totalAssetsToLoad && imagesToLoad > 0) { gameReady = true; gameState = 'ready'; showMessage(`High Score: ${highScore}<br>Press Any Key or Click/Tap to Start`); } }
+        function playHtmlSound(key, volume = 1.0) { if (!userInteracted) return; const audioElement = htmlAudioElements[key]; if (audioElement) { audioElement.volume = volume; audioElement.currentTime = 0; const playPromise = audioElement.play(); if (playPromise !== undefined) { playPromise.catch(error => { }); } } }
+        function loopHtmlSound(key, volume = 1.0) { if (!userInteracted) return; const audioElement = htmlAudioElements[key]; if (audioElement) { audioElement.volume = volume; audioElement.loop = true; const playPromise = audioElement.play(); if (playPromise !== undefined) { playPromise.catch(error => { }); } } }
         function stopHtmlSound(key) { const audioElement = htmlAudioElements[key]; if (audioElement) { audioElement.pause(); audioElement.currentTime = 0; if(key === 'bgm') audioElement.loop = false; } }
-        function handleFirstInteraction() { if (!userInteracted) { console.log("User interaction detected. Enabling audio playback."); userInteracted = true; } }
+        function handleFirstInteraction() { if (!userInteracted) { userInteracted = true; } }
 
-        // --- Game State ---
         let keys = { left: false, right: false, up: false, shoot: false }; let player = null; let goblins = []; let rooks = []; let bishops = []; let fireballs = []; let magicBolts = []; let platforms = []; let coins = []; let powerUps = []; let backgroundElements = []; let particles = []; let lastTime = 0; let score = 0; let distanceScore = 0; let cameraX = 0; let cameraY = 0; let lastPlatformX = 0; let lastEnemySpawnX = 0; let gameState = 'loading'; let lastTimestamp = 0;
-        let gameOverMessageTimeoutId = null; // <<< FIX: Variable to store the game over message timeout ID
+        let gameOverMessageTimeoutId = null;
+        let lastDisplayedScore = -1;
+        let lastDisplayedHealth = -1;
+        let highScore = 0;
 
-        // --- Classes ---
+        function loadHighScore() { const savedScore = localStorage.getItem(HIGH_SCORE_KEY); highScore = savedScore ? parseInt(savedScore, 10) : 0; if (isNaN(highScore)) highScore = 0; console.log(`Loaded High Score: ${highScore}`); }
+        function saveHighScore(newScore) { if (newScore > highScore) { highScore = newScore; localStorage.setItem(HIGH_SCORE_KEY, highScore.toString()); console.log(`New High Score Saved: ${highScore}`); return true; } return false; }
+
         class GameObject {
             constructor(x,y,w,h,k=null){this.x=x;this.y=y;this.width=w;this.height=h;this.spriteKey=k;this.active=true;this.color=null;}
             get sprite(){return this.spriteKey?assets[this.spriteKey]:null;}
-            draw(ctx,cX,cY){if(!this.active)return;const i=this.sprite;const dX=Math.round(this.x-cX);const dY=Math.round(this.y-cY);if(dX+this.width<-OFFSCREEN_BUFFER||dX>GAME_WIDTH+OFFSCREEN_BUFFER||dY+this.height<-OFFSCREEN_BUFFER||dY>GAME_HEIGHT+OFFSCREEN_BUFFER)return;if(i){ctx.drawImage(i,dX,dY,this.width,this.height);}else if(this.color){ctx.fillStyle=this.color;ctx.fillRect(dX,dY,this.width,this.height);}else{ctx.fillStyle='magenta';ctx.fillRect(dX,dY,this.width,this.height);}}
+            draw(ctx,cX,cY){if(!this.active)return;const i=this.sprite;const dX=Math.round(this.x-cX);const dY=Math.round(this.y-cY);if(dX+this.width<-OFFSCREEN_BUFFER||dX>GAME_WIDTH+OFFSCREEN_BUFFER||dY+this.height<-OFFSCREEN_BUFFER||dY>GAME_HEIGHT+OFFSCREEN_BUFFER)return;if(i && i.complete && i.naturalWidth > 0){ctx.drawImage(i,dX,dY,this.width,this.height);}else if(this.color){ctx.fillStyle=this.color;ctx.fillRect(dX,dY,this.width,this.height);}else{ctx.fillStyle='magenta';ctx.fillRect(dX,dY,this.width,this.height);}}
             collidesWith(o){return this.active&&o.active&&this.x<o.x+o.width&&this.x+this.width>o.x&&this.y<o.y+o.height&&this.y+this.height>o.y;}
-            update(dT,p){ /* Default update does nothing */ }
-        } // <<< --- FIX: Added missing closing brace --- <<<
+            update(dT,p){}
+        }
 
         class Player extends GameObject{
             constructor(x,y){super(x,y,50,60,'knight');this.vx=0;this.vy=0;this.isOnGround=false;this.wasOnGround=false; this.canJump=true;this.shootCooldown=0;this.shootDelay=25;this.facingRight=true;this.health=PLAYER_MAX_HEALTH;this.isInvulnerable=false;this.invulnerabilityTimer=0;this.flashState=false;this.isBoosted=false;this.boostTimer=0; this.coyoteTimeCounter = 0; this.jumpBufferCounter = 0;}
-            update(dT, p) { if (!this.active) return; const currentSpeed = this.isBoosted ? BASE_PLAYER_SPEED * SPEED_BOOST_MULTIPLIER : BASE_PLAYER_SPEED; const currentShootDelay = this.isBoosted ? Math.round(this.shootDelay / SPEED_BOOST_MULTIPLIER) : this.shootDelay; if (this.isInvulnerable) { this.invulnerabilityTimer -= dT; if (this.invulnerabilityTimer <= 0) this.isInvulnerable = false; this.flashState = !this.flashState; } else { this.flashState = false; } if (this.isBoosted) { this.boostTimer -= dT; if (this.boostTimer <= 0) { this.isBoosted = false; boostDisplay.style.display = 'none'; } } if (this.shootCooldown > 0) this.shootCooldown -= (dT / 16.67); this.vx = 0; if (keys.left) { this.vx = -currentSpeed; this.facingRight = false; } if (keys.right) { this.vx = currentSpeed; this.facingRight = true; } let nX = this.x + this.vx; let tempHorizRect = { x: nX, y: this.y, width: this.width, height: this.height, active: true }; for (const plat of p) { if (plat.collidesWith(tempHorizRect)) { if (this.vx > 0) nX = plat.x - this.width; else if (this.vx < 0) nX = plat.x + plat.width; this.vx = 0; break; } } this.x = nX; this.wasOnGround = this.isOnGround; if (this.isOnGround) { this.coyoteTimeCounter = COYOTE_TIME_DURATION; } else { if (this.coyoteTimeCounter > 0) this.coyoteTimeCounter -= dT; } if (keys.up) { this.jumpBufferCounter = JUMP_BUFFER_DURATION; keys.up = false; } else { if (this.jumpBufferCounter > 0) this.jumpBufferCounter -= dT; } if (this.jumpBufferCounter > 0 && (this.isOnGround || this.coyoteTimeCounter > 0)) { this.vy = -JUMP_FORCE; this.isOnGround = false; this.coyoteTimeCounter = 0; this.jumpBufferCounter = 0; playHtmlSound('jump'); } if (keys.shoot && this.shootCooldown <= 0) { this.shoot(); this.shootCooldown = currentShootDelay; keys.shoot = false; } this.vy += GRAVITY; this.isOnGround = false; let nY = this.y + this.vy; let tempVertRect = { x: this.x, y: nY, width: this.width, height: this.height, active: true }; for (const plat of p) { if (plat.collidesWith(tempVertRect)) { if (this.vy > 0 && this.y + this.height <= plat.y + 1) { nY = plat.y - this.height; this.vy = 0; this.isOnGround = true; break; } else if (this.vy < 0 && this.y >= plat.y + plat.height - 1) { nY = plat.y + plat.height; this.vy = 0; } else if (this.vy > 0 && (nX + this.width > plat.x && nX < plat.x + plat.width)) { if (tempVertRect.y + tempVertRect.height > plat.y) { nY = plat.y - this.height; this.vy = 0; this.isOnGround = true; break; } } } } this.y = nY; if (this.isOnGround && !this.wasOnGround && this.vy >= 0) { spawnDustParticles(this.x + this.width / 2, this.y + this.height, 5); } if (this.y > GAME_HEIGHT + 150) { this.takeDamage(this.health); }}
+            update(dT, p) { if (!this.active) return; const currentSpeed = this.isBoosted ? BASE_PLAYER_SPEED * SPEED_BOOST_MULTIPLIER : BASE_PLAYER_SPEED; const currentShootDelay = this.isBoosted ? Math.round(this.shootDelay / SPEED_BOOST_MULTIPLIER) : this.shootDelay; if (this.isInvulnerable) { this.invulnerabilityTimer -= dT; if (this.invulnerabilityTimer <= 0) this.isInvulnerable = false; this.flashState = !this.flashState; } else { this.flashState = false; } if (this.isBoosted) { this.boostTimer -= dT; if (this.boostTimer <= 0) { this.isBoosted = false; boostDisplay.style.display = 'none'; } } if (this.shootCooldown > 0) this.shootCooldown -= (dT / 16.67); this.vx = 0; if (keys.left) { this.vx = -currentSpeed; this.facingRight = false; } if (keys.right) { this.vx = currentSpeed; this.facingRight = true; } let nX = this.x + this.vx; let tempHorizRect = { x: nX, y: this.y, width: this.width, height: this.height, active: true }; for (let i = 0; i < p.length; i++) { const plat = p[i]; if (plat.collidesWith(tempHorizRect)) { if (this.vx > 0) nX = plat.x - this.width; else if (this.vx < 0) nX = plat.x + plat.width; this.vx = 0; break; } } this.x = nX; this.wasOnGround = this.isOnGround; if (this.isOnGround) { this.coyoteTimeCounter = COYOTE_TIME_DURATION; } else { if (this.coyoteTimeCounter > 0) this.coyoteTimeCounter -= dT; } if (keys.up) { this.jumpBufferCounter = JUMP_BUFFER_DURATION; keys.up = false; } else { if (this.jumpBufferCounter > 0) this.jumpBufferCounter -= dT; } if (this.jumpBufferCounter > 0 && (this.isOnGround || this.coyoteTimeCounter > 0)) { this.vy = -JUMP_FORCE; this.isOnGround = false; this.coyoteTimeCounter = 0; this.jumpBufferCounter = 0; playHtmlSound('jump'); } if (keys.shoot && this.shootCooldown <= 0) { this.shoot(); this.shootCooldown = currentShootDelay; keys.shoot = false; } this.vy += GRAVITY; this.isOnGround = false; let nY = this.y + this.vy; let tempVertRect = { x: this.x, y: nY, width: this.width, height: this.height, active: true }; for (let i = 0; i < p.length; i++) { const plat = p[i]; if (plat.collidesWith(tempVertRect)) { if (this.vy > 0 && this.y + this.height <= plat.y + 1) { nY = plat.y - this.height; this.vy = 0; this.isOnGround = true; break; } else if (this.vy < 0 && this.y >= plat.y + plat.height - 1) { nY = plat.y + plat.height; this.vy = 0; } else if (this.vy > 0 && (this.x + this.width > plat.x && this.x < plat.x + plat.width)) { if (tempVertRect.y + tempVertRect.height > plat.y) { nY = plat.y - this.height; this.vy = 0; this.isOnGround = true; break; } } } } this.y = nY; if (this.isOnGround && !this.wasOnGround && this.vy >= 0) { spawnDustParticles(this.x + this.width / 2, this.y + this.height, 5); } if (this.y > GAME_HEIGHT + 150) { this.takeDamage(this.health); }}
             shoot(){let fX=this.facingRight?this.x+this.width:this.x-20;let fY=this.y+this.height/2-10;let vX=this.facingRight?FIREBALL_SPEED:-FIREBALL_SPEED;fireballs.push(new Fireball(fX,fY,vX)); playHtmlSound('shoot'); }
             takeDamage(a=1){if(this.isInvulnerable||!this.active)return;this.health-=a;updateHealthUI(this.health); playHtmlSound('playerHurt'); if(this.health<=0){this.die();}else{this.isInvulnerable=true;this.invulnerabilityTimer=PLAYER_INVULNERABILITY_DURATION;this.flashState=true;}}
             activateBoost(){if(!this.active)return;this.isBoosted=true;this.boostTimer=SPEED_BOOST_DURATION;boostDisplay.style.display='block'; playHtmlSound('powerup'); }
-            draw(ctx,cX,cY){if(!this.active)return;const dX=Math.round(this.x-cX);const dY=Math.round(this.y-cY);if(dX+this.width<-OFFSCREEN_BUFFER||dX>GAME_WIDTH+OFFSCREEN_BUFFER||dY+this.height<-OFFSCREEN_BUFFER||dY>GAME_HEIGHT+OFFSCREEN_BUFFER)return;ctx.save();const i=this.sprite;if(!i){ctx.fillStyle='magenta';ctx.fillRect(dX,dY,this.width,this.height);ctx.restore();return;} if(this.isInvulnerable&&this.flashState)ctx.globalAlpha=0.5; if(this.isBoosted)ctx.filter='hue-rotate(90deg) brightness(1.2)'; if(!this.facingRight){ctx.translate(dX+this.width,dY);ctx.scale(-1,1);ctx.drawImage(i,0,0,this.width,this.height);}else{ctx.translate(dX,dY);ctx.drawImage(i,0,0,this.width,this.height);}ctx.restore();}
+            draw(ctx,cX,cY){if(!this.active)return;const dX=Math.round(this.x-cX);const dY=Math.round(this.y-cY);if(dX+this.width<-OFFSCREEN_BUFFER||dX>GAME_WIDTH+OFFSCREEN_BUFFER||dY+this.height<-OFFSCREEN_BUFFER||dY>GAME_HEIGHT+OFFSCREEN_BUFFER)return;ctx.save();const i=this.sprite;if(!i || !i.complete || i.naturalWidth === 0){ctx.fillStyle='magenta';ctx.fillRect(dX,dY,this.width,this.height);ctx.restore();return;} if(this.isInvulnerable&&this.flashState)ctx.globalAlpha=0.5; if(this.isBoosted)ctx.filter='hue-rotate(90deg) brightness(1.2)'; if(!this.facingRight){ctx.translate(dX+this.width,dY);ctx.scale(-1,1);ctx.drawImage(i,0,0,this.width,this.height);}else{ctx.translate(dX,dY);ctx.drawImage(i,0,0,this.width,this.height);}ctx.restore();}
             die(){
-                if(!this.active)return;
-                this.active=false;
-                gameState='gameOver';
-                stopHtmlSound('bgm');
-                playHtmlSound('playerDie');
-                spawnPlayerDeathParticles(this.x + this.width/2, this.y + this.height/2);
-
-                // <<< FIX: Clear any existing timeout first (defensive)
-                if (gameOverMessageTimeoutId) {
-                    clearTimeout(gameOverMessageTimeoutId);
-                }
-                // <<< FIX: Store the timeout ID and check state before showing message
+                if(!this.active)return; this.active=false; gameState='gameOver'; stopHtmlSound('bgm'); playHtmlSound('playerDie'); spawnPlayerDeathParticles(this.x + this.width/2, this.y + this.height/2);
+                const finalScore = score + distanceScore; const newHighScore = saveHighScore(finalScore);
+                if (gameOverMessageTimeoutId) clearTimeout(gameOverMessageTimeoutId);
                 gameOverMessageTimeoutId = setTimeout(()=>{
-                    if (gameState === 'gameOver') { // Only show if we haven't already restarted
-                         showMessage(`Game Over!<br>Final Score: ${score+distanceScore}<br>Tap/Click/Key to Restart`);
+                    if (gameState === 'gameOver') {
+                         let message = `Game Over!<br>Final Score: ${finalScore}<br>`;
+                         message += newHighScore ? `NEW High Score: ${highScore}!<br>` : `High Score: ${highScore}<br>`;
+                         message += `Tap/Click/Key to Restart`; showMessage(message);
                     }
-                    gameOverMessageTimeoutId = null; // Clear the ID after execution/cancellation
+                    gameOverMessageTimeoutId = null;
                 }, 800);
             }
         }
-        // --- Other Classes (Goblin, Rook, Bishop, Fireball, MagicBolt, Coin, SpeedBoost, BackgroundElement, Platform, Particle - No changes required here) ---
-        class Goblin extends GameObject {
+        class Enemy extends GameObject {
+             constructor(x, y, w, h, k) { super(x, y, w, h, k); this.isHit = false; this.hitTimer = 0; }
+             update(dT, p) { if (this.hitTimer > 0) { this.hitTimer -= dT; if (this.hitTimer <= 0) this.isHit = false; } }
+             triggerHitFlash() { this.isHit = true; this.hitTimer = ENEMY_HIT_FLASH_DURATION; }
+             baseDraw(ctx, cX, cY, defaultColor, facingRight) {
+                if(!this.active)return;const dX=Math.round(this.x-cX);const dY=Math.round(this.y-cY);if(dX+this.width<-OFFSCREEN_BUFFER||dX>GAME_WIDTH+OFFSCREEN_BUFFER||dY+this.height<-OFFSCREEN_BUFFER||dY>GAME_HEIGHT+100)return;ctx.save();const i=this.sprite; let drawImage = i && i.complete && i.naturalWidth > 0;
+                if (this.isHit) ctx.filter = 'brightness(2.5) grayscale(0.5)';
+                if(!facingRight){ ctx.translate(dX+this.width,dY);ctx.scale(-1,1); if (drawImage) ctx.drawImage(i,0,0,this.width,this.height); else { ctx.fillStyle = defaultColor; ctx.fillRect(0,0,this.width,this.height); }
+                }else{ ctx.translate(dX,dY); if (drawImage) ctx.drawImage(i,0,0,this.width,this.height); else { ctx.fillStyle = defaultColor; ctx.fillRect(0,0,this.width,this.height); } }
+                ctx.restore();
+             }
+             hitByFireball() { if(!this.active) return false; playHtmlSound('enemyHit'); spawnHitParticles(this.x+this.width/2, this.y+this.height/2); this.triggerHitFlash(); return true; }
+        }
+        class Goblin extends Enemy {
              constructor(x, y, patrolWidth = 50) { super(x, y, 45, 55, 'goblin'); this.vx = BASE_GOBLIN_SPEED * (Math.random() < 0.5 ? 1 : -1); this.vy = 0; this.isOnGround = false; this.patrolStartX = x; this.patrolEndX = x + patrolWidth; this.facingRight = this.vx > 0; }
-             update(dT, p) { if (!this.active) return; this.vy += GRAVITY * 0.8; this.isOnGround = false; let nY = this.y + this.vy; let tempVertRect = { x: this.x, y: nY, width: this.width, height: this.height, active: true }; let platformBelow = null; for (const plat of p) { if (plat.collidesWith(tempVertRect)) { if (this.vy > 0 && this.y + this.height <= plat.y + 1) { nY = plat.y - this.height; this.vy = 0; this.isOnGround = true; platformBelow = plat; break; } else if (this.vy < 0 && this.y >= plat.y + plat.height -1) { nY = plat.y + plat.height; this.vy = 0; } } } this.y = nY; if (this.isOnGround && platformBelow) { let nX = this.x + this.vx; const currentPlatformStartX = platformBelow.x; const currentPlatformEndX = platformBelow.x + platformBelow.width; if ((this.vx > 0 && nX + this.width > currentPlatformEndX) || (this.vx < 0 && nX < currentPlatformStartX)) { this.vx *= -1; nX = this.x; this.facingRight = this.vx > 0; } let tempHorizRect = { x: nX, y: this.y, width: this.width, height: this.height, active: true }; for (const plat of p) { if(plat === platformBelow) continue; if (plat.collidesWith(tempHorizRect)) { if (this.vx > 0) nX = plat.x - this.width; else if (this.vx < 0) nX = plat.x + plat.width; this.vx *= -1; this.facingRight = this.vx > 0; break; } } this.x = nX; } if (this.y > GAME_HEIGHT + 100) this.active = false; }
-             draw(ctx,cX,cY){if(!this.active)return;const dX=Math.round(this.x-cX);const dY=Math.round(this.y-cY);if(dX+this.width<-OFFSCREEN_BUFFER||dX>GAME_WIDTH+OFFSCREEN_BUFFER||dY+this.height<-OFFSCREEN_BUFFER||dY>GAME_HEIGHT+100)return;ctx.save();const i=this.sprite;if(!i){ctx.fillStyle='lime';ctx.fillRect(dX,dY,this.width,this.height);ctx.restore();return;}if(!this.facingRight){ctx.translate(dX+this.width,dY);ctx.scale(-1,1);ctx.drawImage(i,0,0,this.width,this.height);}else{ctx.translate(dX,dY);ctx.drawImage(i,0,0,this.width,this.height);}ctx.restore();}
-             hitByFireball(){if(!this.active) return; this.active=false;score+=10; playHtmlSound('enemyHit'); spawnHitParticles(this.x+this.width/2, this.y+this.height/2);}
+             update(dT, p) { if (!this.active) return; super.update(dT); this.vy += GRAVITY * 0.8; this.isOnGround = false; let nY = this.y + this.vy; let tempVertRect = { x: this.x, y: nY, width: this.width, height: this.height, active: true }; let platformBelow = null; for (let i = 0; i < p.length; i++) { const plat = p[i]; if (plat.collidesWith(tempVertRect)) { if (this.vy > 0 && this.y + this.height <= plat.y + 1) { nY = plat.y - this.height; this.vy = 0; this.isOnGround = true; platformBelow = plat; break; } else if (this.vy < 0 && this.y >= plat.y + plat.height -1) { nY = plat.y + plat.height; this.vy = 0; } } } this.y = nY; if (this.isOnGround && platformBelow) { let nX = this.x + this.vx; const currentPlatformStartX = platformBelow.x; const currentPlatformEndX = platformBelow.x + platformBelow.width; if ((this.vx > 0 && nX + this.width > currentPlatformEndX) || (this.vx < 0 && nX < currentPlatformStartX)) { this.vx *= -1; nX = this.x; this.facingRight = this.vx > 0; } let tempHorizRect = { x: nX, y: this.y, width: this.width, height: this.height, active: true }; for (let i = 0; i < p.length; i++) { const plat = p[i]; if(plat === platformBelow) continue; if (plat.collidesWith(tempHorizRect)) { if (this.vx > 0) nX = plat.x - this.width; else if (this.vx < 0) nX = plat.x + plat.width; this.vx *= -1; this.facingRight = this.vx > 0; break; } } this.x = nX; } if (this.y > GAME_HEIGHT + 100) this.active = false; }
+             draw(ctx,cX,cY){ super.baseDraw(ctx, cX, cY, 'lime', this.facingRight); }
+             hitByFireball(){ if(super.hitByFireball()) { this.active=false; score+=10; } }
         }
-        class Rook extends GameObject {
+        class Rook extends Enemy {
             constructor(x, y) { super(x, y, 50, 70, 'rook'); this.vx = ROOK_SPEED * (Math.random() < 0.5 ? 1 : -1); this.vy = 0; this.health = ROOK_HEALTH; this.isOnGround = false; this.facingRight = this.vx > 0; }
-            update(dT, p) { if (!this.active) return; this.vy += GRAVITY; this.isOnGround = false; let nY = this.y + this.vy; let tempVertRect = { x: this.x, y: nY, width: this.width, height: this.height, active: true }; let platformBelow = null; for (const plat of p) { if (plat.collidesWith(tempVertRect)) { if (this.vy > 0 && this.y + this.height <= plat.y + 1) { nY = plat.y - this.height; this.vy = 0; this.isOnGround = true; platformBelow = plat; break; } else if (this.vy < 0 && this.y >= plat.y + plat.height - 1) { nY = plat.y + plat.height; this.vy = 0; } } } this.y = nY; if (this.isOnGround && platformBelow) { let nX = this.x + this.vx; const currentPlatformStartX = platformBelow.x; const currentPlatformEndX = platformBelow.x + platformBelow.width; if ((this.vx > 0 && nX + this.width > currentPlatformEndX) || (this.vx < 0 && nX < currentPlatformStartX)) { this.vx *= -1; nX = this.x; this.facingRight = this.vx > 0; } let tempHorizRect = { x: nX, y: this.y, width: this.width, height: this.height, active: true }; for (const plat of p) { if(plat === platformBelow) continue; if (plat.collidesWith(tempHorizRect)) { if (this.vx > 0) nX = plat.x - this.width; else if (this.vx < 0) nX = plat.x + plat.width; this.vx *= -1; this.facingRight = this.vx > 0; break; } } this.x = nX; } if (this.y > GAME_HEIGHT + 100) this.active = false; }
-            hitByFireball() { if(!this.active) return; this.health--; playHtmlSound('enemyHit'); spawnHitParticles(this.x+this.width/2, this.y+this.height/2); if (this.health <= 0) { this.active = false; score += ROOK_SCORE; } }
-            draw(ctx,cX,cY){if(!this.active)return;const dX=Math.round(this.x-cX);const dY=Math.round(this.y-cY);if(dX+this.width<-OFFSCREEN_BUFFER||dX>GAME_WIDTH+OFFSCREEN_BUFFER||dY+this.height<-OFFSCREEN_BUFFER||dY>GAME_HEIGHT+100)return;ctx.save();const i=this.sprite;if(!i){ctx.fillStyle='#666';ctx.fillRect(dX,dY,this.width,this.height);ctx.restore();return;}if(!this.facingRight){ctx.translate(dX+this.width,dY);ctx.scale(-1,1);ctx.drawImage(i,0,0,this.width,this.height);}else{ctx.translate(dX,dY);ctx.drawImage(i,0,0,this.width,this.height);}ctx.restore();}
+            update(dT, p) { if (!this.active) return; super.update(dT); this.vy += GRAVITY; this.isOnGround = false; let nY = this.y + this.vy; let tempVertRect = { x: this.x, y: nY, width: this.width, height: this.height, active: true }; let platformBelow = null; for (let i = 0; i < p.length; i++) { const plat = p[i]; if (plat.collidesWith(tempVertRect)) { if (this.vy > 0 && this.y + this.height <= plat.y + 1) { nY = plat.y - this.height; this.vy = 0; this.isOnGround = true; platformBelow = plat; break; } else if (this.vy < 0 && this.y >= plat.y + plat.height - 1) { nY = plat.y + plat.height; this.vy = 0; } } } this.y = nY; if (this.isOnGround && platformBelow) { let nX = this.x + this.vx; const currentPlatformStartX = platformBelow.x; const currentPlatformEndX = platformBelow.x + platformBelow.width; if ((this.vx > 0 && nX + this.width > currentPlatformEndX) || (this.vx < 0 && nX < currentPlatformStartX)) { this.vx *= -1; nX = this.x; this.facingRight = this.vx > 0; } let tempHorizRect = { x: nX, y: this.y, width: this.width, height: this.height, active: true }; for (let i = 0; i < p.length; i++) { const plat = p[i]; if(plat === platformBelow) continue; if (plat.collidesWith(tempHorizRect)) { if (this.vx > 0) nX = plat.x - this.width; else if (this.vx < 0) nX = plat.x + plat.width; this.vx *= -1; this.facingRight = this.vx > 0; break; } } this.x = nX; } if (this.y > GAME_HEIGHT + 100) this.active = false; }
+            draw(ctx,cX,cY){ super.baseDraw(ctx, cX, cY, '#666', this.facingRight); }
+            hitByFireball() { if(super.hitByFireball()) { this.health--; if (this.health <= 0) { this.active = false; score += ROOK_SCORE; } } }
         }
-        class Bishop extends GameObject {
+        class Bishop extends Enemy {
              constructor(x, y) { super(x, y, 55, 75, 'bishop'); this.shootCooldown = 180 + Math.random() * 120; this.shootTimer = this.shootCooldown * Math.random(); this.facingRight = false; this.vy = 0; this.isOnGround = false; }
-             update(dT, p) { if (!this.active || !player) return; this.vy += GRAVITY; this.isOnGround = false; let nY = this.y + this.vy; let tempVertRect = { x: this.x, y: nY, width: this.width, height: this.height, active: true }; for (const plat of p) { if (plat.collidesWith(tempVertRect)) { if (this.vy > 0 && this.y + this.height <= plat.y + 1) { nY = plat.y - this.height; this.vy = 0; this.isOnGround = true; break; } else if (this.vy < 0 && this.y >= plat.y + plat.height - 1) { nY = plat.y + plat.height; this.vy = 0; } } } this.y = nY; if(this.isOnGround) { this.facingRight = (player.x > this.x); this.shootTimer -= (dT / 16.67); if (this.shootTimer <= 0) { const verticalDist = Math.abs((player.y + player.height / 2) - (this.y + this.height / 2)); if (verticalDist < GAME_HEIGHT * 0.6) { this.shoot(); this.shootTimer = this.shootCooldown; } else { this.shootTimer = this.shootCooldown * 0.3; } } } else { if(this.shootTimer < this.shootCooldown * 0.5) { this.shootTimer = this.shootCooldown * 0.5; } } if (this.y > GAME_HEIGHT + 100) this.active = false; }
+             update(dT, p) { if (!this.active || !player) return; super.update(dT); this.vy += GRAVITY; this.isOnGround = false; let nY = this.y + this.vy; let tempVertRect = { x: this.x, y: nY, width: this.width, height: this.height, active: true }; for (let i = 0; i < p.length; i++) { const plat = p[i]; if (plat.collidesWith(tempVertRect)) { if (this.vy > 0 && this.y + this.height <= plat.y + 1) { nY = plat.y - this.height; this.vy = 0; this.isOnGround = true; break; } else if (this.vy < 0 && this.y >= plat.y + plat.height - 1) { nY = plat.y + plat.height; this.vy = 0; } } } this.y = nY; if(this.isOnGround && player.active) { this.facingRight = (player.x > this.x); this.shootTimer -= (dT / 16.67); if (this.shootTimer <= 0) { const verticalDist = Math.abs((player.y + player.height / 2) - (this.y + this.height / 2)); if (verticalDist < GAME_HEIGHT * 0.6) { this.shoot(); this.shootTimer = this.shootCooldown; } else { this.shootTimer = this.shootCooldown * 0.3; } } } else { if(this.shootTimer < this.shootCooldown * 0.5) { this.shootTimer = this.shootCooldown * 0.5; } } if (this.y > GAME_HEIGHT + 100) this.active = false; }
              shoot() { let bX = this.facingRight ? this.x + this.width : this.x - 15; let bY = this.y + this.height * 0.4; let bVX = this.facingRight ? MAGIC_BOLT_SPEED : -MAGIC_BOLT_SPEED; magicBolts.push(new MagicBolt(bX, bY, bVX)); }
-             hitByFireball(){if(!this.active) return; this.active=false;score+=BISHOP_SCORE; playHtmlSound('enemyHit'); spawnHitParticles(this.x+this.width/2, this.y+this.height/2);}
-             draw(ctx,cX,cY){if(!this.active)return;const dX=Math.round(this.x-cX);const dY=Math.round(this.y-cY);if(dX+this.width<-OFFSCREEN_BUFFER||dX>GAME_WIDTH+OFFSCREEN_BUFFER||dY+this.height<-OFFSCREEN_BUFFER||dY>GAME_HEIGHT+100)return;ctx.save();const i=this.sprite;if(!i){ctx.fillStyle='#9370DB';ctx.fillRect(dX,dY,this.width,this.height);ctx.restore();return;}if(!this.facingRight){ctx.translate(dX+this.width,dY);ctx.scale(-1,1);ctx.drawImage(i,0,0,this.width,this.height);}else{ctx.translate(dX,dY);ctx.drawImage(i,0,0,this.width,this.height);}ctx.restore();}
+             draw(ctx,cX,cY){ super.baseDraw(ctx, cX, cY, '#9370DB', this.facingRight); }
+             hitByFireball(){ if(super.hitByFireball()){ this.active=false;score+=BISHOP_SCORE; } }
         }
         class Fireball extends GameObject{constructor(x,y,vx){super(x,y,20,20,'fireball');this.vx=vx;}update(dT){if(!this.active)return;this.x+=this.vx * (dT/16.67);if(this.x<cameraX-OFFSCREEN_BUFFER||this.x>cameraX+GAME_WIDTH+OFFSCREEN_BUFFER)this.active=false;}}
-        class MagicBolt extends GameObject{constructor(x,y,vx){super(x,y,18,18,'magicBolt');this.vx=vx;this.color='#9932CC';}update(dT){if(!this.active)return;this.x+=this.vx * (dT/16.67);if(this.x<cameraX-OFFSCREEN_BUFFER||this.x>cameraX+GAME_WIDTH+OFFSCREEN_BUFFER)this.active=false;}draw(ctx,cX,cY){if(!this.active)return;const i=this.sprite;const dX=Math.round(this.x-cX);const dY=Math.round(this.y-cY);if(dX+this.width<-OFFSCREEN_BUFFER||dX>GAME_WIDTH+OFFSCREEN_BUFFER||dY+this.height<-OFFSCREEN_BUFFER||dY>GAME_HEIGHT+OFFSCREEN_BUFFER)return;ctx.save();if(i){ctx.filter='hue-rotate(200deg) saturate(2)';ctx.drawImage(i,dX,dY,this.width,this.height);}else{ctx.fillStyle=this.color;ctx.fillRect(dX,dY,this.width,this.height);}ctx.restore();}}
+        class MagicBolt extends GameObject{constructor(x,y,vx){super(x,y,18,18,'magicBolt');this.vx=vx;this.color='#9932CC';}update(dT){if(!this.active)return;this.x+=this.vx * (dT/16.67);if(this.x<cameraX-OFFSCREEN_BUFFER||this.x>cameraX+GAME_WIDTH+OFFSCREEN_BUFFER)this.active=false;}draw(ctx,cX,cY){if(!this.active)return;const i=this.sprite;const dX=Math.round(this.x-cX);const dY=Math.round(this.y-cY);if(dX+this.width<-OFFSCREEN_BUFFER||dX>GAME_WIDTH+OFFSCREEN_BUFFER||dY+this.height<-OFFSCREEN_BUFFER||dY>GAME_HEIGHT+OFFSCREEN_BUFFER)return;ctx.save();if(i && i.complete && i.naturalWidth > 0){ctx.filter='hue-rotate(200deg) saturate(2)';ctx.drawImage(i,dX,dY,this.width,this.height);}else{ctx.fillStyle=this.color;ctx.fillRect(dX,dY,this.width,this.height);}ctx.restore();}}
         class Coin extends GameObject{constructor(x,y){super(x,y,25,25,'coin');this.baseY=y;this.angle=Math.random()*Math.PI*2;}update(dT){if(!this.active)return;this.angle+=0.05 * (dT / 16.67);this.y=this.baseY+Math.sin(this.angle)*3;}collect(){if(!this.active) return; this.active=false;score+=COIN_VALUE; playHtmlSound('coin', 0.7);}}
         class SpeedBoost extends GameObject{constructor(x,y){super(x,y,40,40,'speedBoost');this.baseY=y;this.angle=Math.random()*Math.PI*2;}update(dT){if(!this.active)return;this.angle+=0.06 * (dT / 16.67);this.y=this.baseY+Math.sin(this.angle)*4;}collect(){if(!this.active) return; this.active=false;if(player)player.activateBoost();}}
-        class BackgroundElement{constructor(x,y,w,h,sf,c){this.x=x;this.y=y;this.width=w;this.height=h;this.scrollFactor=sf;this.color=c;}draw(ctx,cX,cY){const effectiveCamX=cX*this.scrollFactor;let startX=this.x-(effectiveCamX%this.width);if(startX>0)startX-=this.width;ctx.fillStyle=this.color;let currentXpos=startX;while(currentXpos<GAME_WIDTH){ctx.fillRect(Math.round(currentXpos),Math.round(this.y),this.width,this.height);currentXpos+=this.width;}}}
+        class BackgroundElement{
+            constructor(x,y,w,h,sf,c=null,sk=null, yOffset = 0){ // <-- Added yOffset parameter with default value
+    this.x=x;
+    this.y=y; // Note: this.y isn't really used for drawing vertical position anymore
+    this.scrollFactor=sf;
+    this.color=c;
+    this.spriteKey=sk;
+    this.imgRef = this.spriteKey ? assets[this.spriteKey] : null;
+    this.yOffset = yOffset; // <-- Store the offset
+}
+             draw(ctx,cX,cY){
+                const i = this.imgRef;
+                const hasImage = i && i.complete && i.naturalWidth > 0 && i.naturalHeight > 0;
+
+                if(hasImage){
+                    const aspectRatio = i.naturalWidth / i.naturalHeight;
+                    const drawHeight = GAME_HEIGHT; // Scale to fit game height
+                    const scaledWidth = drawHeight * aspectRatio;
+
+                    if (scaledWidth <= 0) return; // Avoid division by zero or infinite loops
+
+                    const effectiveCamX = cX * this.scrollFactor;
+                    let startX = this.x - (effectiveCamX % scaledWidth);
+                    if(startX > 0) startX -= scaledWidth;
+
+                    // Draw Y position is 0 relative to canvas, adjusted by vertical parallax
+                    // This ensures the image scaled to GAME_HEIGHT covers the screen vertically
+                    const drawY = Math.round(this.yOffset - (cY * this.scrollFactor));
+
+                    let currentXpos = startX;
+                    while(currentXpos < GAME_WIDTH){
+                         ctx.drawImage(i, Math.round(currentXpos), drawY, scaledWidth, drawHeight);
+                         currentXpos += scaledWidth;
+                    }
+                } else if (this.color){
+                     // Fallback for original color rect drawing (if needed, less common now)
+                     const effectiveCamX=cX*this.scrollFactor;
+                     let startX=this.x-(effectiveCamX%this.width);
+                     if(startX>0)startX-=this.width;
+                     ctx.fillStyle=this.color;
+                     let currentXpos=startX;
+                     const drawY = Math.round(this.y - cY * this.scrollFactor);
+                     while(currentXpos<GAME_WIDTH){
+                         ctx.fillRect(Math.round(currentXpos),drawY,this.width,this.height);
+                         currentXpos+=this.width;
+                     }
+                }
+             }
+        }
         class Platform extends GameObject{constructor(x,y,w,h,c='#8B4513',isG=false){super(x,y,w,h);this.color=c;this.isGround=isG;}draw(ctx,cX,cY){if(!this.active)return;const dX=Math.round(this.x-cX);const dY=Math.round(this.y-cY);if(dX+this.width<0||dX>GAME_WIDTH||dY+this.height<0||dY>GAME_HEIGHT+GROUND_THICKNESS)return;ctx.fillStyle=this.color;ctx.fillRect(dX,dY,this.width,this.height);if(this.isGround){ctx.fillStyle='#A0522D';ctx.fillRect(dX,dY,this.width,5);}}}
         class Particle extends GameObject { constructor(x, y, vx, vy, size, color, lifespan, gravity = PARTICLE_GRAVITY) { super(x - size / 2, y - size / 2, size, size); this.vx = vx; this.vy = vy; this.lifespan = lifespan; this.life = lifespan; this.color = color; this.gravity = gravity; } update(dT) { if (!this.active) return; this.life -= dT; if (this.life <= 0) { this.active = false; return; } this.vy += this.gravity * (dT / 16.67); this.x += this.vx * (dT / 16.67); this.y += this.vy * (dT / 16.67); } draw(ctx, cX, cY) { if (!this.active) return; const dX = Math.round(this.x - cX); const dY = Math.round(this.y - cY); ctx.globalAlpha = Math.max(0, this.life / this.lifespan); ctx.fillStyle = this.color; ctx.fillRect(dX, dY, this.width, this.height); ctx.globalAlpha = 1.0; } }
         function spawnParticles(x, y, count, color, speedRange, lifespan, gravity = PARTICLE_GRAVITY) { for (let i = 0; i < count; i++) { const angle = Math.random() * Math.PI * 2; const speed = Math.random() * speedRange.max + speedRange.min; const vx = Math.cos(angle) * speed; const vy = Math.sin(angle) * speed; const size = Math.random() * 3 + 2; particles.push(new Particle(x, y, vx, vy, size, color, lifespan, gravity)); } }
@@ -155,277 +212,125 @@
         function spawnHitParticles(x, y, count = 8) { spawnParticles(x, y, count, '#FFA500', {min: 1, max: 3}, 300 + Math.random() * 150); }
         function spawnPlayerDeathParticles(x, y, count = 30) { for(let i=0; i<count; i++) { const color = Math.random() < 0.6 ? '#ff4d4d' : (Math.random() < 0.5 ? '#FFA500' : '#f0e68c'); spawnParticles(x, y, 1, color, {min: 2, max: 6}, 600 + Math.random() * 400); } }
 
-        // --- Helper Function to Start Game (MODIFIED) ---
         function startGame() {
-            handleFirstInteraction();
-            if (loadError) { console.warn("Start cancelled: Asset load error."); return; }
-            if (!gameReady) { console.warn("Start cancelled: Assets not ready."); return; }
-            console.log("Attempting to start game...");
-
-            // <<< FIX: Clear the pending game over message timeout *before* resetting state
-            if (gameOverMessageTimeoutId) {
-                clearTimeout(gameOverMessageTimeoutId);
-                gameOverMessageTimeoutId = null;
-                console.log("Cleared pending game over message timeout on restart.");
-            }
-
-            resetGame(); // Resets player, score, objects, camera etc.
-
-            if (!player) {
-                console.error("Start cancelled: Player null after reset.");
-                showMessage("Error starting game. Please refresh.", true);
-                return;
-            }
-
-            gameState = 'playing'; // Set state to playing
-            hideMessage(); // Hide any overlay (like the game over/ready message)
-            playHtmlSound('start');
-            loopHtmlSound('bgm', 0.4);
-            lastTimestamp = performance.now(); // Reset delta time calculation
-            console.log("Game state changed to 'playing'.");
+            handleFirstInteraction(); if (loadError || !gameReady) return;
+            if (gameOverMessageTimeoutId) { clearTimeout(gameOverMessageTimeoutId); gameOverMessageTimeoutId = null; }
+            resetGame(); if (!player) { showMessage("Error starting game. Please refresh.", true); return; }
+            gameState = 'playing'; hideMessage(); playHtmlSound('start'); loopHtmlSound('bgm', 0.4); lastTimestamp = performance.now();
         }
 
-        // --- Input Handling (No changes) ---
         function handleOverlayInput(e) { e.preventDefault(); e.stopPropagation(); handleFirstInteraction(); if (gameState === 'ready' || gameState === 'gameOver') { startGame(); } }
-        function handleKeyDown(e) { handleFirstInteraction(); if (gameState === 'ready' || gameState === 'gameOver') { const gameplayKeys = ['ArrowLeft', 'a', 'ArrowRight', 'd', 'ArrowUp', 'w', ' ', 'f', 'Control', 'p', 'Escape']; startGame(); if (gameplayKeys.includes(e.key)) { e.preventDefault(); } return; } if (e.key === 'p' || e.key === 'Escape') { if (gameState === 'playing') { gameState = 'paused'; stopHtmlSound('bgm'); showMessage('Paused', false, true); } else if (gameState === 'paused') { gameState = 'playing'; lastTimestamp = performance.now(); loopHtmlSound('bgm', 0.4); hideMessage(); } e.preventDefault(); return; } if (gameState !== 'playing') return; switch (e.key) { case 'ArrowLeft': case 'a': keys.left = true; break; case 'ArrowRight': case 'd': keys.right = true; break; case 'ArrowUp': case 'w': case ' ': keys.up = true; break; case 'f': case 'Control': keys.shoot = true; break; } }
+        function handleKeyDown(e) { handleFirstInteraction(); if (gameState === 'ready' || gameState === 'gameOver') { const gameplayKeys = ['ArrowLeft', 'a', 'ArrowRight', 'd', 'ArrowUp', 'w', ' ', 'f', 'Control', 'p', 'Escape']; startGame(); if (gameplayKeys.includes(e.key)) e.preventDefault(); return; } if (e.key === 'p' || e.key === 'Escape') { if (gameState === 'playing') { gameState = 'paused'; stopHtmlSound('bgm'); showMessage('Paused', false, true); } else if (gameState === 'paused') { gameState = 'playing'; lastTimestamp = performance.now(); loopHtmlSound('bgm', 0.4); hideMessage(); } e.preventDefault(); return; } if (gameState !== 'playing') return; switch (e.key) { case 'ArrowLeft': case 'a': keys.left = true; break; case 'ArrowRight': case 'd': keys.right = true; break; case 'ArrowUp': case 'w': case ' ': keys.up = true; break; case 'f': case 'Control': keys.shoot = true; break; } }
         function handleKeyUp(e) { if (gameState !== 'playing' && gameState !== 'paused') return; switch (e.key) { case 'ArrowLeft': case 'a': keys.left = false; break; case 'ArrowRight': case 'd': keys.right = false; break; case 'f': case 'Control': keys.shoot = false; break; } }
-        function handleTouchInput(e) { handleFirstInteraction(); if (gameState === 'ready' || gameState === 'gameOver') { return; } if (gameState !== 'playing') return; e.preventDefault(); let ct = { l: 0, r: 0, u: 0, s: 0 }; const rect = gameContainer.getBoundingClientRect(); const scaleX = rect.width / GAME_WIDTH; const scaleY = rect.height / GAME_HEIGHT; keys.left = false; keys.right = false; keys.up = false; keys.shoot = false; for (let i = 0; i < e.touches.length; i++) { const touch = e.touches[i]; const touchX = (touch.clientX - rect.left) / scaleX; const touchY = (touch.clientY - rect.top) / scaleY; const deadZoneX = GAME_WIDTH * 0.1; const jumpShootBoundaryY = GAME_HEIGHT * 0.4; const leftBoundaryX = GAME_WIDTH * 0.5 - deadZoneX; const rightBoundaryX = GAME_WIDTH * 0.5 + deadZoneX; if (touchY < jumpShootBoundaryY) { if (touchX < GAME_WIDTH / 2) ct.s = 1; else ct.u = 1; } else { if (touchX < leftBoundaryX) ct.l = 1; else if (touchX > rightBoundaryX) ct.r = 1; } } keys.left = !!ct.l; keys.right = !!ct.r; keys.up = !!ct.u; keys.shoot = !!ct.s; if (e.type === 'touchend' || e.type === 'touchcancel') { if (e.touches.length === 0) { keys.left = false; keys.right = false; keys.up = false; keys.shoot = false; } } }
+        function handleTouchInput(e) { handleFirstInteraction(); if (gameState === 'ready' || gameState === 'gameOver' || gameState !== 'playing') return; e.preventDefault(); let ct = { l: 0, r: 0, u: 0, s: 0 }; const rect = gameContainer.getBoundingClientRect(); const scaleX = rect.width / GAME_WIDTH; const scaleY = rect.height / GAME_HEIGHT; keys.left = false; keys.right = false; keys.up = false; keys.shoot = false; for (let i = 0; i < e.touches.length; i++) { const touch = e.touches[i]; const touchX = (touch.clientX - rect.left) / scaleX; const touchY = (touch.clientY - rect.top) / scaleY; const deadZoneX = GAME_WIDTH * 0.1; const jumpShootBoundaryY = GAME_HEIGHT * 0.4; const leftBoundaryX = GAME_WIDTH * 0.5 - deadZoneX; const rightBoundaryX = GAME_WIDTH * 0.5 + deadZoneX; if (touchY < jumpShootBoundaryY) { if (touchX < GAME_WIDTH / 2) ct.s = 1; else ct.u = 1; } else { if (touchX < leftBoundaryX) ct.l = 1; else if (touchX > rightBoundaryX) ct.r = 1; } } keys.left = !!ct.l; keys.right = !!ct.r; keys.up = !!ct.u; keys.shoot = !!ct.s; if (e.type === 'touchend' || e.type === 'touchcancel') { if (e.touches.length === 0) { keys.left = false; keys.right = false; keys.up = false; keys.shoot = false; } } }
 
-        // --- Fullscreen & Scaling (No changes) ---
-        function toggleFullScreen() { try{if(!document.fullscreenElement&&!document.mozFullScreenElement&&!document.webkitFullscreenElement&&!document.msFullscreenElement){if(gameContainer.requestFullscreen)gameContainer.requestFullscreen();else if(gameContainer.msRequestFullscreen)gameContainer.msRequestFullscreen();else if(gameContainer.mozRequestFullScreen)gameContainer.mozRequestFullScreen();else if(gameContainer.webkitRequestFullscreen)gameContainer.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);}else{if(document.exitFullscreen)document.exitFullscreen();else if(document.msExitFullscreen)document.msExitFullscreen();else if(document.mozCancelFullScreen)document.mozCancelFullScreen();else if(document.webkitExitFullscreen)document.webkitExitFullscreen();}}catch(err){console.error("FS API error:",err);} }
-        function resizeGame() { try{const ww=window.innerWidth;const wh=window.innerHeight;const gar=GAME_WIDTH/GAME_HEIGHT;const war=ww/wh;let nw,nh;if(war>gar){nh=wh;nw=nh*gar;}else{nw=ww;nh=nw/gar;}gameContainer.style.width=`${nw}px`;gameContainer.style.height=`${nh}px`;}catch(err){console.error("Resize error:",err);}}
+        function toggleFullScreen() { try{if(!document.fullscreenElement&&!document.mozFullScreenElement&&!document.webkitFullscreenElement&&!document.msFullscreenElement){if(gameContainer.requestFullscreen)gameContainer.requestFullscreen();else if(gameContainer.msRequestFullscreen)gameContainer.msRequestFullscreen();else if(gameContainer.mozRequestFullScreen)gameContainer.mozRequestFullScreen();else if(gameContainer.webkitRequestFullscreen)gameContainer.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);}else{if(document.exitFullscreen)document.exitFullscreen();else if(document.msExitFullscreen)document.msExitFullscreen();else if(document.mozCancelFullScreen)document.mozCancelFullScreen();else if(document.webkitExitFullscreen)document.webkitExitFullscreen();}}catch(err){} }
+        function resizeGame() { try{const ww=window.innerWidth;const wh=window.innerHeight;const gar=GAME_WIDTH/GAME_HEIGHT;const war=ww/wh;let nw,nh;if(war>gar){nh=wh;nw=nh*gar;}else{nw=ww;nh=nw/gar;}gameContainer.style.width=`${nw}px`;gameContainer.style.height=`${nh}px`;}catch(err){} }
 
-        // --- World Generation (No changes) ---
         function generateWorld() { if(!player)return;let generationEdge=cameraX+GENERATION_DISTANCE;while(lastPlatformX<generationEdge){const gap=MIN_GAP+Math.random()*(MAX_GAP-MIN_GAP);const nextX=lastPlatformX+gap;let platformY,platformWidth,platformHeight,platformColor;let isGroundPlatform=Math.random()<GROUND_PROBABILITY;let previousPlatformY=GROUND_Y;let previousPlatformEndX=lastPlatformX;if(platforms.length>0){const prevPlat=platforms[platforms.length-1];previousPlatformY=prevPlat.y;previousPlatformEndX=prevPlat.x+prevPlat.width;} if(isGroundPlatform){platformWidth=MIN_GROUND_WIDTH+Math.random()*(MAX_GROUND_WIDTH-MIN_GROUND_WIDTH);platformY=GROUND_Y;platformHeight=GROUND_THICKNESS;platformColor='#654321';}else{platformWidth=MIN_FLOAT_WIDTH+Math.random()*(MAX_FLOAT_WIDTH-MIN_FLOAT_WIDTH);platformHeight=PLATFORM_THICKNESS;platformColor='#8B4513';let yVariance=MAX_Y_DELTA_UP*1.8;let targetY=previousPlatformY+(Math.random()*yVariance-yVariance*0.6);platformY=Math.max(MIN_FLOAT_Y,Math.min(targetY,MAX_FLOAT_Y));let yDelta=platformY-previousPlatformY;if(yDelta<-MAX_Y_DELTA_UP)platformY=previousPlatformY-MAX_Y_DELTA_UP;const actualGap=nextX-previousPlatformEndX;if(actualGap>MAX_GAP*0.8&&yDelta<-MAX_Y_DELTA_UP*0.5)platformY=previousPlatformY-MAX_Y_DELTA_UP*0.5;} platformY=Math.round(platformY); const newPlatform=new Platform(nextX,platformY,platformWidth,platformHeight,platformColor,isGroundPlatform);platforms.push(newPlatform);lastPlatformX=nextX+platformWidth; let didSpawnEnemy=false;if(platformWidth>MIN_PLATFORM_WIDTH_FOR_ENEMY&&lastPlatformX>lastEnemySpawnX+MIN_ENEMY_SPACING){let enemyRoll=Math.random();let spawnX = nextX + platformWidth * 0.1 + Math.random() * platformWidth * 0.8; if (!isGroundPlatform && enemyRoll < GOBLIN_SPAWN_CHANCE) { goblins.push(new Goblin(spawnX - 22, platformY - 57, Math.max(20, platformWidth * 0.6))); didSpawnEnemy = true; } else if (isGroundPlatform && enemyRoll < GOBLIN_SPAWN_CHANCE + ROOK_SPAWN_CHANCE) { rooks.push(new Rook(spawnX - 25, platformY - 72)); didSpawnEnemy = true; } else if (!isGroundPlatform && enemyRoll < GOBLIN_SPAWN_CHANCE + ROOK_SPAWN_CHANCE + BISHOP_SPAWN_CHANCE) { bishops.push(new Bishop(spawnX - 27, platformY - 77)); didSpawnEnemy = true; } if(didSpawnEnemy)lastEnemySpawnX=nextX;} if(platformWidth>50&&Math.random()<COIN_SPAWN_CHANCE){const numCoins=1+Math.floor(Math.random()*(platformWidth/70));const coinSize=25;const coinSpacing=5;let startCoinX=nextX+platformWidth*0.15+Math.random()*platformWidth*0.4;const coinY=platformY-coinSize-10;for(let i=0;i<numCoins;i++){let potentialCoinX=startCoinX+i*(coinSize+coinSpacing);if(potentialCoinX+coinSize<nextX+platformWidth-platformWidth*0.1)coins.push(new Coin(potentialCoinX,coinY));else break;}} if(!isGroundPlatform&&platformWidth>60&&Math.random()<POWERUP_SPAWN_CHANCE){powerUps.push(new SpeedBoost(nextX+platformWidth*0.5-20,platformY-45));}} }
-        // --- Object Cleanup (No changes) ---
         function cleanupObjects() { const removalEdge = cameraX - OFFSCREEN_BUFFER*1.5; platforms=platforms.filter(o=>o.x+o.width>removalEdge); goblins=goblins.filter(o=>o.active&&(o.x+o.width)>removalEdge); rooks=rooks.filter(o=>o.active&&o.x+o.width>removalEdge); bishops=bishops.filter(o=>o.active&&o.x+o.width>removalEdge); fireballs=fireballs.filter(o=>o.active); magicBolts=magicBolts.filter(o=>o.active); coins=coins.filter(o=>o.active&&o.x+o.width>removalEdge); powerUps=powerUps.filter(o=>o.active&&o.x+o.width>removalEdge); particles = particles.filter(p => p.active); }
 
-        // --- Game Initialization / Reset (No changes) ---
         function resetGame() {
-            console.log("Resetting Game...");
             stopHtmlSound('bgm');
-
-             // Clear game object arrays
-             platforms=[]; goblins=[]; rooks=[]; bishops=[]; fireballs=[]; magicBolts=[]; coins=[]; powerUps=[]; backgroundElements=[]; particles=[];
-
-             // Reset scores and camera
-             score=0; distanceScore=0; cameraX=0; cameraY=0; lastPlatformX=0; lastEnemySpawnX=-MIN_ENEMY_SPACING;
-
-             // Create new player
-             player=new Player(100,GROUND_Y-100);
-             player.active=true; player.health=PLAYER_MAX_HEALTH; player.isInvulnerable=false; player.isBoosted=false;
-
-             // Update UI
-             updateHealthUI(player.health); boostDisplay.style.display='none';
-
-             // Create starting platform
-             const startPlatform=new Platform(-50,GROUND_Y,GAME_WIDTH*0.6,GROUND_THICKNESS,'#654321',true);
-             platforms.push(startPlatform);
-             lastPlatformX=startPlatform.x+startPlatform.width;
-
-             // Create background elements
-             backgroundElements.push(new BackgroundElement(0, GAME_HEIGHT - 250, 600, 190, 0.1, '#2a3e5e'));
-             backgroundElements.push(new BackgroundElement(0, GAME_HEIGHT - 180, 400, 180, 0.2, '#3a5e3a'));
-             backgroundElements.push(new BackgroundElement(0, GAME_HEIGHT - 120, 300, 120, 0.4, '#5e8d5e'));
-
-             // Generate initial world beyond start platform
-             generateWorld();
-
-             // Reset input keys state
-             keys={left:false,right:false,up:false,shoot:false};
-
-             // Reset game over message timeout ID just in case it wasn't cleared elsewhere
-             if (gameOverMessageTimeoutId) {
-                 clearTimeout(gameOverMessageTimeoutId);
-                 gameOverMessageTimeoutId = null;
-             }
-
-             console.log("Game Reset Complete.");
+            platforms=[]; goblins=[]; rooks=[]; bishops=[]; fireballs=[]; magicBolts=[]; coins=[]; powerUps=[]; backgroundElements=[]; particles=[];
+            score=0; distanceScore=0; cameraX=0; cameraY=0; lastPlatformX=0; lastEnemySpawnX=-MIN_ENEMY_SPACING;
+            player=new Player(100,GROUND_Y-100); player.active=true; player.health=PLAYER_MAX_HEALTH; player.isInvulnerable=false; player.isBoosted=false;
+            lastDisplayedScore = -1; lastDisplayedHealth = -1; updateHealthUI(player.health); boostDisplay.style.display='none';
+            const startPlatform=new Platform(-50,GROUND_Y,GAME_WIDTH*0.6,GROUND_THICKNESS,'#654321',true); platforms.push(startPlatform); lastPlatformX=startPlatform.x+startPlatform.width;
+            backgroundElements = [];
+             backgroundElements.push(new BackgroundElement(0, 0, 0, 0, 0.0, null, 'bgSky', 0));
+             backgroundElements.push(new BackgroundElement(0, 0, 0, 0, 0.15, null, 'bgHills', 100));
+             backgroundElements.push(new BackgroundElement(0, 0, 0, 0, 0.4, null, 'bgGround', 220));
+            generateWorld(); keys={left:false,right:false,up:false,shoot:false};
+            if (gameOverMessageTimeoutId) { clearTimeout(gameOverMessageTimeoutId); gameOverMessageTimeoutId = null; }
          }
 
-        // --- Game Loop (No changes) ---
         function gameLoop(timestamp) {
-             if (loadError && !gameReady) { return; } // Stop loop if critical load error
-             if (!lastTimestamp) lastTimestamp = timestamp; // Initialize first timestamp
-             let deltaTime = timestamp - lastTimestamp;
-             lastTimestamp = timestamp;
-
-             // Clamp delta time to prevent physics issues on lag spikes or tab switching
-             if (deltaTime > 50) deltaTime = 16.67;
-             if (deltaTime <= 0) deltaTime = 1; // Avoid zero/negative delta time
-
-             // Only update game logic if playing
-             if (gameState === 'playing') {
-                 update(deltaTime);
-             }
-
-             // Always render the current state
-             render();
-
-             // Request next frame
-             requestAnimationFrame(gameLoop);
+             if (loadError && !gameReady) return;
+             if (!lastTimestamp) lastTimestamp = timestamp; let deltaTime = timestamp - lastTimestamp; lastTimestamp = timestamp;
+             if (deltaTime > 50) deltaTime = 16.67; if (deltaTime <= 0) deltaTime = 1;
+             if (gameState === 'playing') update(deltaTime);
+             render(); requestAnimationFrame(gameLoop);
          }
 
-        // --- Update Function (No changes needed here for the fix) ---
         function update(deltaTime) {
-            if (!player || !player.active) {
-                 // If player becomes inactive during play (e.g., falls off), trigger death
-                 if (gameState === 'playing' && player && !player.active) {
-                     // Player might already be set to inactive by die() but gameState not yet 'gameOver'
-                     // Or player fell off screen without die() being called yet
-                     // Ensure die() logic runs if needed
-                     if (gameState !== 'gameOver') {
-                         player.die(); // Ensure game over sequence starts
-                     }
-                 }
-                 return; // Don't update anything else if player is not active
-             }
+            if (!player) return;
+            if (!player.active) { if (gameState === 'playing' && gameState !== 'gameOver') player.die(); return; }
+            player.update(deltaTime, platforms); if (!player.active) return;
+            let i;
+            for (i = 0; i < goblins.length; i++) goblins[i].update(deltaTime, platforms);
+            for (i = 0; i < rooks.length; i++) rooks[i].update(deltaTime, platforms);
+            for (i = 0; i < bishops.length; i++) bishops[i].update(deltaTime, platforms);
+            for (i = 0; i < fireballs.length; i++) fireballs[i].update(deltaTime);
+            for (i = 0; i < magicBolts.length; i++) magicBolts[i].update(deltaTime);
+            for (i = 0; i < coins.length; i++) coins[i].update(deltaTime);
+            for (i = 0; i < powerUps.length; i++) powerUps[i].update(deltaTime);
+            for (i = 0; i < particles.length; i++) particles[i].update(deltaTime);
 
-            // Update game objects
-            player.update(deltaTime, platforms);
-            // Only proceed if player is still active after update (e.g., didn't fall off screen)
-            if (!player.active) return;
-
-            goblins.forEach(g => g.update(deltaTime, platforms));
-            rooks.forEach(r => r.update(deltaTime, platforms));
-            bishops.forEach(b => b.update(deltaTime, platforms));
-            fireballs.forEach(fb => fb.update(deltaTime));
-            magicBolts.forEach(mb => mb.update(deltaTime));
-            coins.forEach(c => c.update(deltaTime));
-            powerUps.forEach(p => p.update(deltaTime));
-            particles.forEach(p => p.update(deltaTime));
-
-            // --- Direct Follow Camera Update ---
             const playerScreenTargetX = GAME_WIDTH * CAMERA_PLAYER_SCREEN_X_RATIO;
             const targetCameraX = player.x - playerScreenTargetX;
-            cameraX = targetCameraX; // Direct follow
-            cameraX = Math.max(0, cameraX); // Prevent camera from going left of the start
-            // cameraY = 0; // Assuming no vertical camera movement for now
-            // --- End Camera Update ---
+            cameraX += (targetCameraX - cameraX) * CAMERA_SMOOTH_FACTOR; cameraX = Math.max(0, cameraX);
 
-            // --- Collision Checks ---
-            // Fireball vs Enemies
-            fireballs.forEach(fb => {
-                if (!fb.active) return;
-                let hit = false;
-                goblins.forEach(g => { if (!hit && g.active && fb.collidesWith(g)) { fb.active = false; g.hitByFireball(); hit = true; } });
-                rooks.forEach(r => { if (!hit && r.active && fb.collidesWith(r)) { fb.active = false; r.hitByFireball(); hit = true; } });
-                bishops.forEach(b => { if (!hit && b.active && fb.collidesWith(b)) { fb.active = false; b.hitByFireball(); hit = true; } });
-            });
-
-            // MagicBolt vs Player
-             magicBolts.forEach(mb => {
-                 if (mb.active && player.active && !player.isInvulnerable && mb.collidesWith(player)) {
-                     mb.active = false;
-                     player.takeDamage(1);
-                     // Check if player died from this hit immediately
-                     if (!player.active) return; // Stop further checks if player died
-                 }
-             });
-
-             // Player vs Enemies (only if not invulnerable)
+            for (let fbIdx = 0; fbIdx < fireballs.length; fbIdx++) {
+                const fb = fireballs[fbIdx]; if (!fb.active) continue; let hit = false;
+                for (let gIdx = 0; gIdx < goblins.length; gIdx++) { const g = goblins[gIdx]; if (!hit && g.active && fb.collidesWith(g)) { fb.active = false; g.hitByFireball(); hit = true; break; } } if (hit) continue;
+                for (let rIdx = 0; rIdx < rooks.length; rIdx++) { const r = rooks[rIdx]; if (!hit && r.active && fb.collidesWith(r)) { fb.active = false; r.hitByFireball(); hit = true; break; } } if (hit) continue;
+                for (let bIdx = 0; bIdx < bishops.length; bIdx++) { const b = bishops[bIdx]; if (!hit && b.active && fb.collidesWith(b)) { fb.active = false; b.hitByFireball(); hit = true; break; } }
+            }
+            for (let mbIdx = 0; mbIdx < magicBolts.length; mbIdx++) { const mb = magicBolts[mbIdx]; if (mb.active && player.active && !player.isInvulnerable && mb.collidesWith(player)) { mb.active = false; player.takeDamage(1); if (!player.active) return; } }
              if (player.active && !player.isInvulnerable) {
                  let tookDamage = false;
-                 goblins.forEach(g => { if (!tookDamage && g.active && player.collidesWith(g)) { player.takeDamage(1); tookDamage = true; } });
-                 // Check if player died before checking other enemies
-                 if (!player.active) return;
-                 rooks.forEach(r => { if (!tookDamage && r.active && player.collidesWith(r)) { player.takeDamage(1); tookDamage = true; } });
-                 if (!player.active) return;
-                 // Note: Bishops don't typically cause contact damage in this setup, only projectiles
+                 for (let gIdx = 0; gIdx < goblins.length; gIdx++) { const g = goblins[gIdx]; if (!tookDamage && g.active && player.collidesWith(g)) { player.takeDamage(1); tookDamage = true; if (!player.active) return; break; } }
+                 if (tookDamage) return;
+                 for (let rIdx = 0; rIdx < rooks.length; rIdx++) { const r = rooks[rIdx]; if (!tookDamage && r.active && player.collidesWith(r)) { player.takeDamage(1); tookDamage = true; if (!player.active) return; break; } }
              }
-
-             // Player vs Collectibles
              if (player.active) {
-                 coins.forEach(c => { if (c.active && player.collidesWith(c)) c.collect(); });
-                 powerUps.forEach(p => { if (p.active && player.collidesWith(p)) p.collect(); });
+                 for (let cIdx = 0; cIdx < coins.length; cIdx++) { const c = coins[cIdx]; if (c.active && player.collidesWith(c)) c.collect(); }
+                 for (let pIdx = 0; pIdx < powerUps.length; pIdx++) { const p = powerUps[pIdx]; if (p.active && player.collidesWith(p)) p.collect(); }
              }
-
-            // --- Score & World Management ---
-            if (player.active) {
-                 distanceScore = Math.floor(player.x / 10); // Update distance score based on player's progress
-             }
-            generateWorld(); // Generate new platforms/enemies if needed
-            cleanupObjects(); // Remove objects far behind the camera
+            if (player.active) { distanceScore = Math.floor(player.x / 10); }
+            generateWorld(); cleanupObjects();
         }
 
-        // --- UI Update Functions (No changes) ---
-        function updateScoreUI() { scoreDisplay.textContent = `Score: ${score + distanceScore}`; }
-        function updateHealthUI(currentHealth) { let h=''; for(let i=0;i<PLAYER_MAX_HEALTH;i++) h+=(i<currentHealth)?'<span>♥</span>':'<span style="opacity: 0.5;">♡</span>'; healthDisplay.innerHTML=`Health: ${h}`; }
+        function updateScoreUI() {
+            const totalScore = score + distanceScore; if (totalScore !== lastDisplayedScore) { scoreDisplay.textContent = `Score: ${totalScore}`; lastDisplayedScore = totalScore; }
+        }
+        function updateHealthUI(currentHealth) {
+             if(currentHealth !== lastDisplayedHealth){ let h=''; for(let i=0;i<PLAYER_MAX_HEALTH;i++) h+=(i<currentHealth)?'<span>♥</span>':'<span style="opacity: 0.5;">♡</span>'; healthDisplay.innerHTML=`Health: ${h}`; lastDisplayedHealth = currentHealth; }
+        }
 
-        // --- Render Function (No changes) ---
         function render() {
-             // Clear canvas
-             ctx.fillStyle = '#5c94fc'; // Sky color
-             ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-             // Use integer camera coordinates for potentially sharper rendering
-             const camX = Math.round(cameraX);
-             const camY = Math.round(cameraY);
-
-             // Draw background elements (parallax)
-             backgroundElements.forEach(bg => bg.draw(ctx, camX, camY));
-
-             // Draw game world objects relative to camera
-             platforms.forEach(p => p.draw(ctx, camX, camY));
-             coins.forEach(c => c.draw(ctx, camX, camY));
-             powerUps.forEach(p => p.draw(ctx, camX, camY));
-             goblins.forEach(g => g.draw(ctx, camX, camY));
-             rooks.forEach(r => r.draw(ctx, camX, camY));
-             bishops.forEach(b => b.draw(ctx, camX, camY));
-             fireballs.forEach(f => f.draw(ctx, camX, camY));
-             magicBolts.forEach(m => m.draw(ctx, camX, camY));
-             particles.forEach(p => p.draw(ctx, camX, camY));
-
-             // Draw player (must be active)
-             if (player && player.active) { // Check if player exists and is active before drawing
-                 player.draw(ctx, camX, camY);
-             }
-
-             // Update score display (only needs update during gameplay/end screen)
-             if (gameState === 'playing' || gameState === 'gameOver' || gameState === 'paused') {
-                 updateScoreUI();
-             }
+             ctx.fillStyle = '#5c94fc'; ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+             const camX = Math.round(cameraX); const camY = Math.round(cameraY); let i;
+             for (i = 0; i < backgroundElements.length; i++) backgroundElements[i].draw(ctx, camX, camY);
+             for (i = 0; i < platforms.length; i++) platforms[i].draw(ctx, camX, camY);
+             for (i = 0; i < coins.length; i++) coins[i].draw(ctx, camX, camY);
+             for (i = 0; i < powerUps.length; i++) powerUps[i].draw(ctx, camX, camY);
+             for (i = 0; i < goblins.length; i++) goblins[i].draw(ctx, camX, camY);
+             for (i = 0; i < rooks.length; i++) rooks[i].draw(ctx, camX, camY);
+             for (i = 0; i < bishops.length; i++) bishops[i].draw(ctx, camX, camY);
+             for (i = 0; i < fireballs.length; i++) fireballs[i].draw(ctx, camX, camY);
+             for (i = 0; i < magicBolts.length; i++) magicBolts[i].draw(ctx, camX, camY);
+             for (i = 0; i < particles.length; i++) particles[i].draw(ctx, camX, camY);
+             if (player && player.active) player.draw(ctx, camX, camY);
+             if (gameState === 'playing' || gameState === 'gameOver' || gameState === 'paused') updateScoreUI();
          }
 
-        // --- Global Init (No changes) ---
         function initialize() {
-             console.log("Initializing game...");
-             // Add interaction listeners to enable audio context
-             console.log("Adding interaction listeners (click/key/touch to enable sound).");
+             loadHighScore();
              document.body.addEventListener('click', handleFirstInteraction, { once: true });
              document.body.addEventListener('keydown', handleFirstInteraction, { once: true });
              document.body.addEventListener('touchstart', handleFirstInteraction, { passive: true, once: true });
-
              try {
-                 // Setup event listeners
-                 window.addEventListener('keydown', handleKeyDown);
-                 window.addEventListener('keyup', handleKeyUp);
-                 canvas.addEventListener('touchstart', handleTouchInput, { passive: false });
-                 canvas.addEventListener('touchmove', handleTouchInput, { passive: false });
-                 canvas.addEventListener('touchend', handleTouchInput, { passive: false });
-                 canvas.addEventListener('touchcancel', handleTouchInput, { passive: false });
-                 messageOverlay.addEventListener('click', handleOverlayInput);
-                 messageOverlay.addEventListener('touchstart', handleOverlayInput, { passive: false }); // Ensure touch on overlay works
-                 fullscreenBtn.addEventListener('click', toggleFullScreen);
-                 window.addEventListener('resize', resizeGame);
-
-                 // Initial setup
-                 resizeGame(); // Size canvas correctly from the start
-                 loadAssets(); // Start loading assets
-                 showMessage("Loading Assets..."); // Show initial loading message
-                 lastTimestamp = 0; // Ensure delta time starts correctly
-                 requestAnimationFrame(gameLoop); // Start the game loop
-                 console.log("Initialization complete. Waiting for assets to load.");
-
-             } catch (err) {
-                 // Catch critical errors during initialization
-                 console.error("Error during initialization:", err);
-                 showMessage("Critical error during startup. Please refresh.", true);
-                 loadError = true; // Prevent game from starting if init fails
-             }
+                 window.addEventListener('keydown', handleKeyDown); window.addEventListener('keyup', handleKeyUp);
+                 canvas.addEventListener('touchstart', handleTouchInput, { passive: false }); canvas.addEventListener('touchmove', handleTouchInput, { passive: false });
+                 canvas.addEventListener('touchend', handleTouchInput, { passive: false }); canvas.addEventListener('touchcancel', handleTouchInput, { passive: false });
+                 messageOverlay.addEventListener('click', handleOverlayInput); messageOverlay.addEventListener('touchstart', handleOverlayInput, { passive: false });
+                 fullscreenBtn.addEventListener('click', toggleFullScreen); window.addEventListener('resize', resizeGame);
+                 resizeGame(); loadAssets(); showMessage("Loading Assets..."); lastTimestamp = 0; requestAnimationFrame(gameLoop);
+             } catch (err) { console.error("Error during initialization:", err); showMessage("Critical error during startup. Please refresh.", true); loadError = true; }
          }
 
-        // --- Initiate ---
         initialize();
 
     </script>
