@@ -7,356 +7,614 @@
     <style>
         body {
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background-color: #2c1e1a; /* Dark brown earth */
-            font-family: 'Courier New', Courier, monospace; /* Pixel-ish font */
+            background-color: #1a0f0c;
+            font-family: 'Courier New', Courier, monospace;
             margin: 0;
             overflow: hidden;
+            color: #ffffff;
         }
 
-        #game-container {
-            width: 400px;
-            height: 550px;
-            background-color: #6b4f41; /* Lighter brown stone */
-            border: 5px solid #1a0f0c; /* Darkest border */
-            border-radius: 3px; /* Slightly less rounded */
+        #game-wrapper {
             position: relative;
+            width: 480px;
+            height: 640px;
+            border: 6px solid #4a2d1f;
+            border-radius: 4px;
+            box-shadow: 6px 6px 0px #0a0706;
+            background-color: #000;
             overflow: hidden;
-            box-shadow: 5px 5px 0px #1a0f0c; /* Simple block shadow */
-            display: flex;
-            flex-direction: column;
         }
 
-        #game-area {
-            flex-grow: 1;
-            position: relative;
-            background-color: #8d7163; /* Castle floor color */
-            /* Optional simple background pattern */
-            background-image: linear-gradient(45deg, #7a5f51 25%, transparent 25%),
-                              linear-gradient(-45deg, #7a5f51 25%, transparent 25%),
-                              linear-gradient(45deg, transparent 75%, #7a5f51 75%),
-                              linear-gradient(-45deg, transparent 75%, #7a5f51 75%);
-            background-size: 20px 20px;
-            image-rendering: pixelated; /* Helps keep patterns sharp */
+        #game-canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background-color: #346834;
+            image-rendering: pixelated;
+            cursor: crosshair;
         }
 
-        #hoard {
-            width: 60px;
-            height: 40px;
-            background-color: #ffd700; /* Gold */
-            border: 3px solid #b8860b; /* Darker gold border */
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            border-radius: 2px;
-            box-shadow: inset 0 0 5px rgba(0,0,0,0.3);
-            z-index: 5; /* Above floor pattern */
-            /* Simple sparkle effect? */
-            /* animation: sparkle 1.5s infinite alternate; */
-        }
-        /* @keyframes sparkle { 0% { box-shadow: inset 0 0 5px rgba(255,255,255,0.5); } 100% { box-shadow: inset 0 0 5px rgba(0,0,0,0.3); } } */
-
-
-        .goblin {
-            width: 40px;
-            height: 40px;
-            position: absolute;
-			background-image: url('./sprites/Goblin.png'); /* Correct path to your sprite */
-			background-size: contain; /* Or 'cover', 'contain' fits the whole image */
-			background-repeat: no-repeat;
-			background-position: center;
-            top: -45px; /* Start off screen */
-            border-radius: 3px;
-            cursor: pointer; /* Indicate clickable */
-            z-index: 10;
-            transition: transform 0.05s ease-out; /* For click feedback */
-            image-rendering: pixelated; /* Keep edges sharp */
-        }
-
-        .goblin:active {
-            transform: scale(1.1); /* Slight grow on click */
-        }
-
-        /* Simple visual effect on goblin defeat */
-        .poof {
-            width: 30px;
-            height: 30px;
-            background-color: #888; /* Smoke gray */
-            border-radius: 50%;
-            position: absolute;
-            opacity: 0.7;
-            animation: fadeOut 0.3s forwards;
-            z-index: 15;
-            pointer-events: none; /* Don't block clicks */
-        }
-
-        @keyframes fadeOut {
-            from { opacity: 0.7; transform: scale(1); }
-            to { opacity: 0; transform: scale(0.5); }
-        }
-
-        #score-display {
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            color: #fff;
-            background-color: rgba(0, 0, 0, 0.5);
-            padding: 5px 10px;
-            border-radius: 3px;
-            font-size: 1.1em;
-            border: 2px solid #1a0f0c;
-            z-index: 20;
-        }
-
-        /* Overlays */
-        .overlay {
+        .screen {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.75);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            color: white;
             text-align: center;
-            z-index: 50;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 100;
             padding: 20px;
             box-sizing: border-box;
+            image-rendering: pixelated;
         }
-        .overlay h2 {
-            margin-bottom: 15px;
-            color: #ffd700; /* Gold text */
-            text-shadow: 2px 2px #8B4513; /* Brown shadow */
+
+        #loading-screen {
+             background-color: #1a0f0c;
+             font-size: 1.5em;
+             color: #ccc;
         }
-        .overlay p {
+
+        #main-menu-screen {
+            background-color: rgba(10, 5, 4, 0.9);
+            justify-content: center;
+        }
+
+        #game-over-screen {
+            background-color: rgba(70, 10, 10, 0.85);
+             backdrop-filter: blur(2px);
+        }
+
+
+        .screen h1, .screen h2 {
+            color: #ffd700;
+            text-shadow: 2px 2px #8B4513, 3px 3px #000;
             margin-bottom: 25px;
-            line-height: 1.4;
+            font-size: 2.2em;
         }
-        .overlay button {
-            padding: 12px 25px;
+         .screen h2 {
+             font-size: 2em;
+             margin-bottom: 15px;
+         }
+
+        .screen p {
+            margin-bottom: 30px;
+            font-size: 1.2em;
+            line-height: 1.5;
+            text-shadow: 1px 1px #000;
+            max-width: 90%;
+        }
+
+        #main-menu-screen p {
+            color: #e0e0e0;
             font-size: 1.1em;
+        }
+
+
+        .pixel-button {
+            padding: 12px 25px;
+            font-size: 1.3em;
             cursor: pointer;
             border: 3px solid #1a0f0c;
             border-radius: 3px;
-            background-color: #a0522d; /* Sienna button */
+            background-color: #a0522d;
             color: white;
             font-family: 'Courier New', Courier, monospace;
-            transition: background-color 0.2s ease;
-            box-shadow: 3px 3px 0px #1a0f0c;
+            transition: background-color 0.15s ease, transform 0.1s ease;
+            box-shadow: 4px 4px 0px #1a0f0c;
+            text-shadow: 1px 1px #000;
+            min-width: 200px;
+            margin-top: 10px;
         }
-        .overlay button:hover {
-             background-color: #8B4513; /* Saddle Brown */
+        .pixel-button:hover {
+             background-color: #c67a3d;
+             color: #fff;
         }
-         .overlay button:active {
+         .pixel-button:active {
              transform: translate(2px, 2px);
-             box-shadow: 1px 1px 0px #1a0f0c;
+             box-shadow: 2px 2px 0px #1a0f0c;
          }
 
     </style>
 </head>
 <body>
-    <div id="game-container">
-        <div id="score-display">SCORE: 0</div>
-        <div id="game-area">
-            <div id="hoard"></div>
-            <!-- Goblins will be added here -->
+    <div id="game-wrapper">
+        <canvas id="game-canvas" width="480" height="640"></canvas>
+
+        <div id="loading-screen" class="screen">
+            <p>Loading Assets...</p>
         </div>
 
-        <!-- Start Screen Overlay -->
-        <div id="start-screen" class="overlay">
-            <h2>Goblin Siege Defense!</h2>
-            <p>Protect the King's Hoard!<br>Click the invading Goblins before they reach the treasure!</p>
-            <button id="start-button">Defend the Realm!</button>
+        <div id="main-menu-screen" class="screen" style="display: none;">
+            <h1>Goblin Siege Defense</h1>
+            <p>Click the invading goblins before they reach the tower!</p>
+            <button id="start-button" class="pixel-button">Start Game</button>
         </div>
 
-        <!-- Game Over Overlay -->
-        <div id="game-over-screen" class="overlay" style="display: none;">
-             <h2>Thy Castle Has Fallen!</h2>
-             <p id="final-score">Goblins Vanquished: 0</p>
-             <button id="restart-button">Try Again?</button>
+        <div id="game-over-screen" class="screen" style="display: none;">
+             <h2>Game Over!</h2>
+             <p id="final-score">Score: 0</p>
+             <p id="final-wave">Wave Reached: 0</p>
+             <button id="restart-button" class="pixel-button">Try Again</button>
         </div>
     </div>
 
+    <audio id="bg-music" loop></audio>
+    <audio id="sfx-hit"></audio>
+    <audio id="sfx-death"></audio>
+    <audio id="sfx-tower-hit"></audio>
+    <audio id="sfx-game-over"></audio>
+    <audio id="sfx-wave-start"></audio>
+
+
     <script>
-        // --- DOM Elements ---
-        const gameArea = document.getElementById('game-area');
-        const hoard = document.getElementById('hoard');
-        const scoreDisplay = document.getElementById('score-display');
-        const startScreen = document.getElementById('start-screen');
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const gameWrapper = document.getElementById('game-wrapper');
+
+        const loadingScreen = document.getElementById('loading-screen');
+        const mainMenuScreen = document.getElementById('main-menu-screen');
         const gameOverScreen = document.getElementById('game-over-screen');
         const startButton = document.getElementById('start-button');
         const restartButton = document.getElementById('restart-button');
         const finalScoreDisplay = document.getElementById('final-score');
+        const finalWaveDisplay = document.getElementById('final-wave');
 
-        // --- Game Configuration ---
-        const initialEnemySpeed = 1.5; // Pixels per frame update
-        const speedIncrement = 0.05;   // How much speed increases per goblin clicked
-        const initialSpawnInterval = 1800; // Milliseconds
-        const minSpawnInterval = 400;   // Fastest spawn rate
-        const spawnIntervalDecrement = 25; // How much spawn interval decreases
+        const bgMusicElement = document.getElementById('bg-music');
+        const sfxHitElement = document.getElementById('sfx-hit');
+        const sfxDeathElement = document.getElementById('sfx-death');
+        const sfxTowerHitElement = document.getElementById('sfx-tower-hit');
+        const sfxGameOverElement = document.getElementById('sfx-game-over');
+        const sfxWaveStartElement = document.getElementById('sfx-wave-start');
 
-        // --- Game State Variables ---
+        ctx.imageSmoothingEnabled = false;
+
+
+        const TOWER_HEALTH_MAX = 10;
+        const TOWER_Y_POSITION = canvas.height - 80;
+        const GOBLIN_SIZE = 40;
+        const DEATH_EFFECT_DURATION = 800;
+        const CLICK_PADDING = 8;
+
+        let gameState = 'LOADING';
         let score = 0;
-        let enemySpeed = initialEnemySpeed;
-        let currentSpawnInterval = initialSpawnInterval;
-        let enemies = []; // Array to hold enemy elements and data
-        let gameLoopInterval = null;
-        let spawnTimeout = null;
-        let isGameOver = true;
-        const gameAreaWidth = gameArea.offsetWidth;
-        const hoardTopPosition = hoard.offsetTop;
+        let towerHealth = TOWER_HEALTH_MAX;
+        let wave = 0;
+        let enemies = [];
+        let deathEffects = [];
+        let lastTime = 0;
+        let spawnTimer = 0;
+        let waveCooldown = 0;
+        let enemiesThisWave = 0;
+        let enemiesSpawnedThisWave = 0;
+        let currentWaveConfig = {};
+
+        const assets = {
+            images: {},
+            audio: {},
+            loadedCount: 0,
+            totalCount: 0
+        };
+
+        const imageSources = {
+            background: './sprites/tile_grass.png',
+            tower: './sprites/tower.png',
+            goblinBasic: './sprites/goblin.png',
+            goblinClub: './sprites/goblin_club.png',
+            goblinArcher: './sprites/goblin_archer.png',
+            goblinPyro: './sprites/goblin_pyromancer.png',
+            goblinDead: './sprites/goblin_dead.png'
+        };
+
+         const audioSources = {
+            music: './audio/music_WarcraftOrc.mp3',
+            hit: './audio/sfxHit.wav',
+            death: './audio/sfxGoblinDead.wav',
+            towerHit: './audio/player_hurt.wav',
+            gameOver: './audio/GameOver.wav',
+            waveStart: './audio/Success.wav'
+        };
+
+        const enemyTypes = {
+            basic: { img: 'goblinBasic', speed: 1.5, health: 1, points: 10 },
+            club: { img: 'goblinClub', speed: 1.0, health: 3, points: 25 },
+            archer: { img: 'goblinArcher', speed: 2.0, health: 1, points: 15 },
+            pyro: { img: 'goblinPyro', speed: 1.2, health: 2, points: 20 }
+        };
 
 
-        // --- Functions ---
+        function loadAssets() {
+            let imagesToLoad = Object.keys(imageSources);
+            let audioToLoad = Object.keys(audioSources);
+            assets.totalCount = imagesToLoad.length + audioToLoad.length;
 
-        function getRandomPositionX() {
-            const goblinWidth = 40; // Match CSS
-            return Math.floor(Math.random() * (gameAreaWidth - goblinWidth));
+            imagesToLoad.forEach(key => {
+                assets.images[key] = new Image();
+                assets.images[key].onload = assetLoaded;
+                assets.images[key].onerror = () => console.error(`Failed to load image: ${imageSources[key]}`);
+                assets.images[key].src = imageSources[key];
+            });
+
+             audioToLoad.forEach(key => {
+                const audio = new Audio();
+                audio.addEventListener('canplaythrough', assetLoaded, { once: true });
+                audio.addEventListener('error', () => console.error(`Failed to load audio: ${audioSources[key]}`), { once: true });
+                audio.src = audioSources[key];
+                assets.audio[key] = audio;
+
+                if (key === 'music') bgMusicElement.src = audioSources.music;
+                if (key === 'hit') sfxHitElement.src = audioSources.hit;
+                if (key === 'death') sfxDeathElement.src = audioSources.death;
+                if (key === 'towerHit') sfxTowerHitElement.src = audioSources.towerHit;
+                if (key === 'gameOver') sfxGameOverElement.src = audioSources.gameOver;
+                if (key === 'waveStart') sfxWaveStartElement.src = audioSources.waveStart;
+            });
+
+             if (assets.totalCount === 0) {
+                 assetLoaded();
+             }
         }
 
-        function createGoblin() {
-            if (isGameOver) return;
+        function assetLoaded() {
+            assets.loadedCount++;
+             let allAudioSrcSet = true;
+             Object.keys(audioSources).forEach(key => {
+                 const elementIdSuffix = key.toLowerCase()
+                                          .replace('towerhit', 'tower-hit')
+                                          .replace('wavestart', 'wave-start')
+                                          .replace('gameover', 'game-over');
+                 const soundElement = document.getElementById(`sfx-${elementIdSuffix}`) || (key === 'music' ? bgMusicElement : null);
+                 if (soundElement && !soundElement.src) {
+                     allAudioSrcSet = false;
+                 }
+             });
 
-            const goblin = document.createElement('div');
-            goblin.classList.add('goblin');
-            goblin.style.left = `${getRandomPositionX()}px`;
-            goblin.style.top = '-40px'; // Start above the screen
-
-            // Add click listener to defeat goblin
-            goblin.addEventListener('click', () => defeatGoblin(goblin), { once: true }); // {once: true} auto-removes listener
-
-            gameArea.appendChild(goblin);
-            enemies.push(goblin); // Add to our tracking array
+            if (assets.loadedCount >= assets.totalCount && allAudioSrcSet) {
+                console.log("Assets loaded!");
+                changeState('MENU');
+            }
         }
 
-        function defeatGoblin(goblinElement) {
-            if (isGameOver) return;
 
-            // Create 'poof' effect
-            const poof = document.createElement('div');
-            poof.classList.add('poof');
-            poof.style.left = goblinElement.style.left;
-            poof.style.top = goblinElement.style.top;
-            gameArea.appendChild(poof);
-            // Remove poof element after animation
-            setTimeout(() => {
-                if (poof.parentNode) poof.parentNode.removeChild(poof);
-            }, 300); // Match animation duration
+        function playSound(soundKey) {
+            const elementIdSuffix = soundKey.toLowerCase()
+                                        .replace('towerhit', 'tower-hit')
+                                        .replace('wavestart', 'wave-start')
+                                        .replace('gameover', 'game-over');
+            const soundElement = document.getElementById(`sfx-${elementIdSuffix}`);
 
-            // Remove goblin from DOM
-            if (goblinElement.parentNode) {
-                goblinElement.parentNode.removeChild(goblinElement);
+            if(soundElement) {
+                soundElement.currentTime = 0;
+                soundElement.play().catch(e => console.warn("Audio play interrupted or failed:", soundKey, e));
+            } else if (assets.audio[soundKey]) {
+                 assets.audio[soundKey].currentTime = 0;
+                 assets.audio[soundKey].play().catch(e => console.warn("Audio play interrupted or failed (fallback):", soundKey, e));
+            }
+        }
+
+        function changeState(newState) {
+            gameState = newState;
+            loadingScreen.style.display = gameState === 'LOADING' ? 'flex' : 'none';
+            mainMenuScreen.style.display = gameState === 'MENU' ? 'flex' : 'none';
+            gameOverScreen.style.display = gameState === 'GAMEOVER' ? 'flex' : 'none';
+
+            if (gameState === 'PLAYING') {
+                resetGame();
+                if (!lastTime) {
+                   lastTime = performance.now();
+                   requestAnimationFrame(gameLoop);
+                }
+                 bgMusicElement.currentTime = 0;
+                 bgMusicElement.play().catch(e => console.warn("Background music play failed:", e));
+
+            } else {
+                 bgMusicElement.pause();
+                 lastTime = 0;
             }
 
-            // Remove goblin from the tracking array
-            enemies = enemies.filter(enemy => enemy !== goblinElement);
+             if(gameState === 'GAMEOVER') {
+                 playSound('gameOver');
+                 finalScoreDisplay.textContent = `Score: ${score}`;
+                 finalWaveDisplay.textContent = `Wave Reached: ${wave}`;
+             }
+        }
 
-            // Update score and difficulty
-            score++;
-            scoreDisplay.textContent = `SCORE: ${score}`;
-            enemySpeed += speedIncrement;
-            if (currentSpawnInterval > minSpawnInterval) {
-                currentSpawnInterval -= spawnIntervalDecrement;
-            }
+        function resetGame() {
+            score = 0;
+            towerHealth = TOWER_HEALTH_MAX;
+            wave = 0;
+            enemies = [];
+            deathEffects = [];
+            lastTime = 0;
+            spawnTimer = 0;
+            waveCooldown = 3000;
+            enemiesThisWave = 0;
+            enemiesSpawnedThisWave = 0;
+            currentWaveConfig = {};
+        }
+
+        function startNextWave() {
+            wave++;
+            waveCooldown = 0;
+            enemiesSpawnedThisWave = 0;
+
+            let baseEnemies = 5 + wave * 2;
+            let spawnRate = Math.max(200, 1500 - wave * 50);
+            let enemyPool = ['basic'];
+
+            if (wave >= 2) enemyPool.push('archer');
+            if (wave >= 3) enemyPool.push('pyro');
+            if (wave >= 5) enemyPool.push('club');
+            if (wave >= 7) { baseEnemies += Math.floor(wave / 3); spawnRate = Math.max(150, spawnRate - wave * 5); }
+            if (wave >= 10) { baseEnemies += Math.floor(wave / 2); spawnRate = Math.max(100, spawnRate - wave * 10); }
+
+
+             currentWaveConfig = {
+                count: baseEnemies,
+                rate: spawnRate,
+                types: enemyPool
+            };
+            enemiesThisWave = currentWaveConfig.count;
+            spawnTimer = currentWaveConfig.rate;
+             playSound('waveStart');
         }
 
 
-        function moveEnemies() {
-            if (isGameOver) return;
+         function spawnEnemy() {
+             if (enemiesSpawnedThisWave >= enemiesThisWave) return;
 
-            // Iterate backwards for safe removal while iterating
+             const typeKey = currentWaveConfig.types[Math.floor(Math.random() * currentWaveConfig.types.length)];
+             const type = enemyTypes[typeKey];
+             const x = Math.random() * (canvas.width - GOBLIN_SIZE);
+             const y = -GOBLIN_SIZE;
+             const currentHealth = type.health + Math.floor((wave-1)/3);
+
+             enemies.push({
+                 x: x,
+                 y: y,
+                 type: typeKey,
+                 speed: type.speed * (1 + (wave-1)*0.05),
+                 maxHealth: currentHealth,
+                 currentHealth: currentHealth,
+                 points: type.points,
+                 img: assets.images[type.img],
+                 width: GOBLIN_SIZE,
+                 height: GOBLIN_SIZE
+             });
+             enemiesSpawnedThisWave++;
+         }
+
+         function createDeathEffect(x, y) {
+             deathEffects.push({
+                 x: x,
+                 y: y,
+                 duration: DEATH_EFFECT_DURATION,
+                 initialDuration: DEATH_EFFECT_DURATION
+             });
+         }
+
+        function update(deltaTime) {
+             if (deltaTime > 100) deltaTime = 16.67;
+
+            if (waveCooldown > 0) {
+                waveCooldown -= deltaTime;
+                if (waveCooldown <= 0) {
+                    startNextWave();
+                }
+            } else {
+                spawnTimer -= deltaTime;
+                if (spawnTimer <= 0 && enemiesSpawnedThisWave < enemiesThisWave) {
+                    spawnEnemy();
+                    spawnTimer = currentWaveConfig.rate;
+                }
+
+                for (let i = enemies.length - 1; i >= 0; i--) {
+                    const enemy = enemies[i];
+                    enemy.y += enemy.speed * (deltaTime / 16.67);
+
+                    if (enemy.y + enemy.height >= TOWER_Y_POSITION) {
+                        towerHealth--;
+                         playSound('towerHit');
+                        enemies.splice(i, 1);
+                        if (towerHealth <= 0) {
+                            towerHealth = 0;
+                            changeState('GAMEOVER');
+                            return;
+                        }
+                    }
+                }
+
+                 if (enemies.length === 0 && enemiesSpawnedThisWave >= enemiesThisWave) {
+                     waveCooldown = 3000;
+                 }
+             }
+
+            for (let i = deathEffects.length - 1; i >= 0; i--) {
+                 const effect = deathEffects[i];
+                 effect.duration -= deltaTime;
+
+                 if (effect.duration <= 0) {
+                     deathEffects.splice(i, 1);
+                 }
+             }
+        }
+
+
+        function drawBackground() {
+            const bgImg = assets.images.background;
+            if (!bgImg || !bgImg.complete || bgImg.naturalWidth === 0) return;
+            const pattern = ctx.createPattern(bgImg, 'repeat');
+            ctx.fillStyle = pattern || '#346834';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function drawTower() {
+            const towerImg = assets.images.tower;
+            if (!towerImg || !towerImg.complete || towerImg.naturalWidth === 0) {
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(canvas.width / 2 - 30, TOWER_Y_POSITION, 60, 60);
+                return;
+            };
+            const towerWidth = 60;
+            const towerHeight = 60;
+            ctx.drawImage(towerImg, canvas.width / 2 - towerWidth / 2, TOWER_Y_POSITION, towerWidth, towerHeight);
+
+             const damageOpacity = Math.max(0, 1 - (towerHealth / TOWER_HEALTH_MAX)) * 0.5;
+             if (damageOpacity > 0.1) {
+                ctx.fillStyle = `rgba(255, 0, 0, ${damageOpacity})`;
+                ctx.fillRect(canvas.width / 2 - towerWidth / 2, TOWER_Y_POSITION, towerWidth, towerHeight);
+             }
+        }
+
+        function drawEnemies() {
+            enemies.forEach(enemy => {
+                if (enemy.img && enemy.img.complete && enemy.img.naturalWidth > 0) {
+                    ctx.drawImage(enemy.img, enemy.x, enemy.y, enemy.width, enemy.height);
+
+                    if (enemy.currentHealth < enemy.maxHealth) {
+                        const barWidth = enemy.width * 0.8;
+                        const barHeight = 5;
+                        const barX = enemy.x + (enemy.width - barWidth) / 2;
+                        const barY = enemy.y - barHeight - 2;
+                        const healthPercent = enemy.currentHealth / enemy.maxHealth;
+
+                        ctx.fillStyle = '#555';
+                        ctx.fillRect(barX, barY, barWidth, barHeight);
+                        ctx.fillStyle = healthPercent > 0.5 ? '#00ff00' : healthPercent > 0.2 ? '#ffff00' : '#ff0000';
+                        ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+                        ctx.strokeStyle = '#000';
+                        ctx.lineWidth = 1;
+                         ctx.strokeRect(barX, barY, barWidth, barHeight);
+                    }
+                } else {
+                    ctx.fillStyle = 'lime';
+                    ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+                }
+            });
+        }
+
+         function drawDeathEffects() {
+             const deadGoblinImg = assets.images.goblinDead;
+             if (!deadGoblinImg || !deadGoblinImg.complete || deadGoblinImg.naturalWidth === 0) return;
+
+             deathEffects.forEach(effect => {
+                 const opacity = Math.max(0, effect.duration / effect.initialDuration);
+                 ctx.globalAlpha = opacity;
+
+                 ctx.drawImage(
+                     deadGoblinImg,
+                     effect.x, effect.y,
+                     GOBLIN_SIZE, GOBLIN_SIZE
+                 );
+
+                 ctx.globalAlpha = 1.0;
+             });
+         }
+
+
+        function drawUI() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            ctx.fillRect(0, 0, canvas.width, 40);
+
+            ctx.font = "18px 'Courier New', Courier, monospace";
+            const textY = 26;
+
+            ctx.fillStyle = '#ffd700';
+            ctx.textAlign = 'left';
+            ctx.fillText(`Score: ${score}`, 10, textY);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.fillText(`Wave: ${wave}`, canvas.width / 2, textY);
+
+             const healthColor = towerHealth > TOWER_HEALTH_MAX * 0.6 ? '#00ff00' : towerHealth > TOWER_HEALTH_MAX * 0.3 ? '#ffff00' : '#ff0000';
+             ctx.fillStyle = healthColor;
+            ctx.textAlign = 'right';
+            ctx.fillText(`HP: ${towerHealth}/${TOWER_HEALTH_MAX}`, canvas.width - 10, textY);
+
+             if (waveCooldown > 0 && wave > 0) {
+                 ctx.fillStyle = '#ffffff';
+                 ctx.font = "22px 'Courier New', Courier, monospace";
+                 ctx.textAlign = 'center';
+                 const message = `Wave ${wave + 1} Starting Soon...`;
+                 ctx.fillText(message, canvas.width / 2, canvas.height / 2);
+             } else if (wave === 0 && waveCooldown > 0) {
+                  ctx.fillStyle = '#ffffff';
+                 ctx.font = "22px 'Courier New', Courier, monospace";
+                 ctx.textAlign = 'center';
+                 ctx.fillText("Get Ready!", canvas.width / 2, canvas.height / 2);
+             }
+        }
+
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBackground();
+            drawTower();
+            drawEnemies();
+             drawDeathEffects();
+            drawUI();
+        }
+
+
+        function gameLoop(timestamp) {
+            if (gameState !== 'PLAYING') {
+                lastTime = 0;
+                return;
+            }
+            if (!lastTime) lastTime = timestamp;
+            const deltaTime = timestamp - lastTime;
+            lastTime = timestamp;
+
+            update(deltaTime);
+            draw();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function handleCanvasClick(event) {
+            if (gameState !== 'PLAYING' || waveCooldown > 0) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const mouseX = (event.clientX - rect.left) * scaleX;
+            const mouseY = (event.clientY - rect.top) * scaleY;
+
+            let clickedEnemy = false;
             for (let i = enemies.length - 1; i >= 0; i--) {
-                const goblin = enemies[i];
-                let currentTop = parseFloat(goblin.style.top || -40);
-                currentTop += enemySpeed;
-                goblin.style.top = `${currentTop}px`;
+                const enemy = enemies[i];
+                if (mouseX >= enemy.x - CLICK_PADDING &&
+                    mouseX <= enemy.x + enemy.width + CLICK_PADDING &&
+                    mouseY >= enemy.y - CLICK_PADDING &&
+                    mouseY <= enemy.y + enemy.height + CLICK_PADDING) {
 
-                // Check if goblin reached the hoard
-                const goblinBottom = currentTop + goblin.offsetHeight;
-                if (goblinBottom >= hoardTopPosition) {
-                    endGame();
-                    return; // Stop checking once game is over
+                    enemy.currentHealth--;
+                     playSound('hit');
+                    clickedEnemy = true;
+
+                    if (enemy.currentHealth <= 0) {
+                        score += enemy.points;
+                        createDeathEffect(enemy.x, enemy.y);
+                         playSound('death');
+                        enemies.splice(i, 1);
+                    }
+                    break;
                 }
             }
         }
 
-        function spawnLoop() {
-            if (isGameOver) return;
-
-            createGoblin();
-
-            // Schedule the next spawn with potentially updated interval
-            spawnTimeout = setTimeout(spawnLoop, currentSpawnInterval);
-        }
-
-        function startGame() {
-            // Reset state
-            score = 0;
-            enemySpeed = initialEnemySpeed;
-            currentSpawnInterval = initialSpawnInterval;
-            scoreDisplay.textContent = `SCORE: ${score}`;
-            isGameOver = false;
-
-            // Clear previous game elements and timers
-            enemies.forEach(enemy => {
-                if (enemy.parentNode) enemy.parentNode.removeChild(enemy);
-            });
-            enemies = [];
-            document.querySelectorAll('.poof').forEach(p => p.remove()); // Clear leftover poofs
-            if (gameLoopInterval) clearInterval(gameLoopInterval);
-            if (spawnTimeout) clearTimeout(spawnTimeout);
-
-            // Hide overlays
-            startScreen.style.display = 'none';
-            gameOverScreen.style.display = 'none';
-
-            // Start game loops
-            gameLoopInterval = setInterval(moveEnemies, 1000 / 60); // ~60 FPS movement update
-            spawnLoop(); // Start the spawn cycle
-        }
-
-        function endGame() {
-            if (isGameOver) return; // Prevent multiple calls
-
-            isGameOver = true;
-            clearInterval(gameLoopInterval);
-            clearTimeout(spawnTimeout);
-            gameLoopInterval = null;
-            spawnTimeout = null;
-
-            // Add a visual cue maybe - flash screen?
-             gameContainer.style.transition = 'background-color 0.1s ease-out';
-             gameContainer.style.backgroundColor = '#8B0000'; // Dark Red flash
-             setTimeout(() => {
-                 gameContainer.style.backgroundColor = '#6b4f41'; // Revert
-                 setTimeout(() => gameContainer.style.transition = '', 100);
-             }, 150);
-
-
-            finalScoreDisplay.textContent = `Goblins Vanquished: ${score}`;
-            gameOverScreen.style.display = 'flex';
-
-             // Optional: Stop goblins visually
-             enemies.forEach(g => g.style.animationPlayState = 'paused');
-        }
-
-        // --- Initialization ---
-        startButton.addEventListener('click', startGame);
-        restartButton.addEventListener('click', startGame);
-
-        // Make sure hoard position is calculated after layout
-        // window.onload = () => {
-        //     hoardTopPosition = hoard.offsetTop;
-        // };
-         // Using offsetTop directly might be sufficient in this simple layout,
-         // but window.onload is safer if complex CSS affects layout timing.
-
+        startButton.addEventListener('click', () => changeState('PLAYING'));
+        restartButton.addEventListener('click', () => changeState('PLAYING'));
+        canvas.addEventListener('click', handleCanvasClick);
+        loadAssets();
 
     </script>
 </body>
