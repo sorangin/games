@@ -114,18 +114,18 @@
         }
 
         #top-ui-bar {
-            position: absolute; /* Keep absolute positioning relative to game-screen */
+            position: absolute;
             top: 0; left: 0; right: 0;
             display: flex;
-            justify-content: space-between; /* Space between left status and right controls */
+            justify-content: space-between;
             align-items: center;
             padding: 8px 15px;
             background-color: var(--color-bg-panel);
             border-bottom: 3px solid var(--color-border);
             box-shadow: var(--shadow-panel);
             z-index: 10;
-            flex-wrap: wrap; /* Allow wrapping on small screens */
-            gap: 10px; /* Gap between items if they wrap */
+            flex-wrap: wrap;
+            gap: 10px;
             min-height: 45px;
         }
 
@@ -140,24 +140,23 @@
          #status-area img { height: clamp(18px, 4vw, 24px); vertical-align: middle; }
          #sharpen-indicator { color: orange; font-style: italic; font-weight: bold; }
 
-        /* New wrapper for right-side controls */
         #top-controls-right {
             display: flex;
             align-items: center;
-            gap: 10px; /* Space between audio buttons and fullscreen button */
+            gap: 10px;
         }
 
         #audio-controls { display: flex; gap: 10px; }
-        #audio-controls button, #fullscreen-button { /* Style both audio and fullscreen buttons */
+        #audio-controls button, #fullscreen-button {
             background: none; border: 2px solid var(--color-accent); color: var(--color-accent);
             width: 35px; height: 35px; border-radius: 50%; cursor: pointer;
-            font-size: 1.2em; line-height: 31px; text-align: center; /* Adjusted line-height */
-            padding: 0; /* Remove padding that might affect centering */
-            display: flex; /* Use flex to center content */
+            font-size: 1.2em; line-height: 31px; text-align: center;
+            padding: 0;
+            display: flex;
             justify-content: center;
             align-items: center;
             transition: all 0.2s; outline: none;
-            flex-shrink: 0; /* Prevent buttons from shrinking */
+            flex-shrink: 0;
         }
         #audio-controls button:hover, #fullscreen-button:hover { background-color: rgba(255,255,255,0.2); }
         #audio-controls button.muted { text-decoration: line-through; opacity: 0.7; }
@@ -199,7 +198,6 @@
             position: relative;
             z-index: 1;
             transition: transform 0.15s ease-in-out, opacity 0.3s ease-in, filter 0.5s ease-out;
-            /* Adjust margin-top to prevent overlap with portrait */
             margin-top: clamp(50px, 12vw, 65px);
         }
         #knight-sprite { background-image: url('./sprites/Knight.png'); }
@@ -239,8 +237,8 @@
         }
 
         .sprite.attack { transform: scale(1.1); }
-        #knight-sprite.attack { transform: translate(15px, -5px) scale(1.1); } /* Added slight vertical move */
-        #goblin-sprite.attack { transform: translate(-15px, -5px) scale(1.1); }/* Added slight vertical move */
+        #knight-sprite.attack { transform: translate(15px, -5px) scale(1.1); }
+        #goblin-sprite.attack { transform: translate(-15px, -5px) scale(1.1); }
         .sprite.hit { animation: shake 0.3s ease-in-out; }
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
@@ -275,11 +273,10 @@
             text-shadow: 1px 1px #000; outline: none;
         }
         .shop-button img { height: clamp(25px, 6vw, 35px); image-rendering: pixelated; }
-        /* Style for the sword icon */
         .shop-button .icon {
-            font-size: clamp(1.8em, 5vw, 2.2em); /* Make icon larger */
-            line-height: 1; /* Adjust line height for icon */
-             margin-bottom: 2px; /* Space below icon */
+            font-size: clamp(1.8em, 5vw, 2.2em);
+            line-height: 1;
+             margin-bottom: 2px;
         }
         .shop-button:hover:not(:disabled) { background-color: var(--color-accent); }
         .shop-button:disabled { background-color: #777; color: #aaa; cursor: not-allowed; opacity: 0.6; }
@@ -316,7 +313,7 @@
         #submit-button:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0px #1a0f0c; }
         #submit-button:disabled { background-color: #888; cursor: not-allowed; box-shadow: none; transform: none; opacity: 0.7; }
 
-        .feedback-area { /* Changed ID to class for consistency */
+        .feedback-area {
             margin-top: 10px; min-height: 25px;
             font-size: clamp(1em, 3.5vw, 1.3em); font-weight: bold;
             text-align: center; text-shadow: var(--shadow-text);
@@ -360,9 +357,6 @@
 </head>
 <body>
     <div id="game-container">
-
-        <!-- Fullscreen button moved inside top-ui-bar -->
-
         <div id="menu-screen" class="screen active">
             <h1>Medieval Math</h1>
             <p>Sharpen your mind and your blade! Solve math problems to defeat waves of goblins. Earn gold, buy items, and level up your Knight!</p>
@@ -377,7 +371,7 @@
                      <span id="gold-display"><img src="./sprites/gold.png" alt="Gold"> 0</span>
                      <span id="sharpen-indicator" style="display: none;">⚔️ Sharpened!</span>
                  </div>
-                 <!-- New wrapper for right controls -->
+                 
                  <div id="top-controls-right">
                      <div id="audio-controls">
                          <button id="music-toggle-button" title="Toggle Music">🎵</button>
