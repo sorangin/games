@@ -2,463 +2,155 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Color Cascade</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
-        /* --- Body Styles --- */
-        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #000; }
-        body { display: flex; justify-content: center; align-items: center; font-family: sans-serif; }
-
-        /* --- Fullscreen Wrapper --- */
+        :root {
+            --bg-gradient-start: #1a1a2e;
+            --bg-gradient-end: #16213e;
+            --container-bg: rgba(40, 40, 65, 0.8);
+            --container-border: #0f3460;
+            --controls-bg: rgba(20, 20, 40, 0.9);
+            --text-light: #e9f1f7;
+            --text-dark: #333;
+            --score-color: #f0f0f0;
+            --score-shadow: #000000aa;
+            --combo-color: #ffdd57;
+            --accent-glow: rgba(255, 255, 255, 0.1);
+            --button-active-scale: 0.95;
+            --font-main: 'Poppins', sans-serif;
+            --color-1: #ff6b6b; --color-1-glow: #ff6b6ba0;
+            --color-2: #3498db; --color-2-glow: #3498dba0;
+            --color-3: #2ecc71; --color-3-glow: #2ecc71a0;
+            --color-4: #feca57; --color-4-glow: #feca57a0;
+            --color-5: #9b59b6; --color-5-glow: #9b59b6a0;
+            --block-size: 45px;
+            --control-button-size: 55px;
+            --control-height: 80px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end)); font-family: var(--font-main); }
+        body { display: flex; justify-content: center; align-items: center; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; }
         #fullscreen-wrapper { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; overflow: hidden; }
-
-        /* --- Game Container (9:16) --- */
-        #game-container {
-            aspect-ratio: 9 / 16;
-            height: 100%; width: auto; max-width: 100%; max-height: 100%;
-            position: relative; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box; background-color: #333;
-            border: 3px solid #222; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            transition: background-color 0.1s ease-out; /* Added for smooth flash */
-        }
-
-        /* --- Internal Elements (Fixed Sizes) --- */
-        #game-area { flex-grow: 1; position: relative; background-color: #444; }
-        #controls { height: 60px; background-color: #2a2a2a; display: flex; justify-content: space-around; align-items: center; padding: 0 10px; border-top: 3px solid #111; flex-shrink: 0; }
-        .control-button { width: 50px; height: 40px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 10px; color: white; transition: transform 0.1s ease; box-shadow: 0 3px 5px rgba(0,0,0,0.3); -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; }
-        .control-button:active, .control-button.active-touch { transform: scale(0.95); box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
-        .block { width: 40px; height: 40px; position: absolute; border-radius: 5px; box-shadow: inset 0 0 5px rgba(0,0,0,0.4); top: -50px; }
-        #score-display { position: absolute; top: 10px; left: 10px; color: white; font-size: 1.5em; font-weight: bold; text-shadow: 1px 1px 2px black; z-index: 10; }
-        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; z-index: 20; padding: 20px; box-sizing: border-box; pointer-events: none; /* Allow clicks/taps to pass through overlay div */ }
-        .overlay > * { pointer-events: auto; /* Make children (like buttons) clickable again */ } /* Reset pointer-events for children */
-        .overlay h2 { margin-bottom: 10px; } .overlay p { margin-bottom: 20px; }
-        .overlay button { padding: 12px 25px; font-size: 1.1em; cursor: pointer; border: none; border-radius: 5px; background-color: #4CAF50; color: white; transition: background-color 0.2s ease, transform 0.1s ease; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
-        .overlay button:hover { background-color: #45a049; } .overlay button:active { transform: scale(0.97); }
-
-        /* --- UI Buttons (Fullscreen & Mute) --- */
-        .ui-button {
-            position: absolute;
-            top: 8px;
-            z-index: 30;
-            padding: 3px 6px; /* Adjusted padding */
-            font-size: 1.6em; /* Increased font size for icon */
-            cursor: pointer;
-            background-color: rgba(255, 255, 255, 0.6);
-            color: #333;
-            border: 1px solid #999;
-            border-radius: 4px;
-            font-weight: normal; /* Normal weight often looks better for icons */
-            line-height: 1;
-            -webkit-tap-highlight-color: transparent;
-            user-select: none; -webkit-user-select: none;
-            /* Ensure minimum size */
-            min-width: 25px;
-            min-height: 25px;
-            display: inline-flex; /* Use flex to center */
-            justify-content: center;
-            align-items: center;
-        }
-         .ui-button:hover { background-color: rgba(255, 255, 255, 0.8); }
-         .ui-button:active { transform: scale(0.95); }
-         .ui-button:disabled { opacity: 0.5; cursor: not-allowed; }
-
-        #fullscreen-btn {
-             right: 8px; /* Position Fullscreen button */
-        }
-        #mute-btn {
-            right: 45px; /* Position Mute button next to Fullscreen */
-        }
-
+        #game-container { aspect-ratio: 9 / 16; height: 100%; width: auto; max-width: 100%; max-height: 100%; position: relative; overflow: hidden; display: flex; flex-direction: column; background-color: var(--container-bg); border: 3px solid var(--container-border); border-radius: 15px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 15px var(--accent-glow); backdrop-filter: blur(5px); transition: transform 0.1s ease-out; }
+        #game-container.shake { animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-3px, 0, 0); } 40%, 60% { transform: translate3d(3px, 0, 0); } }
+        #game-area { flex-grow: 1; position: relative; overflow: hidden; }
+        #status-bar { position: absolute; top: 0; left: 0; width: 100%; padding: 15px; display: flex; align-items: flex-start; z-index: 10; background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0)); }
+        #score-group { display: flex; flex-direction: column; align-items: flex-start; }
+        #score-display { color: var(--score-color); font-size: 1.6em; font-weight: 600; text-shadow: 1px 1px 3px var(--score-shadow); line-height: 1.1; margin-bottom: 2px; }
+        #highscore-display { color: var(--score-color); font-size: 0.9em; font-weight: 400; opacity: 0.8; text-shadow: 1px 1px 3px var(--score-shadow); line-height: 1; }
+        #combo-display { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); color: var(--combo-color); font-size: 1.8em; font-weight: 700; text-shadow: 0 0 8px var(--combo-color), 1px 1px 3px var(--score-shadow); z-index: 5; opacity: 0; transition: opacity 0.2s ease, transform 0.2s ease; }
+        #combo-display.visible { opacity: 1; transform: translateX(-50%) scale(1.1); }
+        #controls { height: var(--control-height); background-color: var(--controls-bg); display: flex; justify-content: space-around; align-items: center; padding: 0 10px; border-top: 2px solid var(--container-border); flex-shrink: 0; position: relative; z-index: 15; }
+        .control-button { width: var(--control-button-size); height: var(--control-button-size); border: none; border-radius: 50%; cursor: pointer; transition: transform 0.1s ease, box-shadow 0.2s ease; box-shadow: 0 4px 8px rgba(0,0,0,0.3), inset 0 -2px 4px rgba(0,0,0,0.2); display: flex; justify-content: center; align-items: center; position: relative; overflow: hidden; }
+        .control-button::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 70%); opacity: 0.6; transition: opacity 0.2s ease; }
+        .control-button:hover::before { opacity: 0.8; }
+        .control-button:active, .control-button.active-touch { transform: scale(var(--button-active-scale)); box-shadow: 0 2px 4px rgba(0,0,0,0.3), inset 0 -1px 2px rgba(0,0,0,0.2); }
+        .control-button.success-flash { animation: success-pulse 0.3s ease-out; }
+        @keyframes success-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        .block { width: var(--block-size); height: var(--block-size); position: absolute; border-radius: 8px; box-shadow: 0 0 10px 2px var(--glow-color, transparent), inset 0 0 8px rgba(0,0,0,0.4); will-change: transform; }
+        .block.matched { animation: block-matched 0.3s ease-out forwards; }
+        @keyframes block-matched { 0% { transform: scale(1) translateY(var(--current-y, 0px)); opacity: 1; } 100% { transform: scale(1.5) translateY(var(--current-y, 0px)); opacity: 0; } }
+        .particle { position: absolute; width: 6px; height: 6px; border-radius: 50%; pointer-events: none; z-index: 12; opacity: 1; animation: particle-move-fade 0.6s ease-out forwards; }
+        @keyframes particle-move-fade { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--end-x, 0), var(--end-y, 0)) scale(0.5); opacity: 0; } }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(15, 15, 30, 0.85); backdrop-filter: blur(8px); display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-light); text-align: center; z-index: 20; padding: 30px; opacity: 0; pointer-events: none; transition: opacity 0.4s ease-in-out; }
+        .overlay.visible { opacity: 1; pointer-events: auto; }
+        .overlay > * { pointer-events: auto; }
+        .overlay h2 { font-size: 2.8em; font-weight: 700; margin-bottom: 15px; text-shadow: 2px 2px 5px rgba(0,0,0,0.5); color: var(--text-light); }
+        .overlay p { font-size: 1.1em; line-height: 1.6; margin-bottom: 30px; max-width: 80%; }
+        .overlay #final-score, .overlay #final-highscore { font-size: 1.4em; font-weight: 600; margin-bottom: 10px; color: var(--score-color); }
+        .overlay #final-highscore { font-size: 1.1em; font-weight: 400; opacity: 0.9; margin-bottom: 25px; }
+        .overlay button { padding: 15px 35px; font-size: 1.3em; font-weight: 600; cursor: pointer; border: none; border-radius: 50px; background: linear-gradient(145deg, var(--color-2), var(--color-3)); color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); box-shadow: 0 5px 15px rgba(0,0,0,0.3); transition: background 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease; font-family: var(--font-main); }
+        .overlay button:hover { box-shadow: 0 7px 20px rgba(0,0,0,0.4); filter: brightness(1.1); }
+        .overlay button:active { transform: scale(var(--button-active-scale)); box-shadow: 0 3px 10px rgba(0,0,0,0.3); }
+        .ui-button { position: absolute; top: 20px; z-index: 30; padding: 0; font-size: 1.8em; cursor: pointer; background-color: rgba(255, 255, 255, 0.15); color: var(--text-light); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; line-height: 1; min-width: 40px; min-height: 40px; display: inline-flex; justify-content: center; align-items: center; transition: background-color 0.2s ease, transform 0.1s ease; backdrop-filter: blur(3px); }
+        .ui-button:hover { background-color: rgba(255, 255, 255, 0.25); }
+        .ui-button:active { transform: scale(var(--button-active-scale)); }
+        .ui-button:disabled { opacity: 0.5; cursor: not-allowed; background-color: rgba(100, 100, 100, 0.2); }
+        #fullscreen-btn { right: 20px; }
+        #mute-btn { right: 75px; }
     </style>
 </head>
 <body>
-    <!-- Outer wrapper for fullscreen -->
     <div id="fullscreen-wrapper">
-        <!-- Game container (9:16) -->
         <div id="game-container">
-            <div id="score-display">Score: 0</div>
-            <div id="game-area"></div>
+            <div id="status-bar">
+                <div id="score-group">
+                    <div id="score-display">Score: 0</div>
+                    <div id="highscore-display">Best: 0</div>
+                </div>
+            </div>
+            <div id="game-area">
+                 <div id="combo-display">Combo x2</div>
+            </div>
             <div id="controls"></div>
-
-             <!-- UI Buttons -->
              <button id="mute-btn" class="ui-button" title="Toggle Sound">🔊</button>
-             <button id="fullscreen-btn" class="ui-button" title="Toggle Fullscreen" disabled></button>
-
-
-            <!-- Overlays are inside game-container -->
-            <div id="start-screen" class="overlay">
+             <button id="fullscreen-btn" class="ui-button" title="Toggle Fullscreen" disabled>⛶</button>
+            <div id="start-screen" class="overlay visible">
                 <h2>Color Cascade</h2>
-                <p>Tap the button matching the falling block's color before it hits the bottom!</p>
+                <p>Tap the button matching the falling shape's color before it hits the bottom!</p>
                 <button id="start-button">Start Game</button>
             </div>
-            <div id="game-over-screen" class="overlay" style="display: none;">
+            <div id="game-over-screen" class="overlay">
                  <h2>Game Over!</h2>
                  <p id="final-score">Your Score: 0</p>
+                 <p id="final-highscore">High Score: 0</p>
                  <button id="restart-button">Play Again</button>
             </div>
-        </div><!-- end #game-container -->
-    </div><!-- end #fullscreen-wrapper -->
-
+        </div>
+    </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-
-            // --- DOM Elements ---
-            const fullscreenWrapper = document.getElementById('fullscreen-wrapper');
-            const gameContainer = document.getElementById('game-container');
-            const gameArea = document.getElementById('game-area');
-            const controlsDiv = document.getElementById('controls');
-            const scoreDisplay = document.getElementById('score-display');
-            const startScreen = document.getElementById('start-screen');
-            const gameOverScreen = document.getElementById('game-over-screen');
-            const startButton = document.getElementById('start-button');
-            const restartButton = document.getElementById('restart-button');
-            const finalScoreDisplay = document.getElementById('final-score');
-            const fullscreenButton = document.getElementById('fullscreen-btn');
-            const muteButton = document.getElementById('mute-btn'); // Get the mute button
-
-            if (!fullscreenWrapper || !gameContainer || !fullscreenButton || !startButton || !restartButton || !muteButton) { // Check mute button too
-                console.error("Error: Critical DOM elements missing. Game cannot start.");
-                // Optionally disable buttons or show an error message to the user
-                if(startButton) startButton.disabled = true;
-                if(restartButton) restartButton.disabled = true;
-                if(muteButton) muteButton.disabled = true;
-                if(fullscreenButton) fullscreenButton.disabled = true;
-                return;
-            }
-
-            // --- Audio Setup ---
-            // WARNING: .mid files have very poor/inconsistent browser support!
-            // Consider converting them to .mp3 or .ogg for reliability.
-            const musicTracks = [
-                'audio/music_Treasure.mp3',
-                'audio/music_AoiUsagi-Die.mp3',
-                'audio/music_WormsTheme.mp3' // .mp3 has much better support
-            ];
-            const successSfxPath = 'audio/Success.wav';
-            const failSfxPath = 'audio/Error.wav';
-            const gameOverSfxPath = 'audio/GameOver.wav';
-
-            // Initialize bgMusic with the first track for preloading/initialization purposes
-            let bgMusic = new Audio(musicTracks[0]);
-            bgMusic.loop = true;
-            bgMusic.volume = 0.3; // Adjust as needed
-
-            let successSfx = new Audio(successSfxPath);
-            successSfx.volume = 0.7;
-
-            let failSfx = new Audio(failSfxPath);
-            failSfx.volume = 0.7;
-
-            let gameOverSfx = new Audio(gameOverSfxPath);
-            gameOverSfx.volume = 0.8;
-
-            let isMuted = false; // Mute state
-            let audioInitialized = false; // Flag to track if audio context is unlocked
-
-            // Helper function to play SFX (resets playback if already playing)
-            function playSfx(sfx) {
-                if (isMuted || !audioInitialized) return; // Check initialization state
-                // Check if sfx is valid and ready
-                if (sfx && sfx.readyState >= 2) { // HAVE_CURRENT_DATA or more
-                     sfx.currentTime = 0; // Rewind to start
-                     sfx.play().catch(e => console.warn("SFX play failed:", e));
-                } else if (sfx) {
-                    // If not ready, try loading it again just in case, then play when ready
-                    sfx.load(); // May not be necessary but can sometimes help
-                    sfx.addEventListener('canplaythrough', () => {
-                         sfx.currentTime = 0;
-                         sfx.play().catch(e => console.warn("SFX play (after load) failed:", e));
-                    }, { once: true }); // Play only once when ready
-                     console.warn("SFX not ready, attempting to play when loaded:", sfx.src);
-                } else {
-                    console.error("Attempted to play an invalid SFX object.");
-                }
-            }
-
-
-            // Function to handle starting music (respects mute & initialization)
-            function startMusic() {
-                if (isMuted || !audioInitialized) return;
-                // Ensure bgMusic is valid and has a source loaded
-                 if (bgMusic && bgMusic.src && bgMusic.readyState >= 2) { // Check readiness
-                    bgMusic.play().catch(e => console.error("Music play failed (track: " + bgMusic.src + "):", e));
-                 } else if (bgMusic && bgMusic.src) {
-                    // If source is set but not ready, attempt to play once loaded
-                    bgMusic.addEventListener('canplaythrough', () => {
-                         bgMusic.play().catch(e => console.error("Music play (after load) failed:", e));
-                    }, { once: true });
-                    console.warn("Music not ready, attempting to play when loaded:", bgMusic.src);
-                    // bgMusic.load(); // Already called in startGame, usually not needed here again
-                } else {
-                    console.warn("Attempted to play music, but source is invalid or not ready.");
-                }
-            }
-
-            // Function to stop music
-            function stopMusic() {
-                if (bgMusic) {
-                    bgMusic.pause();
-                    bgMusic.currentTime = 0; // Reset position
-                }
-            }
-
-             // Function to try and unlock audio context on first user interaction
-            function initializeAudio() {
-                if (audioInitialized) return;
-                console.log("Attempting to initialize audio context...");
-
-                // Sounds to attempt unlocking with
-                const soundsToUnlock = [bgMusic, successSfx, failSfx, gameOverSfx];
-                let unlockPromise = Promise.resolve();
-
-                soundsToUnlock.forEach(sound => {
-                    // Chain the play/pause attempts safely
-                    unlockPromise = unlockPromise.then(() => {
-                        // Check if sound element is valid and potentially playable
-                        if (sound && sound.play instanceof Function) {
-                            // Temporarily unmute for the unlock attempt
-                            const wasMuted = sound.muted;
-                            sound.muted = false;
-                            const playPromise = sound.play();
-                            if (playPromise !== undefined) {
-                                return playPromise.then(() => {
-                                     sound.pause();
-                                     sound.muted = wasMuted; // Restore original mute state
-                                     }).catch(e => {
-                                         sound.muted = wasMuted; // Restore mute state on error too
-                                         // Ignore specific errors like "interrupted" or "not allowed" which are common here
-                                         if (e.name !== 'AbortError' && e.name !== 'NotAllowedError') {
-                                             console.warn("Audio unlock play/pause failed for:", sound.src, e.name);
-                                         }
-                                     });
-                            } else {
-                                return Promise.resolve(); // Skip if play() is not available or returns undefined
-                            }
-                        } else {
-                            return Promise.resolve(); // Skip if sound object is invalid
-                        }
-                    }).catch(e => { /* Ignore chain errors */ });
-                });
-
-                unlockPromise.then(() => {
-                    // Check again in case it was already set by a rapid event
-                    if (!audioInitialized) {
-                         audioInitialized = true;
-                         console.log("Audio context potentially initialized by user action.");
-                         // If not muted and game has already started (less likely here, but possible), try starting music
-                         if (!isGameOver && !isMuted) {
-                              startMusic();
-                         }
-                    }
-                }).catch(e => {
-                     console.warn("Audio context unlock sequence encountered issues:", e);
-                });
-            }
-
-
-            // --- Game Config, State Vars, Game Logic Functions ---
-            const colors = ['#FF5733', '#33FF57', '#3357FF', '#FF33A1', '#F1C40F'];
-            const initialFallSpeed = 3; const speedIncrement = 0.15; let score = 0; let currentBlock = null;
-            let currentBlockColor = ''; let fallSpeed = initialFallSpeed; let isGameOver = true; // Start as true
-            let animationFrameId = null; let isStartingOrRestarting = false;
-
-            function getRandomColor() { return colors[Math.floor(Math.random() * colors.length)]; }
-            function getRandomPositionX() { const w = gameArea.offsetWidth, bW = 40; return Math.max(0, Math.min(w - bW, Math.floor(Math.random() * (w - bW)))); }
-            function createBlock() { if (currentBlock && currentBlock.parentNode) currentBlock.remove(); const b = document.createElement('div'); b.classList.add('block'); currentBlockColor = getRandomColor(); b.style.backgroundColor = currentBlockColor; b.style.left = `${getRandomPositionX()}px`; b.style.top = '-50px'; gameArea.appendChild(b); currentBlock = b; }
-            function gameLoop() { if (isGameOver) return; moveBlock(); animationFrameId = requestAnimationFrame(gameLoop); }
-            function moveBlock() { if (!currentBlock || isGameOver) return; let t = parseFloat(currentBlock.style.top || -50); t += fallSpeed; currentBlock.style.top = `${t}px`; const gH = gameArea.offsetHeight, bH = 40; if (t + bH >= gH - 5) endGame(); }
-
-            function handleColorSelection(selectedColor) {
-                if (isGameOver || !currentBlock) return;
-                if (selectedColor === currentBlockColor) {
-                    playSfx(successSfx); // <<< Play success SFX
-                    score++;
-                    scoreDisplay.textContent = `Score: ${score}`;
-                    fallSpeed += speedIncrement;
-                    if(currentBlock && currentBlock.parentNode) currentBlock.remove(); // Ensure removal
-                    currentBlock = null;
-                    currentBlockColor = '';
-                    setTimeout(createBlock, 10); // Create next block slightly faster
-                } else {
-                    playSfx(failSfx); // <<< Play fail SFX
-                    flashScreen('#FF0000');
-                }
-            }
-
-            function handleControlClick(event) { const c = event.target.dataset.color; if (c) { initializeAudio(); handleColorSelection(c); } } // Also attempt init on control click
-            function handleControlTouch(event) { event.preventDefault(); initializeAudio(); const el = event.target; const c = el.dataset.color; if (c) { handleColorSelection(c); el.classList.add('active-touch'); const rm = () => { el.classList.remove('active-touch'); el.removeEventListener('touchend', rm); el.removeEventListener('touchcancel', rm); }; el.addEventListener('touchend', rm); el.addEventListener('touchcancel', rm); } } // And touch
-            function flashScreen(color) { if (!gameContainer) return; /* gameContainer.style.transition = 'background-color 0.1s ease-out'; // Ensure transition is set */ gameContainer.style.backgroundColor = color; setTimeout(() => { if (gameContainer) gameContainer.style.backgroundColor = '#333'; /* setTimeout(() => gameContainer.style.transition = '', 100); // Reset transition if needed, but style has it */ }, 100); }
-            function setupControls() { controlsDiv.innerHTML = ''; colors.forEach(c => { const btn = document.createElement('button'); btn.classList.add('control-button'); btn.style.backgroundColor = c; btn.dataset.color = c; btn.addEventListener('click', handleControlClick); btn.addEventListener('touchstart', handleControlTouch, { passive: false }); controlsDiv.appendChild(btn); }); }
-
-            function startGame() {
-                console.log("Starting game...");
-                score = 0;
-                fallSpeed = initialFallSpeed;
-                scoreDisplay.textContent = `Score: ${score}`;
-                isGameOver = false; // Set game state correctly
-                isStartingOrRestarting = false; // Reset this flag
-                gameArea.innerHTML = ''; // Clear previous blocks
-                currentBlock = null;
-                currentBlockColor = '';
-                startScreen.style.display = 'none';
-                gameOverScreen.style.display = 'none';
-
-                if (animationFrameId) {
-                    cancelAnimationFrame(animationFrameId);
-                }
-
-                // Stop game over sound if it was playing
-                if (gameOverSfx) {
-                    gameOverSfx.pause();
-                    gameOverSfx.currentTime = 0;
-                }
-
-                stopMusic(); // Stop any previous music just in case
-
-                // Select and set new random background music
-                const randomIndex = Math.floor(Math.random() * musicTracks.length);
-                const selectedTrack = musicTracks[randomIndex];
-                console.log("Selected music:", selectedTrack);
-
-                // Update the source of the *existing* bgMusic object
-                bgMusic.src = selectedTrack;
-
-                // Explicitly load the new source. This is important.
-                bgMusic.load();
-
-                // Attempt to play the new track (startMusic checks mute/init state)
-                startMusic();
-
-                createBlock(); // Create the first block
-                animationFrameId = requestAnimationFrame(gameLoop); // Start the game loop
-            }
-
-            function endGame() {
-                if (isGameOver) return; // Prevent running multiple times
-                console.log("Ending game...");
-                isGameOver = true;
-                if (animationFrameId) {
-                    cancelAnimationFrame(animationFrameId);
-                    animationFrameId = null;
-                }
-                stopMusic(); // Stop background music
-                playSfx(gameOverSfx); // Play game over SFX
-                flashScreen('#AA0000');
-                finalScoreDisplay.textContent = `Your Score: ${score}`;
-                gameOverScreen.style.display = 'flex';
-                // Clean up the last block
-                if (currentBlock && currentBlock.parentNode) {
-                     currentBlock.remove();
-                     currentBlock = null;
-                }
-            }
-
-            // --- Fullscreen API Logic ---
+        'use strict';
+        const ColorCascade = (() => {
+            const config = { colors: [ { name: 'red', hex: 'var(--color-1)', glow: 'var(--color-1-glow)' }, { name: 'blue', hex: 'var(--color-2)', glow: 'var(--color-2-glow)' }, { name: 'green', hex: 'var(--color-3)', glow: 'var(--color-3-glow)' }, { name: 'yellow', hex: 'var(--color-4)', glow: 'var(--color-4-glow)' }, { name: 'purple', hex: 'var(--color-5)', glow: 'var(--color-5-glow)' } ], initialFallSpeed: 2.5, speedIncrement: 0.08, comboThreshold: 1, baseScore: 10, particleCount: 15, localStorageHighScoreKey: 'colorCascadeHighScore', audioFiles: { music: [ 'audio/music_Treasure.mp3', 'audio/music_WormsTheme.mp3', 'audio/music_Luffy.mp3' ], success: 'audio/Success.wav', fail: 'audio/Error.wav', gameOver: 'audio/GameOver.wav' } };
+            const state = { score: 0, highScore: 0, currentBlockElement: null, currentBlockData: null, currentBlockY: 0, fallSpeed: config.initialFallSpeed, gameState: 'MENU', animationFrameId: null, isMuted: false, audioInitialized: false, audioInitializing: false, comboCount: 0, activeTouches: new Set() };
+            const dom = {}; const audio = {};
+            function cacheDOM() { dom.fullscreenWrapper = document.getElementById('fullscreen-wrapper'); dom.gameContainer = document.getElementById('game-container'); dom.gameArea = document.getElementById('game-area'); dom.controls = document.getElementById('controls'); dom.scoreDisplay = document.getElementById('score-display'); dom.highscoreDisplay = document.getElementById('highscore-display'); dom.comboDisplay = document.getElementById('combo-display'); dom.startScreen = document.getElementById('start-screen'); dom.gameOverScreen = document.getElementById('game-over-screen'); dom.startButton = document.getElementById('start-button'); dom.restartButton = document.getElementById('restart-button'); dom.finalScoreDisplay = document.getElementById('final-score'); dom.finalHighscoreDisplay = document.getElementById('final-highscore'); dom.fullscreenButton = document.getElementById('fullscreen-btn'); dom.muteButton = document.getElementById('mute-btn'); dom.scoreGroup = document.getElementById('score-group'); for (const key in dom) { if (!dom[key]) console.error(`Initialization Error: DOM element #${key} not found!`); } }
+            function loadHighScore() { const savedScore = localStorage.getItem(config.localStorageHighScoreKey); state.highScore = savedScore ? parseInt(savedScore, 10) : 0; updateHighScoreDisplay(); }
+            function saveHighScore() { if (state.score > state.highScore) { state.highScore = state.score; localStorage.setItem(config.localStorageHighScoreKey, state.highScore.toString()); updateHighScoreDisplay(); } }
+            function updateHighScoreDisplay() { if (dom.highscoreDisplay) dom.highscoreDisplay.textContent = `Best: ${state.highScore}`; if (dom.finalHighscoreDisplay) dom.finalHighscoreDisplay.textContent = `High Score: ${state.highScore}`; }
+            async function initializeAudio() { if (state.audioInitialized || state.audioInitializing || typeof Audio === 'undefined') { return Promise.resolve(state.audioInitialized); } state.audioInitializing = true; console.log("Attempting to initialize audio context..."); return new Promise(async (resolve) => { let success = false; try { audio.success = new Audio(config.audioFiles.success); audio.fail = new Audio(config.audioFiles.fail); audio.gameOver = new Audio(config.audioFiles.gameOver); const sfxPromises = [audio.success, audio.fail, audio.gameOver].map(sfx => new Promise((res, rej) => { if (!sfx) return rej("SFX object null"); sfx.volume = 0.6; sfx.addEventListener('canplaythrough', res, { once: true }); sfx.addEventListener('error', (e) => { console.error(`Error loading sound: ${sfx.src}`, e); res(); }); sfx.load(); })); if (config.audioFiles.music.length > 0) { audio.bgMusic = new Audio(); audio.bgMusic.loop = true; audio.bgMusic.volume = 0.3; } else { audio.bgMusic = null; } await Promise.all(sfxPromises); const soundsToUnlock = [audio.success, audio.fail, audio.gameOver].filter(a => a); if (soundsToUnlock.length > 0) { console.log("Attempting audio context unlock..."); for (const sound of soundsToUnlock) { if (sound && sound.play) { const currentVolume = sound.volume; sound.volume = 0; try { await sound.play(); sound.pause(); sound.currentTime = 0; } catch (e) { if (e.name !== 'NotAllowedError' && e.name !== 'AbortError') console.warn("Audio unlock play/pause failed for:", sound.src, e.name); } finally { sound.volume = currentVolume; } } } console.log("Audio context unlock attempted."); } else { console.warn("No valid SFX found to attempt audio context unlock."); } success = true; } catch (error) { console.error("Audio initialization process failed critically:", error); success = false; } finally { state.audioInitialized = success; state.audioInitializing = false; console.log(`Audio Initialization ${success ? 'Succeeded' : 'Failed (some sounds might not play)'}.`); applyMuteState(); resolve(success); } }); }
+            function playSound(sound, volume = 1.0) { if (!state.audioInitialized || state.isMuted || !sound || typeof sound.play !== 'function') return; try { const baseVolume = (sound === audio.bgMusic) ? 0.3 : 0.6; sound.volume = baseVolume * volume; sound.currentTime = 0; sound.play().catch(e => { if (e.name !== 'AbortError') console.warn("Sound play failed:", e.name, sound.src); }); } catch (e) { console.error("Error playing sound:", e); } }
+            function playMusic() { if (!state.audioInitialized || state.isMuted || !audio.bgMusic || !audio.bgMusic.paused || state.gameState !== 'PLAYING') return; if (!audio.bgMusic.src || audio.bgMusic.readyState < 2) { console.log("Music source not ready or set, selecting random track."); if (selectAndLoadMusic()) { audio.bgMusic.addEventListener('canplaythrough', () => { if (!state.isMuted && state.gameState === 'PLAYING') { console.log("Playing music after load."); audio.bgMusic.play().catch(e => console.error("Music play failed after load:", e)); } }, { once: true }); audio.bgMusic.addEventListener('error', (e) => { console.error(`Error loading music track: ${audio.bgMusic.src}`, e); }, { once: true }); } else { console.warn("Could not select or load music track."); } } else { console.log("Playing existing music track."); audio.bgMusic.play().catch(e => console.error("Music play failed:", e)); } }
+            function stopMusic() { if (!audio.bgMusic) return; try { if (!audio.bgMusic.paused) { audio.bgMusic.pause(); console.log("Music stopped."); } audio.bgMusic.currentTime = 0; } catch(e) { console.error("Error stopping music:", e); } }
+            function selectAndLoadMusic() { if (!audio.bgMusic || config.audioFiles.music.length === 0) return false; const randomIndex = Math.floor(Math.random() * config.audioFiles.music.length); const selectedTrack = config.audioFiles.music[randomIndex]; let currentPathname = ''; try { currentPathname = audio.bgMusic.src ? new URL(audio.bgMusic.src).pathname : ''; } catch { } const selectedPathname = new URL(selectedTrack, window.location.href).pathname; if (!currentPathname.endsWith(selectedPathname)) { console.log("Loading music:", selectedTrack); audio.bgMusic.src = selectedTrack; audio.bgMusic.load(); return true; } else { console.log("Music track already loaded:", selectedTrack); return audio.bgMusic.readyState >= 2; } }
+            function applyMuteState() { Object.values(audio).forEach(sound => { if (sound && typeof sound.muted !== 'undefined') sound.muted = state.isMuted; }); if (dom.muteButton) { dom.muteButton.innerHTML = state.isMuted ? '🔇' : '🔊'; dom.muteButton.title = state.isMuted ? 'Unmute' : 'Mute Sound'; } if (state.isMuted) stopMusic(); else if (state.gameState === 'PLAYING' && state.audioInitialized) playMusic(); }
+            function toggleMute() { state.isMuted = !state.isMuted; console.log(`Mute toggled: ${state.isMuted}`); applyMuteState(); if (!state.audioInitialized && !state.audioInitializing) initializeAudio(); }
+            function getRandomColorData() { return config.colors[Math.floor(Math.random() * config.colors.length)]; }
+            function getRandomPositionX() { if (!dom.gameArea) return 50; const gameAreaWidth = dom.gameArea.offsetWidth; const blockWidthValue = getComputedStyle(document.documentElement).getPropertyValue('--block-size') || '45px'; const blockWidth = parseFloat(blockWidthValue); const padding = 10; const randomPos = Math.floor(Math.random() * (gameAreaWidth - blockWidth - 2 * padding)) + padding; return Math.max(padding, Math.min(randomPos, gameAreaWidth - blockWidth - padding)); }
+            function createBlock() { if (state.currentBlockElement && state.currentBlockElement.parentNode) state.currentBlockElement.remove(); if (state.gameState !== 'PLAYING') return; const block = document.createElement('div'); block.classList.add('block'); state.currentBlockData = getRandomColorData(); block.style.backgroundColor = state.currentBlockData.hex; block.style.setProperty('--glow-color', state.currentBlockData.glow); const startX = getRandomPositionX(); const blockHeightValue = getComputedStyle(document.documentElement).getPropertyValue('--block-size') || '45px'; const blockHeight = parseFloat(blockHeightValue); const startY = -blockHeight; state.currentBlockY = startY; block.style.left = `${startX}px`; block.style.transform = `translateY(${startY}px)`; if (dom.gameArea) dom.gameArea.appendChild(block); state.currentBlockElement = block; }
+            function gameLoop() { if (state.gameState !== 'PLAYING') { state.animationFrameId = null; return; } if (state.currentBlockElement) { moveBlock(); checkBlockPosition(); } state.animationFrameId = requestAnimationFrame(gameLoop); }
+            function moveBlock() { if (!state.currentBlockElement) return; state.currentBlockY += state.fallSpeed; state.currentBlockElement.style.transform = `translateY(${state.currentBlockY}px)`; }
+            function checkBlockPosition() { if (!state.currentBlockElement || !dom.gameArea) return; const gameAreaHeight = dom.gameArea.offsetHeight; const blockHeight = state.currentBlockElement.offsetHeight || (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--block-size')) || 45); if (state.currentBlockY + blockHeight >= gameAreaHeight) { console.log("Block reached bottom - Game Over."); state.currentBlockElement.remove(); state.currentBlockElement = null; state.currentBlockData = null; handleGameOverCondition(); } }
+            function handleMatch(colorData) { if (!state.currentBlockElement) return; playSound(audio.success); flashButton(colorData.name, 'success-flash'); const elementForParticles = state.currentBlockElement; const currentYForParticles = state.currentBlockY; createParticles(elementForParticles, currentYForParticles); state.score += config.baseScore * (state.comboCount > config.comboThreshold ? state.comboCount : 1); state.comboCount++; updateScoreDisplay(); updateComboDisplay(); state.fallSpeed += config.speedIncrement * (1 + state.comboCount * 0.1); const elementToRemove = state.currentBlockElement; const currentY = state.currentBlockY; state.currentBlockElement = null; state.currentBlockData = null; state.currentBlockY = 0; elementToRemove.style.setProperty('--current-y', `${currentY}px`); elementToRemove.classList.add('matched'); setTimeout(() => { if (elementToRemove && elementToRemove.parentNode) elementToRemove.remove(); }, 300); setTimeout(createBlock, 150); }
+            function handleMiss() { playSound(audio.fail); shakeScreen(); resetCombo(); if (state.currentBlockElement) { state.currentBlockElement.remove(); state.currentBlockElement = null; state.currentBlockData = null; } setTimeout(createBlock, 250); }
+            function handleGameOverCondition() { endGame(); }
+            function handleControlInteraction(colorName) { if (state.gameState !== 'PLAYING' || !state.currentBlockData || !state.currentBlockElement) return; if (colorName === state.currentBlockData.name) handleMatch(state.currentBlockData); else { flashButton(colorName, 'error-flash'); playSound(audio.fail); shakeScreen(); resetCombo(); } }
+            function createParticles(targetElement, yPosition) { if (!targetElement || !dom.gameArea) return; const rect = targetElement.getBoundingClientRect(); const centerX = targetElement.offsetLeft + rect.width / 2; const centerY = yPosition + rect.height / 2; const color = targetElement.style.backgroundColor; for (let i = 0; i < config.particleCount; i++) { const particle = document.createElement('div'); particle.classList.add('particle'); particle.style.backgroundColor = color; particle.style.left = `${centerX - 3}px`; particle.style.top = `${centerY - 3}px`; dom.gameArea.appendChild(particle); const angle = Math.random() * Math.PI * 2; const velocity = Math.random() * 50 + 30; const endX = Math.cos(angle) * velocity; const endY = Math.sin(angle) * velocity; particle.style.setProperty('--end-x', `${endX}px`); particle.style.setProperty('--end-y', `${endY}px`); setTimeout(() => { if (particle.parentNode) particle.remove(); }, 600); } }
+            function shakeScreen() { if(dom.gameContainer) dom.gameContainer.classList.add('shake'); setTimeout(() => dom.gameContainer?.classList.remove('shake'), 300); }
+            function flashButton(colorName, className) { const button = dom.controls?.querySelector(`[data-color="${colorName}"]`); if (button) { button.classList.add(className); setTimeout(() => button.classList.remove(className), 300); } }
+            function updateScoreDisplay() { if(dom.scoreDisplay) dom.scoreDisplay.textContent = `Score: ${state.score}`; }
+            function resetCombo() { state.comboCount = 0; updateComboDisplay(); }
+            function updateComboDisplay() { if (!dom.comboDisplay) return; if (state.comboCount > config.comboThreshold) { dom.comboDisplay.textContent = `Combo x${state.comboCount}`; dom.comboDisplay.classList.add('visible'); } else { dom.comboDisplay.classList.remove('visible'); } }
+            function setupControls() { if (!dom.controls) return; dom.controls.innerHTML = ''; config.colors.forEach(colorData => { const btn = document.createElement('button'); btn.classList.add('control-button'); btn.style.backgroundColor = colorData.hex; btn.style.boxShadow = `0 4px 8px rgba(0,0,0,0.3), inset 0 -2px 4px rgba(0,0,0,0.2), 0 0 10px ${colorData.glow}`; btn.dataset.color = colorData.name; btn.addEventListener('pointerdown', handlePointerDown); btn.addEventListener('pointerup', handlePointerUp); btn.addEventListener('pointerleave', handlePointerUp); btn.addEventListener('pointercancel', handlePointerUp); dom.controls.appendChild(btn); }); }
+            function handlePointerDown(event) { if (event.pointerType === 'touch') event.preventDefault(); const target = event.target.closest('.control-button'); if (!target) return; target.classList.add('active-touch'); state.activeTouches.add(event.pointerId); const colorName = target.dataset.color; if (colorName) { if (!state.audioInitialized && !state.audioInitializing) initializeAudio(); if (state.gameState === 'PLAYING') handleControlInteraction(colorName); } }
+            function handlePointerUp(event) { const target = event.target.closest('.control-button'); if (state.activeTouches.has(event.pointerId)) { if (target) target.classList.remove('active-touch'); state.activeTouches.delete(event.pointerId); } dom.controls?.querySelectorAll('.control-button.active-touch').forEach(btn => btn.classList.remove('active-touch')); }
+            async function startGame() { console.log("Attempting to start game..."); await initializeAudio(); console.log("Proceeding with startGame..."); state.score = 0; state.fallSpeed = config.initialFallSpeed; state.gameState = 'PLAYING'; state.comboCount = 0; updateScoreDisplay(); updateComboDisplay(); saveHighScore(); if (dom.gameArea) dom.gameArea.innerHTML = ''; if (dom.startScreen) dom.startScreen.classList.remove('visible'); if (dom.gameOverScreen) dom.gameOverScreen.classList.remove('visible'); if (state.animationFrameId) cancelAnimationFrame(state.animationFrameId); stopMusic(); playSound(audio.gameOver, 0); playMusic(); createBlock(); state.animationFrameId = requestAnimationFrame(gameLoop); console.log("Game started."); }
+            function endGame() { if (state.gameState === 'GAME_OVER') return; console.log("Ending game..."); state.gameState = 'GAME_OVER'; if (state.animationFrameId) { cancelAnimationFrame(state.animationFrameId); state.animationFrameId = null; } stopMusic(); playSound(audio.gameOver); saveHighScore(); if (state.currentBlockElement && state.currentBlockElement.parentNode) state.currentBlockElement.remove(); state.currentBlockElement = null; state.currentBlockData = null; state.currentBlockY = 0; if (dom.finalScoreDisplay) dom.finalScoreDisplay.textContent = `Your Score: ${state.score}`; updateHighScoreDisplay(); if (dom.gameOverScreen) dom.gameOverScreen.classList.add('visible'); }
             function isFullscreenActive() { return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement); }
-            function openFullscreen(elem) { if (!elem) return; initializeAudio(); /* Try init on FS enter */ if (elem.requestFullscreen) { elem.requestFullscreen().catch(err => console.error(`FS Error: ${err.message} (${err.name})`)); } else if (elem.mozRequestFullScreen) { elem.mozRequestFullScreen(); } else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); } else if (elem.msRequestFullscreen) { elem.msRequestFullscreen(); } else { console.error("Fullscreen API is not supported."); } }
-            function closeFullscreen() { if (document.exitFullscreen) { document.exitFullscreen(); } else if (document.mozCancelFullScreen) { document.mozCancelFullScreen(); } else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); } else if (document.msExitFullscreen) { document.msExitFullscreen(); } }
-            function updateFullscreenButtonVisuals() {
-                if (fullscreenButton) {
-                    if (isFullscreenActive()) {
-                        fullscreenButton.innerHTML = '✕'; // Set to '✕' (Exit)
-                        fullscreenButton.title = 'Exit Fullscreen';
-                    } else {
-                        fullscreenButton.innerHTML = '⛶'; // Set to '⛶' (Expand)
-                        fullscreenButton.title = 'Enter Fullscreen';
-                    }
-                    // Enable/disable based on support
-                    const fsEnabled = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled);
-                    fullscreenButton.disabled = !fsEnabled;
-                    if (!fsEnabled) {
-                         fullscreenButton.title = "Fullscreen not supported";
-                    }
-                }
-            }
-
-            // --- Initialization and Event Listeners ---
-            setupControls();
-
-            // Fullscreen Button Listener
-            fullscreenButton.addEventListener('click', () => {
-                if (!fullscreenButton.disabled) { // Check if enabled
-                     if (!isFullscreenActive()) {
-                          openFullscreen(fullscreenWrapper); // Target the wrapper
-                     } else {
-                          closeFullscreen();
-                     }
-                }
-            });
-
-            // Listen for fullscreen changes to update the button
-            document.addEventListener('fullscreenchange', updateFullscreenButtonVisuals);
-            document.addEventListener('webkitfullscreenchange', updateFullscreenButtonVisuals);
-            document.addEventListener('mozfullscreenchange', updateFullscreenButtonVisuals);
-            document.addEventListener('MSFullscreenChange', updateFullscreenButtonVisuals);
-
-            // --- Mute Button Listener ---
-            muteButton.addEventListener('click', () => {
-                initializeAudio(); // Try init if mute is first interaction
-                isMuted = !isMuted; // Toggle mute state
-
-                // Mute/unmute all audio elements
-                if(bgMusic) bgMusic.muted = isMuted;
-                if(successSfx) successSfx.muted = isMuted;
-                if(failSfx) failSfx.muted = isMuted;
-                if(gameOverSfx) gameOverSfx.muted = isMuted;
-
-                muteButton.innerHTML = isMuted ? '🔇' : '🔊'; // Update icon
-                muteButton.title = isMuted ? 'Unmute' : 'Mute Sound';
-
-                // If unmuting and music should be playing, start it (if initialized)
-                if (!isMuted && !isGameOver && audioInitialized) {
-                    startMusic();
-                } else if (isMuted) {
-                     // Pause music immediately if muted
-                     if(bgMusic) bgMusic.pause();
-                }
-            });
-
-
-            // --- Start/Restart Button Listeners ---
-            function handleStartRestartClick(event) {
-                event.preventDefault(); // Prevent potential double actions on mobile
-                if (isStartingOrRestarting) return; // Prevent double clicks/taps
-                isStartingOrRestarting = true;
-
-                // *** Crucial: Attempt to unlock audio context on this first user interaction ***
-                initializeAudio();
-
-                // Visual feedback for the button press
-                if(event.target) event.target.style.transform = 'scale(0.97)';
-
-                // Use a short delay to allow visual feedback before heavy logic
-                setTimeout(() => {
-                     startGame(); // startGame now handles selecting and starting the music
-
-                    // Reset button scale after game start logic + short delay
-                    setTimeout(() => {
-                         if(event.target) event.target.style.transform = 'scale(1)';
-                         isStartingOrRestarting = false; // Allow clicking again *after* animation/delay
-                    }, 150);
-                }, 50); // 50ms delay before starting game logic
-            }
-
-            // Attach listeners
-            startButton.addEventListener('click', handleStartRestartClick);
-            startButton.addEventListener('touchstart', handleStartRestartClick, { passive: false });
-            restartButton.addEventListener('click', handleStartRestartClick);
-            restartButton.addEventListener('touchstart', handleStartRestartClick, { passive: false });
-
-            // --- Initial UI Updates ---
-            updateFullscreenButtonVisuals(); // Set initial fullscreen icon/state
-            // Set initial mute button state based on default (unmuted)
-            muteButton.innerHTML = isMuted ? '🔇' : '🔊';
-            muteButton.title = isMuted ? 'Unmute' : 'Mute Sound';
-
-
-            console.log("Game setup complete. Waiting for user interaction.");
-
-        }); // End of DOMContentLoaded listener
+            function openFullscreen(elem) { if (!elem) return; if (!state.audioInitialized && !state.audioInitializing) initializeAudio(); if (elem.requestFullscreen) elem.requestFullscreen().catch(err => console.error(`FS Error: ${err.message}`)); else if (elem.mozRequestFullScreen) elem.mozRequestFullScreen(); else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen(); else if (elem.msRequestFullscreen) elem.msRequestFullscreen(); }
+            function closeFullscreen() { if (document.exitFullscreen) document.exitFullscreen(); else if (document.mozCancelFullScreen) document.mozCancelFullScreen(); else if (document.webkitExitFullscreen) document.webkitExitFullscreen(); else if (document.msExitFullscreen) document.msExitFullscreen(); }
+            function updateFullscreenButtonVisuals() { if (!dom.fullscreenButton) return; const fsEnabled = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled); dom.fullscreenButton.disabled = !fsEnabled; if (!fsEnabled) { dom.fullscreenButton.title = "Fullscreen not supported"; dom.fullscreenButton.innerHTML = '⛶'; } else if (isFullscreenActive()) { dom.fullscreenButton.innerHTML = '✕'; dom.fullscreenButton.title = 'Exit Fullscreen'; } else { dom.fullscreenButton.innerHTML = '⛶'; dom.fullscreenButton.title = 'Enter Fullscreen'; } }
+            function setupEventListeners() { if (!dom.startButton || !dom.restartButton || !dom.muteButton || !dom.fullscreenButton) { console.error("Cannot setup event listeners - essential button elements missing!"); return; } async function handleStartRestartClickWrapper(event) { event.preventDefault(); if (state.gameState === 'PLAYING') return; const button = event.target; button.style.transform = 'scale(var(--button-active-scale))'; try { await startGame(); } catch (error) { console.error("Error during startGame sequence:", error); } finally { setTimeout(() => { button.style.transform = 'scale(1)'; }, 100); } } dom.startButton.addEventListener('click', handleStartRestartClickWrapper); dom.restartButton.addEventListener('click', handleStartRestartClickWrapper); dom.muteButton.addEventListener('click', toggleMute); dom.fullscreenButton.addEventListener('click', () => { if (!dom.fullscreenButton.disabled) { if (!isFullscreenActive()) openFullscreen(dom.fullscreenWrapper); else closeFullscreen(); } }); document.addEventListener('fullscreenchange', updateFullscreenButtonVisuals); document.addEventListener('webkitfullscreenchange', updateFullscreenButtonVisuals); document.addEventListener('mozfullscreenchange', updateFullscreenButtonVisuals); document.addEventListener('MSFullscreenChange', updateFullscreenButtonVisuals); console.log("Event listeners setup."); }
+            function init() { cacheDOM(); loadHighScore(); setupControls(); setupEventListeners(); updateFullscreenButtonVisuals(); applyMuteState(); console.log("Color Cascade Revamped Initialized. Ready to play!"); }
+            return { init: init };
+        })();
+        window.addEventListener('DOMContentLoaded', ColorCascade.init);
     </script>
 </body>
 </html>
