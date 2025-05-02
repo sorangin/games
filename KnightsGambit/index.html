@@ -28,7 +28,7 @@
 
                 <div id="unit-info">
                     <div class="unit-visuals">
-                        <img id="unit-portrait">
+                        <img id="unit-portrait" alt="Unit Portrait">
                         <div class="unit-hp-bar-container info-panel-hp-bar">
                             <div class="unit-hp-bar" style="--hp-percent: 100%;"></div>
                             <span class="unit-hp-text">HP: -/-</span>
@@ -58,7 +58,9 @@
                 <img id="main-menu-title-image" src="./sprites/title.png" alt="Knight's Gambit Title">
                 <div class="main-menu-buttons">
                     <button id="start-game-button" class="primary-button">Play</button>
+                    <button id="achievements-menu-button" class="primary-button">Achievements</button>
                     <button id="leaderboard-menu-button" class="primary-button">Leaderboard</button>
+                    <button id="settings-menu-button" class="primary-button">Options</button>
                 </div>
             </div>
         </div>
@@ -68,18 +70,19 @@
                 <div class="decorative-frame"></div>
                 <h2 id="level-complete-title" class="overlay-title">Level Complete!</h2>
                 <div id="level-complete-stats" class="inset-panel">
-                    <p>Enemies Killed: <span id="stats-enemies-killed">-</span></p>
+                    <p>Enemies Slain: <span id="stats-enemies-killed">-</span></p>
                     <p>Units Lost: <span id="stats-units-lost">-</span></p>
                     <p>Gold Gained: <span id="stats-gold-gained">-</span> <img src="./sprites/gold.png" alt="Gold Icon" class="gold-icon-inline"></p>
                     <div id="level-complete-bonuses">
                         <p>Bonuses:</p>
                         <ul id="stats-bonus-list">
-                           <li class="bonus-item hidden" data-bonus="noSpells"><img src="./sprites/bonus_mightovermagic.png" class="bonus-icon" title="Used no spells" alt="No Spells Bonus"> +<span class="bonus-amount">0</span> <img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></li>
-                           <li class="bonus-item hidden" data-bonus="fullHp"><img src="./sprites/bonus_flawlessvictory.png" class="bonus-icon" title="Flawless victory" alt="Flawless Victory Bonus"> +<span class="bonus-amount">0</span> <img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></li>
-                           <li class="bonus-item hidden" data-bonus="noLosses"><img src="./sprites/bonus_nomanleftbehind.png" class="bonus-icon" title="No units lost" alt="No Losses Bonus"> +<span class="bonus-amount">0</span> <img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></li>
+                           <li class="bonus-item hidden" data-bonus="noSpells"><img src="./sprites/bonus_mightovermagic.png" class="bonus-icon" title="Used no spells" alt="No Spells Bonus"><span class="bonus-amount">0</span> <img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></li>
+                           <li class="bonus-item hidden" data-bonus="fullHp"><img src="./sprites/bonus_flawlessvictory.png" class="bonus-icon" title="Flawless victory" alt="Flawless Victory Bonus"><span class="bonus-amount">0</span> <img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></li>
+                           <li class="bonus-item hidden" data-bonus="noLosses"><img src="./sprites/bonus_nomanleftbehind.png" class="bonus-icon" title="No units lost" alt="No Losses Bonus"><span class="bonus-amount">0</span> <img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></li>
                         </ul>
                     </div>
                     <p>Total Gold Earned: <span id="stats-total-gold">-</span> <img src="./sprites/gold.png" alt="Gold Icon" class="gold-icon-inline"></p>
+                    <p>Your Total Gold: <span id="level-complete-total-gold">-</span> <img src="./sprites/gold.png" alt="Gold Icon" class="gold-icon-inline"></p>
                 </div>
                 <div class="level-complete-buttons">
                     <button id="level-complete-shop-button" class="primary-button" title="Shop (S)">🛒 Shop</button>
@@ -103,11 +106,14 @@
         <div id="level-select-screen" class="overlay">
             <div class="overlay-content level-select-content no-style">
                 <div id="level-select-map-container">
-                    <div id="level-select-map">
-                    </div>
-                        <div id="level-select-dots-layer">
+                    <div id="level-select-map"></div>
+                    <div id="level-select-dots-layer"></div>
                 </div>
-            </div>
+                 <div id="level-select-pagination" class="level-select-pagination">
+                    <button id="level-select-prev-page" class="pagination-button hidden">&lt; Prev</button>
+                    <span id="level-select-page-info">Page 1</span>
+                    <button id="level-select-next-page" class="pagination-button hidden">Next &gt;</button>
+                </div>
                 <div class="level-select-bottom-bar bottom-bar-style">
                    <button id="level-select-shop-button" class="primary-button" title="Shop (S)">🛒 Shop</button>
                    <button id="level-select-troops-button" class="primary-button">Choose Troops</button>
@@ -121,6 +127,11 @@
                 <div class="decorative-frame"></div>
                 <h2 class="overlay-title">Leaderboard</h2>
                 <p>Highest Level Reached / Gold</p>
+                 <div id="leaderboard-entry" class="inset-panel leaderboard-input hidden">
+                    <label for="player-name-input">Enter Your Name:</label>
+                    <input type="text" id="player-name-input" maxlength="12" placeholder="Hero Name">
+                    <button id="submit-score-button" class="primary-button green-accent">Submit Score</button>
+                </div>
                 <ul id="leaderboard-list"></ul>
                 <button id="close-leaderboard-button" class="secondary-button">Close</button>
             </div>
@@ -152,6 +163,24 @@
             </div>
         </div>
 
+         <div id="settings-overlay" class="overlay">
+            <div class="overlay-content styled-overlay-content">
+                <div class="decorative-frame"></div>
+                <h2 class="overlay-title">Options</h2>
+                <p>Settings Placeholder</p>
+                <button id="close-settings-button" class="secondary-button">Close</button>
+            </div>
+        </div>
+
+        <div id="achievements-overlay" class="overlay">
+            <div class="overlay-content styled-overlay-content">
+                <div class="decorative-frame"></div>
+                <h2 class="overlay-title">Achievements</h2>
+                <p>Achievements Placeholder</p>
+                <button id="close-achievements-button" class="secondary-button">Close</button>
+            </div>
+        </div>
+
         <div id="shop-screen" class="overlay">
             <div class="overlay-content styled-overlay-content shop-content">
                 <div class="decorative-frame gold-glow"></div>
@@ -160,80 +189,86 @@
                     <h3 class="shop-section-header">Recruit Units</h3>
                     <div class="shop-item" data-item-id="recruit_knight" data-unit-type="knight" data-max="12">
                         <h4><span class="shop-icon-container"><img src="./sprites/Knight.png" class="shop-item-icon" alt="Knight Icon"></span> Knight (<span class="unit-count">0</span>/12)</h4>
-                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">20</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
-                        <button class="shop-buy-button primary-button green-accent" data-cost="20">Recruit</button>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">50</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
+                        <button class="shop-buy-button primary-button green-accent" data-cost="50">Recruit</button>
                     </div>
                     <div class="shop-item" data-item-id="recruit_archer" data-unit-type="archer" data-max="12">
                         <h4><span class="shop-icon-container"><img src="./sprites/archer.png" class="shop-item-icon" alt="Archer Icon"></span> Archer (<span class="unit-count">0</span>/12)</h4>
-                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">30</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
-                        <button class="shop-buy-button primary-button green-accent" data-cost="30">Recruit</button>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">80</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
+                        <button class="shop-buy-button primary-button green-accent" data-cost="80">Recruit</button>
                     </div>
                     <div class="shop-item" data-item-id="recruit_champion" data-unit-type="champion" data-max="12">
                        <h4><span class="shop-icon-container"><img src="./sprites/champion.png" class="shop-item-icon" alt="Champion Icon"></span> Champion (<span class="unit-count">0</span>/12)</h4>
-                       <p class="shop-cost-line">Cost: <span class="shop-item-cost">60</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
-                       <button class="shop-buy-button primary-button green-accent" data-cost="60">Recruit</button>
-                   </div>
+                       <p class="shop-cost-line">Cost: <span class="shop-item-cost">120</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
+                       <button class="shop-buy-button primary-button green-accent" data-cost="120">Recruit</button>
+                    </div>
 
                     <h3 class="shop-section-header">Unit Upgrades</h3>
                     <div class="shop-item" data-item-id="upgrade_knight_hp">
                         <h4><span class="shop-icon-container"><img src="./sprites/Knight.png" class="shop-item-icon" alt="Knight Icon"></span> Knight HP +1</h4>
-                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">15</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
-                        <button class="shop-buy-button primary-button gold-accent" data-cost="15">Buy</button>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">50</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
+                        <button class="shop-buy-button primary-button gold-accent" data-cost="50">Buy</button>
                     </div>
                      <div class="shop-item" data-item-id="upgrade_knight_atk">
                         <h4><span class="shop-icon-container"><img src="./sprites/Knight.png" class="shop-item-icon" alt="Knight Icon"></span> Knight ATK +1</h4>
-                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">25</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
-                        <button class="shop-buy-button primary-button gold-accent" data-cost="25">Buy</button>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">50</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
+                        <button class="shop-buy-button primary-button gold-accent" data-cost="50">Buy</button>
                     </div>
                     <div class="shop-item" data-item-id="upgrade_archer_hp">
                         <h4><span class="shop-icon-container"><img src="./sprites/archer.png" class="shop-item-icon" alt="Archer Icon"></span> Archer HP +1</h4>
-                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">20</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
-                        <button class="shop-buy-button primary-button gold-accent" data-cost="20">Buy</button>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">50</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
+                        <button class="shop-buy-button primary-button gold-accent" data-cost="50">Buy</button>
                     </div>
                     <div class="shop-item" data-item-id="upgrade_archer_atk">
                         <h4><span class="shop-icon-container"><img src="./sprites/archer.png" class="shop-item-icon" alt="Archer Icon"></span> Archer ATK +1</h4>
-                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">30</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
-                        <button class="shop-buy-button primary-button gold-accent" data-cost="30">Buy</button>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">80</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
+                        <button class="shop-buy-button primary-button gold-accent" data-cost="80">Buy</button>
                     </div>
                     <div class="shop-item" data-item-id="upgrade_champion_hp">
                        <h4><span class="shop-icon-container"><img src="./sprites/champion.png" class="shop-item-icon" alt="Champion Icon"></span> Champion HP +1</h4>
-                       <p class="shop-cost-line">Cost: <span class="shop-item-cost">35</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
-                       <button class="shop-buy-button primary-button gold-accent" data-cost="35">Buy</button>
+                       <p class="shop-cost-line">Cost: <span class="shop-item-cost">100</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
+                       <button class="shop-buy-button primary-button gold-accent" data-cost="100">Buy</button>
                     </div>
                     <div class="shop-item" data-item-id="upgrade_champion_atk">
                        <h4><span class="shop-icon-container"><img src="./sprites/champion.png" class="shop-item-icon" alt="Champion Icon"></span> Champion ATK +1</h4>
-                       <p class="shop-cost-line">Cost: <span class="shop-item-cost">50</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
-                       <button class="shop-buy-button primary-button gold-accent" data-cost="50">Buy</button>
+                       <p class="shop-cost-line">Cost: <span class="shop-item-cost">100</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
+                       <button class="shop-buy-button primary-button gold-accent" data-cost="100">Buy</button>
                     </div>
 
                     <h3 class="shop-section-header">Spell Upgrades</h3>
-                    <div class="shop-item locked" data-item-id="upgrade_spell_fireball" data-spell-name="fireball" data-level="1">
-                        <h4><span class="shop-icon-container"><img src="./sprites/sFireball1.png" class="shop-item-icon" alt="Fireball Icon"></span> Fireball [Lvl <span class="spell-level">1</span>]</h4>
-                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">40</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
-                        <button class="shop-buy-button primary-button gold-accent" data-cost="40" data-required-level="6" disabled>Buy (Lvl 6)</button>
+                    <div class="shop-item locked" data-item-id="upgrade_spell_fireball" data-spell-name="fireball" data-level="0">
+                        <h4><span class="shop-icon-container"><img src="./sprites/sFireball1.png" class="shop-item-icon" alt="Fireball Icon"></span> Fireball [Lvl <span class="spell-level">2</span>]</h4>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">80</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
+                        <button class="shop-buy-button primary-button gold-accent" data-cost="80" data-required-level="6" disabled>Buy (Lvl 6)</button>
                     </div>
-                    <div class="shop-item locked" data-item-id="upgrade_spell_flamewave" data-spell-name="flameWave" data-level="1">
-                        <h4><span class="shop-icon-container"><img src="./sprites/flame_wave.png" class="shop-item-icon" alt="Flame Wave Icon"></span> Flame Wave [Lvl <span class="spell-level">1</span>]</h4>
-                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">50</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
-                        <button class="shop-buy-button primary-button gold-accent" data-cost="50" data-required-level="10" disabled>Buy (Lvl 10)</button>
+                    <div class="shop-item locked" data-item-id="upgrade_spell_flamewave" data-spell-name="flameWave" data-level="0">
+                        <h4><span class="shop-icon-container"><img src="./sprites/flame_wave.png" class="shop-item-icon" alt="Flame Wave Icon"></span> Flame Wave [Lvl <span class="spell-level">2</span>]</h4>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">100</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
+                        <button class="shop-buy-button primary-button gold-accent" data-cost="100" data-required-level="10" disabled>Buy (Lvl 10)</button>
                     </div>
-                    <div class="shop-item locked" data-item-id="upgrade_spell_frostnova" data-spell-name="frostNova" data-level="1">
-                        <h4><span class="shop-icon-container"><img src="./sprites/sFrostbolt1.png" class="shop-item-icon" alt="Frost Nova Icon"></span> Frost Nova [Lvl <span class="spell-level">1</span>]</h4>
-                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">60</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
-                        <button class="shop-buy-button primary-button gold-accent" data-cost="60" data-required-level="14" disabled>Buy (Lvl 14)</button>
+                    <div class="shop-item locked" data-item-id="upgrade_spell_frostnova" data-spell-name="frostNova" data-level="0">
+                        <h4><span class="shop-icon-container"><img src="./sprites/sFrostbolt1.png" class="shop-item-icon" alt="Frost Nova Icon"></span> Frost Nova [Lvl <span class="spell-level">2</span>]</h4>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">80</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
+                        <button class="shop-buy-button primary-button gold-accent" data-cost="80" data-required-level="14" disabled>Buy (Lvl 14)</button>
                     </div>
-                    <div class="shop-item locked" data-item-id="upgrade_spell_heal" data-spell-name="heal" data-level="1">
-                        <h4><span class="shop-icon-container"><img src="./sprites/heal.png" class="shop-item-icon" alt="Heal Icon"></span> Heal [Lvl <span class="spell-level">1</span>]</h4>
-                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">45</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
-                        <button class="shop-buy-button primary-button gold-accent" data-cost="45" data-required-level="18" disabled>Buy (Lvl 18)</button>
+                    <div class="shop-item locked" data-item-id="upgrade_spell_heal" data-spell-name="heal" data-level="0">
+                        <h4><span class="shop-icon-container"><img src="./sprites/heal.png" class="shop-item-icon" alt="Heal Icon"></span> Heal [Lvl <span class="spell-level">2</span>]</h4>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">80</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
+                        <button class="shop-buy-button primary-button gold-accent" data-cost="80" data-required-level="18" disabled>Buy (Lvl 18)</button>
                     </div>
 
                     <h3 class="shop-section-header">Passives</h3>
-                    <div class="shop-item" data-item-id="passive_gold_magnet" data-cost="100">
-                        <h4><span class="shop-icon-container"><img src="./sprites/gold.png" class="shop-item-icon" alt="Greed Icon"></span> Greed</h4>
-                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">100</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
-                        <button class="shop-buy-button primary-button gold-accent" data-cost="100">Buy</button>
+                    <div class="shop-item locked" data-item-id="passive_gold_magnet" data-cost="0">
+                        <h4><span class="shop-icon-container"><img src="./sprites/gold_magnet.png" class="shop-item-icon" alt="Gold Magnet Icon"></span> Gold Magnet</h4>
+                        <p class="shop-cost-line"><span class="shop-item-cost">Drop Only</span></p>
+                        <button class="shop-buy-button primary-button gold-accent" data-cost="0" disabled>Found</button>
                     </div>
+                    <div class="shop-item locked" data-item-id="tactical_command" data-cost="200" data-required-units="8">
+                        <h4><span class="shop-icon-container"><img src="./sprites/icon_troop_increase.png" class="shop-item-icon" alt="Tactical Command Icon"></span> Tactical Command</h4>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">200</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
+                        <button class="shop-buy-button primary-button gold-accent" data-cost="200" disabled>Buy (Own 8+ Units)</button>
+                    </div>
+
                 </div>
                 <div class="shop-bottom-bar bottom-bar-style">
                    <button id="shop-troops-button" class="primary-button">Choose Troops</button>
@@ -251,26 +286,24 @@
             <div class="overlay-content styled-overlay-content choose-troops-content">
                  <div class="decorative-frame gold-glow"></div>
                  <h2 id="choose-troops-title" class="overlay-title">Choose Troops</h2>
-
                  <div class="troops-section current-troops">
-                     <h3>Current Roster (<span id="current-roster-count">0</span>/12)</h3>
+                     <h3>Current Roster (<span id="current-roster-count">0</span>/<span id="max-roster-size">8</span>)</h3>
                      <div id="current-troops-list" class="troops-list"></div>
                  </div>
-
                  <div class="troops-section available-troops">
                      <h3>Available Troops (Reserve)</h3>
                      <div id="available-troops-list" class="troops-list"></div>
                  </div>
-
                  <div id="choose-troops-feedback" class="shop-message"></div>
-
                  <div class="choose-troops-buttons bottom-bar-style">
+                     <button id="troops-back-button" class="secondary-button">Back</button>
                      <button id="confirm-troops-button" class="primary-button green-accent">Confirm</button>
                  </div>
             </div>
         </div>
 
         <div id="tooltip"></div>
+        <canvas id="recolor-canvas" style="display: none;"></canvas>
 
     </div>
 
