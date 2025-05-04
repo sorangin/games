@@ -124,7 +124,7 @@ body {
 }
 
 .main-nav a::after {
-    : '';
+    content: '';
     position: absolute;
     bottom: 0;
     left: 0;
@@ -142,9 +142,9 @@ body {
     width: 100%;
 }
 
-/* ---=== Main  Area ===--- */
-.-area {
-    max-width: var(--container-width); /*  centered */
+/* ---=== Main Content Area ===--- */
+.content-area {
+    max-width: var(--container-width); /* Content centered */
     margin: 0 auto; /* Center content */
     padding: calc(var(--base-spacing) * 2) calc(var(--base-spacing) * 1.5); /* Add padding */
 }
@@ -544,8 +544,8 @@ body {
     border: 1px solid var(--border-color);
     padding: 2rem;
     text-align: center;
-    aspect-ratio: 16 / 9;
     color: var(--text-muted);
+    aspect-ratio: 16 / 9; /* Standard video ratio */
     display: flex;
     align-items: center;
     justify-content: center;
