@@ -339,6 +339,10 @@ body {
     color: var(--background-color); /* Dark text on light teal */
 }
 
+.tag-dem {
+    background-color: var(--accent-color);
+    color: var(--background-color);
+}
 
 /* ---=== Footer (Shared) ===--- */
 .site-footer {
