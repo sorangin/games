@@ -124,5 +124,128 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- KEYFRAMES INJECTION BLOCK IS REMOVED ---
     // The @keyframes cardFadeInUp rule should now be in your style.css file
 
+// --- Lightbox Functionality ---
+    const screenshotImages = document.querySelectorAll('.game-detail-page .screenshot-grid img');
+    let lightboxOverlay = null; // To store the created lightbox DOM element
+    let lightboxImage = null;   // To store the image element within the lightbox
+    let lastFocusedElement = null; // For accessibility: to return focus
 
+    function createLightboxStructure() {
+        if (document.getElementById('sg-lightbox-overlay')) return; // Already created
+
+        // Overlay
+        lightboxOverlay = document.createElement('div');
+        lightboxOverlay.id = 'sg-lightbox-overlay'; // Use a unique ID
+        lightboxOverlay.className = 'lightbox-overlay';
+        lightboxOverlay.setAttribute('role', 'dialog');
+        lightboxOverlay.setAttribute('aria-modal', 'true');
+        lightboxOverlay.setAttribute('aria-hidden', 'true');
+
+
+        // Content container (for image and potential future elements like captions)
+        const content = document.createElement('div');
+        content.className = 'lightbox-content';
+
+        // Image element
+        lightboxImage = document.createElement('img');
+        lightboxImage.id = 'sg-lightbox-image';
+        lightboxImage.className = 'lightbox-image';
+        // ARIA: an empty alt initially, will be set dynamically.
+        // Or, if the image is purely decorative when enlarged, an aria-label on the dialog.
+        // For now, alt will be copied from thumbnail.
+        lightboxImage.alt = "";
+
+
+        // Close button
+        const closeButton = document.createElement('button');
+        closeButton.type = 'button'; // Important for accessibility and preventing form submissions
+        closeButton.className = 'lightbox-close';
+        closeButton.innerHTML = '×'; // Multiplication sign for "X"
+        closeButton.setAttribute('aria-label', 'Close image viewer');
+        closeButton.onclick = closeLightbox;
+
+        // Assemble
+        content.appendChild(lightboxImage);
+        lightboxOverlay.appendChild(content);
+        lightboxOverlay.appendChild(closeButton); // Close button as direct child of overlay for easier positioning
+
+        // Click on overlay (outside image content) to close
+        lightboxOverlay.addEventListener('click', (e) => {
+            if (e.target === lightboxOverlay) { // Only if clicking the overlay itself
+                closeLightbox();
+            }
+        });
+
+        document.body.appendChild(lightboxOverlay);
+    }
+
+    function openLightbox(event) {
+        lastFocusedElement = document.activeElement; // Save current focus
+
+        const clickedImage = event.currentTarget;
+        const imageSrc = clickedImage.src; // Assumes thumbnail src is the full-res one
+                                          // Use clickedImage.dataset.fullsrc if you have separate high-res
+        const imageAlt = clickedImage.alt || 'Enlarged screenshot';
+
+        if (!lightboxOverlay) { // Create structure if it doesn't exist
+            createLightboxStructure();
+        }
+
+        lightboxImage.src = imageSrc;
+        lightboxImage.alt = imageAlt;
+        if (imageAlt) { // If alt text exists, use it to label the dialog
+            lightboxOverlay.setAttribute('aria-label', imageAlt);
+        } else {
+            lightboxOverlay.setAttribute('aria-label', 'Image viewer');
+        }
+
+
+        lightboxOverlay.classList.add('show');
+        lightboxOverlay.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        document.addEventListener('keydown', handleEscKey);
+
+        // Focus management: move focus into the lightbox (e.g., to the close button)
+        const closeBtn = lightboxOverlay.querySelector('.lightbox-close');
+        if(closeBtn) closeBtn.focus();
+    }
+
+    function closeLightbox() {
+        if (lightboxOverlay) {
+            lightboxOverlay.classList.remove('show');
+            lightboxOverlay.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = ''; // Restore scrolling
+            document.removeEventListener('keydown', handleEscKey);
+
+            // Return focus to the element that opened the lightbox
+            if (lastFocusedElement) {
+                lastFocusedElement.focus();
+            }
+        }
+    }
+
+    function handleEscKey(event) {
+        if (event.key === 'Escape') {
+            closeLightbox();
+        }
+    }
+
+    // Attach event listeners to screenshot images
+    if (screenshotImages.length > 0) {
+        createLightboxStructure(); // Create structure once on page load if images exist
+        screenshotImages.forEach(img => {
+            img.addEventListener('click', openLightbox);
+            img.setAttribute('role', 'button'); // Indicate it's clickable
+            img.setAttribute('tabindex', '0'); // Make it focusable
+            // Add keydown for Enter/Space to trigger click for keyboard users
+            img.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault(); // Prevent space from scrolling
+                    openLightbox(event);
+                }
+            });
+        });
+    }
+
+    
 }); // End DOMContentLoaded
