@@ -616,8 +616,6 @@ body {
     display: block;
     width: 100%;
     height: 100%;
-    margin-left: auto;
-    margin-right: auto;
     border: none;
     border-radius: var(--border-radius);
 }
@@ -630,6 +628,18 @@ body {
     height: 100%;          /* Fills the entire height of the relative parent */
     border: none;          /* Removes default iframe border */
     /* border-radius is not needed here because the parent's overflow:hidden will clip it */
+}
+
+.game-detail-page .image-placeholder {
+    display: block;
+    width: 100%;
+    max-width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
+    background-color: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
 }
 
 .game-detail-page .game-description-full p {
@@ -918,6 +928,18 @@ body {
            or set a max-height. For now, keeping 16/9. */
     }
 
+    .game-detail-page .image-placeholder {
+        width: 85vw;
+    }
+
+    .game-detail-page .image-placeholder img {
+    display: block; /* Good practice for images */
+    width: 100%;    /* Image fills width of placeholder */
+    height: 100%;   /* Image fills height of placeholder */
+    object-fit: cover; /* Or 'contain' if you prefer no cropping */
+    object-position: center;
+}
+    
     .lightbox-content {
         /* Add some padding to the sides of content if arrows are outside */
         /* Or adjust arrow positioning if they are inside content */
