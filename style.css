@@ -574,21 +574,25 @@ body {
 .game-detail-page .screenshot-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: calc(var(--base-spacing) * 1.5); /* Increased gap */
+    gap: calc(var(--base-spacing) * 1.25);
 }
 
 .game-detail-page .screenshot-grid img {
     width: 100%;
-    height: auto;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    object-position: center;
     border-radius: var(--border-radius);
     border: 2px solid var(--border-color); /* Slightly thicker border */
     transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
     cursor: pointer; /* Indicate potential lightbox */
+    background-color: var(--card-background);
 }
 .game-detail-page .screenshot-grid img:hover {
-     transform: scale(1.04); /* Slightly more zoom */
-     box-shadow: 0 8px 20px var(--shadow-color);
+     transform: scale(1.05);
+     box-shadow: 0 8px 25px var(--shadow-color);
      border-color: var(--accent-color);
+     opacity: 0.9;
 }
 
 .game-detail-page .game-features ul {
@@ -685,6 +689,93 @@ body {
     transform: translateX(-3px); /* Slight arrow move */
 }
 
+.lightbox-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9); /* Darker overlay */
+    backdrop-filter: blur(8px); /* Optional: blur background */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000; /* Ensure it's on top */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+    padding: 20px; /* Padding around the content area */
+    box-sizing: border-box;
+}
+
+.lightbox-overlay.show {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.3s ease, visibility 0s linear 0s;
+}
+
+.lightbox-content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    max-width: 95vw; /* Max width of the content area */
+    max-height: 95vh; /* Max height of the content area */
+    animation: lightboxZoomIn 0.3s ease-out; /* Simple zoom-in animation */
+}
+
+@keyframes lightboxZoomIn {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.lightbox-image {
+    display: block;
+    max-width: 100%; /* Constrain image within lightbox-content's calculated size */
+    max-height: 100%; /* Constrain image within lightbox-content's calculated size */
+    width: auto;  /* Maintain aspect ratio */
+    height: auto; /* Maintain aspect ratio */
+    border-radius: var(--border-radius);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+    object-fit: contain; /* Ensure the whole image is visible */
+}
+
+.lightbox-close {
+    position: absolute;
+    top: -15px; /* Position slightly outside the content box if image is large */
+    right: -15px;
+    /* For fixed position relative to viewport: */
+    /* top: 25px; */
+    /* right: 25px; */
+    font-size: 2rem;
+    color: #fff;
+    background-color: rgba(30, 30, 30, 0.7);
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+    line-height: 1;
+    z-index: 10; /* Above the image if they overlap */
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+.lightbox-close:hover {
+    background-color: rgba(200, 0, 0, 0.8); /* Reddish hover */
+    border-color: rgba(255,255,255,0.5);
+    transform: scale(1.1) rotate(90deg);
+}
 
 /* =========================================== */
 /* ===   RESPONSIVE ADJUSTMENTS (SHARED)   === */
