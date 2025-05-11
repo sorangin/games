@@ -618,6 +618,16 @@ body {
      border-radius: var(--border-radius);
 }
 
+.game-detail-page .video-placeholder iframe {
+    position: absolute;    /* <<< CRUCIAL */
+    top: 0;
+    left: 0;
+    width: 100%;           /* Fills the entire width of the relative parent */
+    height: 100%;          /* Fills the entire height of the relative parent */
+    border: none;          /* Removes default iframe border */
+    /* border-radius is not needed here because the parent's overflow:hidden will clip it */
+}
+
 .game-detail-page .game-description-full p {
     margin-bottom: 1em;
     line-height: 1.7; /* Slightly more line height for readability */
