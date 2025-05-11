@@ -586,7 +586,7 @@ body {
 .game-detail-page .video-placeholder {
     background-color: var(--card-background);
     border: 1px solid var(--border-color);
-    padding: 2rem;
+    padding: 0;
     text-align: center;
     color: var(--text-muted);
     aspect-ratio: 16 / 9; /* Standard video ratio */
@@ -595,13 +595,26 @@ body {
     justify-content: center;
     border-radius: var(--border-radius);
     font-size: 1.1rem;
+    overflow: hidden;
+    max-width: 800px;
+    margin-right: auto;
 }
+
+.game-detail-page .video-placeholder img {
+    display: block;
+    width: 100%;
+    height: 100%; /* Make image try to fill the placeholder's dimensions */
+    object-fit: contain; /* Key: Scales image down to fit, maintains aspect ratio */
+    object-position: center;
+    border-radius: var(--border-radius); /* Apply to image if placeholder has no padding */
+}
+
 /* Style actual iframe when added */
 .game-detail-page iframe {
     display: block;
     width: 100%;
-    aspect-ratio: 16 / 9;
-    border: none; /* Remove iframe default border */
+    height: 100%;
+    border: none;
      border-radius: var(--border-radius);
 }
 
@@ -879,6 +892,18 @@ body {
         padding: var(--base-spacing);
      }
 
+    .game-detail-page .video-placeholder {
+        width: 90vw; /* Take up 90% of the viewport width */
+        max-width: 90vw; /* Ensure it doesn't exceed this */
+        margin-left: auto; /* Center it */
+        margin-right: auto;
+        /* The aspect-ratio: 16/9 will still apply from the desktop rule,
+           which is fine. The image inside will be 'contain'ed.
+           If you want the placeholder to be less tall on mobile,
+           you could override aspect-ratio here, e.g., aspect-ratio: 4/3;
+           or set a max-height. For now, keeping 16/9. */
+    }
+
     .lightbox-content {
         /* Add some padding to the sides of content if arrows are outside */
         /* Or adjust arrow positioning if they are inside content */
@@ -944,5 +969,13 @@ body {
      }
     .game-detail-page .game-features ul {
         columns: 1; /* Force single column */
+    }
+
+    .game-detail-page .video-placeholder {
+        /* The 90vw from the 768px breakpoint will likely still apply
+           and be suitable unless you need further adjustment. */
+        /* If you want it even wider on very small screens, e.g., almost full width: */
+        /* width: 95vw; */
+        /* max-width: 95vw; */
     }
 }
