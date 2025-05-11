@@ -596,7 +596,7 @@ body {
     border-radius: var(--border-radius);
     font-size: 1.1rem;
     overflow: hidden;
-    max-width: 800px;
+    max-width: 1000px;
     margin-right: auto;
 }
 
