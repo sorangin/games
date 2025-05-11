@@ -589,7 +589,6 @@ body {
     padding: 0;
     text-align: center;
     color: var(--text-muted);
-    aspect-ratio: 16 / 9; /* Standard video ratio */
     display: flex;
     align-items: center;
     justify-content: center;
