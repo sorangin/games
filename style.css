@@ -893,9 +893,9 @@ body {
      }
 
     .game-detail-page .video-placeholder {
-        width: 80vw; /* Take up 90% of the viewport width */
-        max-width: 80vw; /* Ensure it doesn't exceed this */
-        margin-left: auto; /* Center it */
+        width: 85vw;
+        max-width: 85vw;
+        margin-left: auto;
         margin-right: auto;
         /* The aspect-ratio: 16/9 will still apply from the desktop rule,
            which is fine. The image inside will be 'contain'ed.
