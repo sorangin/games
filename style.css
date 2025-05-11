@@ -619,7 +619,7 @@ body {
 }
 
 .game-detail-page .video-placeholder iframe {
-    position: absolute;    /* <<< CRUCIAL */
+    /*position: absolute;    /* <<< CRUCIAL */
     top: 0;
     left: 0;
     width: 100%;           /* Fills the entire width of the relative parent */
