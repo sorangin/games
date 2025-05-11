@@ -124,54 +124,63 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- KEYFRAMES INJECTION BLOCK IS REMOVED ---
     // The @keyframes cardFadeInUp rule should now be in your style.css file
 
-// --- Lightbox Functionality ---
+    // --- NEW: Lightbox Functionality (with Navigation) ---
     const screenshotImages = document.querySelectorAll('.game-detail-page .screenshot-grid img');
-    let lightboxOverlay = null; // To store the created lightbox DOM element
-    let lightboxImage = null;   // To store the image element within the lightbox
-    let lastFocusedElement = null; // For accessibility: to return focus
+    let lightboxOverlay = null;
+    let lightboxImage = null;
+    let lightboxNavPrev = null;
+    let lightboxNavNext = null;
+    let lastFocusedElement = null;
+    let currentImageIndex = 0;
 
     function createLightboxStructure() {
-        if (document.getElementById('sg-lightbox-overlay')) return; // Already created
+        if (document.getElementById('sg-lightbox-overlay')) return;
 
-        // Overlay
         lightboxOverlay = document.createElement('div');
-        lightboxOverlay.id = 'sg-lightbox-overlay'; // Use a unique ID
+        lightboxOverlay.id = 'sg-lightbox-overlay';
         lightboxOverlay.className = 'lightbox-overlay';
         lightboxOverlay.setAttribute('role', 'dialog');
         lightboxOverlay.setAttribute('aria-modal', 'true');
         lightboxOverlay.setAttribute('aria-hidden', 'true');
 
-
-        // Content container (for image and potential future elements like captions)
         const content = document.createElement('div');
         content.className = 'lightbox-content';
 
-        // Image element
         lightboxImage = document.createElement('img');
         lightboxImage.id = 'sg-lightbox-image';
         lightboxImage.className = 'lightbox-image';
-        // ARIA: an empty alt initially, will be set dynamically.
-        // Or, if the image is purely decorative when enlarged, an aria-label on the dialog.
-        // For now, alt will be copied from thumbnail.
-        lightboxImage.alt = "";
+        lightboxImage.alt = ""; // Will be set dynamically
 
-
-        // Close button
         const closeButton = document.createElement('button');
-        closeButton.type = 'button'; // Important for accessibility and preventing form submissions
+        closeButton.type = 'button';
         closeButton.className = 'lightbox-close';
-        closeButton.innerHTML = '×'; // Multiplication sign for "X"
+        closeButton.innerHTML = '×';
         closeButton.setAttribute('aria-label', 'Close image viewer');
         closeButton.onclick = closeLightbox;
 
-        // Assemble
+        // Navigation Arrows
+        lightboxNavPrev = document.createElement('button');
+        lightboxNavPrev.type = 'button';
+        lightboxNavPrev.className = 'lightbox-nav prev';
+        lightboxNavPrev.innerHTML = '❮'; // Left pointing angle bracket
+        lightboxNavPrev.setAttribute('aria-label', 'Previous image');
+        lightboxNavPrev.onclick = showPreviousImage;
+
+        lightboxNavNext = document.createElement('button');
+        lightboxNavNext.type = 'button';
+        lightboxNavNext.className = 'lightbox-nav next';
+        lightboxNavNext.innerHTML = '❯'; // Right pointing angle bracket
+        lightboxNavNext.setAttribute('aria-label', 'Next image');
+        lightboxNavNext.onclick = showNextImage;
+
         content.appendChild(lightboxImage);
         lightboxOverlay.appendChild(content);
-        lightboxOverlay.appendChild(closeButton); // Close button as direct child of overlay for easier positioning
+        lightboxOverlay.appendChild(closeButton);
+        lightboxOverlay.appendChild(lightboxNavPrev);
+        lightboxOverlay.appendChild(lightboxNavNext);
 
-        // Click on overlay (outside image content) to close
         lightboxOverlay.addEventListener('click', (e) => {
-            if (e.target === lightboxOverlay) { // Only if clicking the overlay itself
+            if (e.target === lightboxOverlay) {
                 closeLightbox();
             }
         });
@@ -179,69 +188,103 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.appendChild(lightboxOverlay);
     }
 
-    function openLightbox(event) {
-        lastFocusedElement = document.activeElement; // Save current focus
+    function updateLightboxImage(index) {
+        if (index < 0 || index >= screenshotImages.length) return; // Should not happen with current logic
 
-        const clickedImage = event.currentTarget;
-        const imageSrc = clickedImage.src; // Assumes thumbnail src is the full-res one
-                                          // Use clickedImage.dataset.fullsrc if you have separate high-res
-        const imageAlt = clickedImage.alt || 'Enlarged screenshot';
-
-        if (!lightboxOverlay) { // Create structure if it doesn't exist
-            createLightboxStructure();
-        }
+        const imageToShow = screenshotImages[index];
+        const imageSrc = imageToShow.src; // Assuming thumbnail src is the full-res
+        const imageAlt = imageToShow.alt || `Screenshot ${index + 1}`;
 
         lightboxImage.src = imageSrc;
         lightboxImage.alt = imageAlt;
-        if (imageAlt) { // If alt text exists, use it to label the dialog
-            lightboxOverlay.setAttribute('aria-label', imageAlt);
-        } else {
-            lightboxOverlay.setAttribute('aria-label', 'Image viewer');
-        }
+        lightboxOverlay.setAttribute('aria-label', imageAlt); // Update dialog label
 
+        currentImageIndex = index;
+        updateNavigationState();
+    }
+
+    function updateNavigationState() {
+        if (!lightboxNavPrev || !lightboxNavNext) return;
+
+        if (screenshotImages.length <= 1) {
+            lightboxNavPrev.classList.add('hidden');
+            lightboxNavNext.classList.add('hidden');
+        } else {
+            lightboxNavPrev.classList.remove('hidden');
+            lightboxNavNext.classList.remove('hidden');
+            // Optional: Disable if not looping
+            // lightboxNavPrev.disabled = currentImageIndex === 0;
+            // lightboxNavNext.disabled = currentImageIndex === screenshotImages.length - 1;
+        }
+    }
+
+    function showNextImage() {
+        let nextIndex = currentImageIndex + 1;
+        if (nextIndex >= screenshotImages.length) {
+            nextIndex = 0; // Loop to the first image
+        }
+        updateLightboxImage(nextIndex);
+    }
+
+    function showPreviousImage() {
+        let prevIndex = currentImageIndex - 1;
+        if (prevIndex < 0) {
+            prevIndex = screenshotImages.length - 1; // Loop to the last image
+        }
+        updateLightboxImage(prevIndex);
+    }
+
+    function openLightbox(event, index) {
+        if (!lightboxOverlay) {
+            createLightboxStructure();
+        }
+        
+        lastFocusedElement = document.activeElement;
+        updateLightboxImage(index); // This will set currentImageIndex and update nav
 
         lightboxOverlay.classList.add('show');
         lightboxOverlay.setAttribute('aria-hidden', 'false');
-        document.body.style.overflow = 'hidden'; // Prevent background scrolling
-        document.addEventListener('keydown', handleEscKey);
+        document.body.style.overflow = 'hidden';
+        document.addEventListener('keydown', handleLightboxKeys);
 
-        // Focus management: move focus into the lightbox (e.g., to the close button)
         const closeBtn = lightboxOverlay.querySelector('.lightbox-close');
-        if(closeBtn) closeBtn.focus();
+        if (closeBtn) closeBtn.focus();
     }
 
     function closeLightbox() {
         if (lightboxOverlay) {
             lightboxOverlay.classList.remove('show');
             lightboxOverlay.setAttribute('aria-hidden', 'true');
-            document.body.style.overflow = ''; // Restore scrolling
-            document.removeEventListener('keydown', handleEscKey);
+            document.body.style.overflow = '';
+            document.removeEventListener('keydown', handleLightboxKeys);
 
-            // Return focus to the element that opened the lightbox
             if (lastFocusedElement) {
                 lastFocusedElement.focus();
             }
         }
     }
 
-    function handleEscKey(event) {
+    function handleLightboxKeys(event) {
         if (event.key === 'Escape') {
             closeLightbox();
+        } else if (event.key === 'ArrowRight') {
+            if (screenshotImages.length > 1) showNextImage();
+        } else if (event.key === 'ArrowLeft') {
+            if (screenshotImages.length > 1) showPreviousImage();
         }
     }
 
     // Attach event listeners to screenshot images
     if (screenshotImages.length > 0) {
-        createLightboxStructure(); // Create structure once on page load if images exist
-        screenshotImages.forEach(img => {
-            img.addEventListener('click', openLightbox);
-            img.setAttribute('role', 'button'); // Indicate it's clickable
-            img.setAttribute('tabindex', '0'); // Make it focusable
-            // Add keydown for Enter/Space to trigger click for keyboard users
+        createLightboxStructure(); // Create lightbox structure on page load if images exist
+        screenshotImages.forEach((img, index) => {
+            img.addEventListener('click', (event) => openLightbox(event, index));
+            img.setAttribute('role', 'button');
+            img.setAttribute('tabindex', '0');
             img.addEventListener('keydown', (event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault(); // Prevent space from scrolling
-                    openLightbox(event);
+                    event.preventDefault();
+                    openLightbox(event, index);
                 }
             });
         });
