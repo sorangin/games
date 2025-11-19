@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sora Games</title>
+
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <link rel="stylesheet" href="style.css">
+
+    <meta name="description" content="Explore the collection of unique indie games developed by Sora Ngin.">
+    <meta name="keywords" content="Sora Ngin, indie games, web games, html5 games, strategy games, puzzle games">
+
+    <style>
+        /* Small helper for the transition effect */
+        #app-container {
+            transition: opacity 0.3s ease-in-out;
+            opacity: 1;
+            min-height: 60vh; /* Prevents footer jumping too much */
+        }
+        .fading-out {
+            opacity: 0 !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="noise-overlay"></div>
+
+    <!-- GLOBAL HEADER -->
+    <header class="site-header">
+        <div class="header-content">
+            <!-- Clicking Logo always goes Home -->
+            <a href="?page=home" onclick="event.preventDefault(); loadPage('home');" class="logo-link">
+                <img src="images/logo.png" alt="Sora Games Logo" class="logo-img">
+                <span class="logo-text">Sora Games</span>
+            </a>
+            <nav class="main-nav" id="dynamic-nav">
+                <!-- Nav links can be injected via JS if needed, or kept static -->
+            </nav>
+        </div>
+    </header>
+
+    <!-- DYNAMIC CONTENT AREA -->
+    <main id="app-container">
+        <!-- Javascript will inject the templates here -->
+    </main>
+
+    <!-- GLOBAL FOOTER -->
+    <footer class="site-footer">
+        <div class="footer-content">
+            <div class="footer-logo">
+                <img src="images/logo.png" alt="Sora Games Logo" class="footer-logo-img">
+                <span>Sora Games</span>
+            </div>
+            <div class="footer-info">
+                 <p>© <span id="current-year"></span> Sora Ngin. All Rights Reserved.</p>
+                 <p>Creating worlds, one pixel at a time.</p>
+            </div>
+            <div class="footer-donate">
+                <p class="donate-text">Enjoy the games? Support development!</p>
+                <a href="https://www.paypal.com/donate/?cmd=_donations&business=Sorangin%40gmail.com"
+                   target="_blank" rel="noopener noreferrer" title="Donate via PayPal">
+                    <img src="images/donate.png" alt="PayPal Donate Button">
+                </a>
+            </div>
+            <div class="footer-social"></div>
+        </div>
+    </footer>
+    
+    <!-- Back to Top Button -->
+    <button id="back-to-top" title="Back to Top"><i class="fas fa-arrow-up"></i></button>
+
+    <!-- ====================================================== -->
+    <!--                 TEMPLATES START HERE                   -->
+    <!--     Images inside <template> do not load until used    -->
+    <!-- ====================================================== -->
+
+    <!-- 1. HOME PAGE TEMPLATE -->
+    <template id="tpl-home">
+        <!-- Section 1: Featured Creations -->
+        <section id="main-games" class="game-section featured-games">
+            <h2 class="section-title">Featured Creations</h2>
+            <div class="game-grid">
+
+                <!-- Rota (External Link preserved) -->
+                <a href="rota" class="game-card" data-tags="Survival, Arcade">
+                    <div class="card-image-container">
+                        <img src="images/rota_screenshot.png" alt="Revenge of the Ants" class="game-image" data-static-src="images/rota_screenshot.png" data-gif-src="images/rota_anim.gif">
+                        <div class="image-overlay"><i class="fas fa-play play-icon"></i></div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="game-title">Revenge of the Ants</h3>
+                        <p class="game-description">Giant ants are out for revenge! Defend your kingdom as a valiant knight.</p>
+                        <div class="game-tags"><span class="tag">Survival</span><span class="tag">Arcade</span></div>
+                    </div>
+                </a>
+
+                <!-- Knight's Gambit (External Link preserved) -->
+                <a href="KnightsGambit/index.html" class="game-card" data-tags="Strategy, Turn-Based">
+                    <div class="card-image-container">
+                        <img src="images/knights_vs_goblins_screenshot.png" alt="Knight's Gambit" class="game-image" data-static-src="images/knights_vs_goblins_screenshot.png" data-gif-src="images/knights_gambit_anim.gif">
+                        <div class="image-overlay"><i class="fas fa-play play-icon"></i></div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="game-title">Knight's Gambit</h3>
+                        <p class="game-description">Outmaneuver goblin hordes on a perilous battlefield.</p>
+                        <div class="game-tags"><span class="tag">Strategy</span><span class="tag">Turn-Based</span></div>
+                    </div>
+                </a>
+
+                <!-- Kingsfall Chess (External Link preserved) -->
+                <a href="KingsfallChess" class="game-card" data-tags="Strategy, Chess">
+                     <div class="card-image-container">
+                         <img src="images/chess_screenshot.jpg" alt="Kingsfall Chess" class="game-image" data-static-src="images/chess_screenshot.jpg" data-gif-src="images/chess_anim.gif">
+                        <div class="image-overlay"><i class="fas fa-play play-icon"></i></div>
+                    </div>
+                    <div class="card-content">
+                         <h3 class="game-title">Kingsfall Chess</h3>
+                         <p class="game-description">A unique twist on classic chess with unique art and challenging AI opponents.</p>
+                         <div class="game-tags"><span class="tag">Strategy</span><span class="tag">Chess</span></div>
+                    </div>
+                 </a>
+
+                 <!-- Risen Realms (External Link preserved) -->
+                 <a href="tcg.html" class="game-card" data-tags="Card Game, Strategy">
+                     <div class="card-image-container">
+                         <img src="images/tcg_screenshot.png" alt="Risen Realms" class="game-image" data-static-src="images/tcg_screenshot.png" data-gif-src="images/tcg_anim.gif">
+                         <div class="image-overlay"><i class="fas fa-play play-icon"></i></div>
+                     </div>
+                     <div class="card-content">
+                         <h3 class="game-title">Risen Realms</h3>
+                         <p class="game-description">Build powerful decks and battle opponents in this strategic trading card game.</p>
+                         <div class="game-tags"><span class="tag">Card Game</span><span class="tag">Strategy</span></div>
+                     </div>
+                 </a>
+            </div>
+        </section>
+
+        <!-- Section 2: In Development (Converted to Internal Links) -->
+        <section id="in-development" class="game-section development-games">
+            <h2 class="section-title">Upcoming Adventures</h2>
+            <p class="section-subtitle">Current projects in active development. Click for more details!</p>
+            <div class="game-grid">
+
+                <!-- Yoink the King -->
+                <a href="?page=yoink" onclick="event.preventDefault(); loadPage('yoink');" class="game-card" data-tags="Strategy, Multiplayer">
+                    <div class="card-image-container">
+                        <img src="images/yoinktheking_anim.gif" alt="Yoink the King" class="game-image">
+                        <div class="image-overlay"><i class="fas fa-info-circle play-icon"></i></div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="game-title">Yoink the King [2018]</h3>
+                        <p class="game-description">Arrows, swords, and kidnapped kings... Outsmart your opponents!</p>
+                        <div class="game-tags"><span class="tag tag-dem">Demo Available</span><span class="tag">Strategy</span></div>
+                    </div>
+                </a>
+
+                <!-- Frostfire -->
+                <a href="?page=frostfire" onclick="event.preventDefault(); loadPage('frostfire');" class="game-card">
+                    <div class="card-image-container">
+                        <img src="images/frostfire_anim.gif" alt="Frostfire" class="game-image">
+                        <div class="image-overlay"><i class="fas fa-info-circle play-icon"></i></div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="game-title">Frostfire [2010]</h3>
+                        <p class="game-description">Harness frost powers to stop the malevolent Fire Wizards.</p>
+                        <div class="game-tags"><span class="tag tag-dev">In Development</span><span class="tag">Action RPG</span></div>
+                    </div>
+                </a>
+
+                 <!-- Small World -->
+                <a href="?page=smallworld" onclick="event.preventDefault(); loadPage('smallworld');" class="game-card">
+                    <div class="card-image-container">
+                        <img src="images/smallworld.jpg" alt="Small World" class="game-image">
+                        <div class="image-overlay"><i class="fas fa-info-circle play-icon"></i></div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="game-title">Small World [2010]</h3>
+                        <p class="game-description">Six heroes must unite and shatter the iron-fisted grip of the overlords.</p>
+                         <div class="game-tags"><span class="tag tag-dem">Alpha Demo</span><span class="tag">Action RPG</span></div>
+                    </div>
+                </a>
+
+                <!-- The Return -->
+                <a href="?page=thereturn" onclick="event.preventDefault(); loadPage('thereturn');" class="game-card">
+                    <div class="card-image-container">
+                        <img src="images/thereturn.jpg" alt="The Return" class="game-image">
+                        <div class="image-overlay"><i class="fas fa-info-circle play-icon"></i></div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="game-title">The Return [2010]</h3>
+                        <p class="game-description">Risen from the grave, Gregory must navigate a dangerous world.</p>
+                         <div class="game-tags"><span class="tag tag-dev">In Development</span><span class="tag">Horror</span></div>
+                    </div>
+                </a>
+
+                <!-- Ashes of Veridian -->
+                <a href="?page=ashes" onclick="event.preventDefault(); loadPage('ashes');" class="game-card">
+                    <div class="card-image-container">
+                        <img src="images/ashesofveridian.jpg" alt="Ashes of Veridian" class="game-image">
+                        <div class="image-overlay"><i class="fas fa-info-circle play-icon"></i></div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="game-title">Ashes of Veridian [2010]</h3>
+                        <p class="game-description">Journey through shadows in this isometric action RPG.</p>
+                         <div class="game-tags"><span class="tag tag-dev">In Development</span><span class="tag">Puzzle</span></div>
+                    </div>
+                </a>
+
+                <!-- Ninja Arena -->
+                <a href="?page=ninja" onclick="event.preventDefault(); loadPage('ninja');" class="game-card">
+                    <div class="card-image-container">
+                        <img src="images/ninjaarena.jpg" alt="Ninja Arena" class="game-image">
+                        <div class="image-overlay"><i class="fas fa-info-circle play-icon"></i></div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="game-title">Stick Ninja Showdown! [2011]</h3>
+                        <p class="game-description">Step into the ninja arena as one of many charming stick figure ninjas!</p>
+                         <div class="game-tags"><span class="tag tag-dev">In Development</span><span class="tag">Multiplayer</span></div>
+                    </div>
+                </a>
+
+            </div>
+        </section>
+
+        <!-- Section 3: Prototypes (Kept as is, assumes external links for now, but you can convert them too) -->
+        <section id="prototypes" class="game-section prototype-section">
+            <h2 class="section-title">Prototypes & Experiments</h2>
+            <p class="section-subtitle">Playground for new ideas and works-in-progress.</p>
+             <div class="game-grid">
+                 <!-- Medieval Math -->
+                 <a href="MedievalMath.html" class="game-card prototype-card">
+                     <div class="card-image-container">
+                         <img src="images/medieval_math_screenshot.jpg" alt="Medieval Math" class="game-image">
+                         <div class="image-overlay"><i class="fas fa-flask play-icon"></i></div>
+                     </div>
+                     <div class="card-content">
+                         <h3 class="game-title">Medieval Math</h3>
+                         <div class="game-tags"><span class="tag tag-proto">Educational</span></div>
+                     </div>
+                 </a>
+                 <!-- Add other prototypes here as needed... -->
+            </div>
+        </section>
+    </template>
+
+    <!-- 2. YOINK THE KING TEMPLATE -->
+    <template id="tpl-yoink">
+        <article class="game-detail-content">
+            <header class="game-detail-header">
+                <h1>Yoink the King <span class="release-year">[2018]</span></h1>
+                <p class="game-status"><i class="fas fa-cogs"></i> In Development</p>
+                <div class="game-detail-tags">
+                    <span class="tag">Strategy</span><span class="tag">Multiplayer</span><span class="tag">Action</span><span class="tag tag-dev">Humor</span>
+                </div>
+            </header>
+            <section class="game-trailer">
+                <div class="video-placeholder">
+                    <iframe src="https://www.youtube.com/embed/5ljmrYM_QV0?si=j_pmi0bv7n2kbn7t" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                </div>
+            </section>
+            <section class="game-description-full">
+                <h2>Description</h2>
+                <p>Arrows, swords, and kidnapped kings... Dive into a hilariously chaotic strategy game where you control a swordsman and archer to outsmart opponents online or against the computer. Sneak through enemy bases by land, air, or underground to capture their king!</p>
+            </section>
+            <section class="game-screenshots">
+                <h2>Screenshots & Concepts</h2>
+                <div class="screenshot-grid">
+                    <img src="images/yoinktheking_anim.gif" loading="lazy" alt="Yoink the King 1">
+                    <img src="images/yoink_gameplay_mockup_1.png" loading="lazy" alt="Yoink Gameplay">
+                    <img src="images/yoink_character_design.png" loading="lazy" alt="Yoink Characters">
+                    <img src="images/placeholder_screenshot.png" loading="lazy" alt="Placeholder">
+                </div>
+            </section>
+            <section class="game-features">
+                <h2>Key Features (Planned)</h2>
+                <ul>
+                    <li><i class="fas fa-check"></i> Hilarious & Chaotic Strategy Gameplay</li>
+                    <li><i class="fas fa-check"></i> Online Multiplayer & Challenging AI</li>
+                    <li><i class="fas fa-check"></i> Simultaneous Control of Swordsman & Archer</li>
+                    <li><i class="fas fa-check"></i> Capture-the-Flag Style Objective</li>
+                </ul>
+            </section>
+            <section class="game-download">
+                <h2>Download</h2>
+                 <p><a href="https://drive.google.com/drive/folders/1cqYEcw-YmphrO6LQfPUDJ4Ub860ZAYYW?usp=drive_link" class="cta-button" target="_blank" rel="noopener noreferrer">Download Demo <i class="fas fa-download"></i></a></p>
+            </section>
+            <nav class="back-link-section">
+                <a href="#" onclick="event.preventDefault(); loadPage('home');" class="back-link"><i class="fas fa-arrow-left"></i> Back to All Games</a>
+            </nav>
+        </article>
+    </template>
+
+    <!-- 3. FROSTFIRE TEMPLATE -->
+    <template id="tpl-frostfire">
+        <article class="game-detail-content">
+            <header class="game-detail-header">
+                <h1>Frostfire <span class="release-year">[2010]</span></h1>
+                <p class="game-status"><i class="fas fa-cogs"></i> In Development</p>
+                <div class="game-detail-tags"><span class="tag">Action RPG</span><span class="tag">Fantasy</span><span class="tag tag-dev">Elements</span></div>
+            </header>
+            <section class="game-trailer">
+                <div class="image-placeholder"><img src="images/frostfire0.jpg" alt="Frostfire Screenshot"></div>
+            </section>
+            <section class="game-description-full">
+                <h2>Description</h2>
+                <p>In a world ravaged by a fiery invasion, Roman the Wizard must harness his frost powers to stop the malevolent Fire Wizards from uniting a world-ending orb. Journey through ash-choked ruins and fiery fortresses, battling scorching enemies with potent frost magic in FrostFire!</p>
+            </section>
+            <section class="game-screenshots">
+                <h2>Concepts</h2>
+                <div class="screenshot-grid">
+                    <img src="images/frostfire1.jpg" loading="lazy" alt="Frostfire 1">
+                    <img src="images/frostfire_anim.gif" loading="lazy" alt="Frostfire GIF">
+                    <img src="images/frostfire3.gif" loading="lazy" alt="Frostfire GIF 2">
+                    <img src="images/frostfire4.jpg" loading="lazy" alt="Frostfire 4">
+                </div>
+            </section>
+            <section class="game-features">
+                <h2>Key Features (Planned)</h2>
+                <ul>
+                    <li><i class="fas fa-check"></i> Dynamic Dual-Element Combat System</li>
+                    <li><i class="fas fa-check"></i> Open-World Exploration across Diverse Biomes</li>
+                    <li><i class="fas fa-check"></i> Deep Character Progression & Skill Trees</li>
+                </ul>
+            </section>
+            <section class="game-download">
+                <h2>Get Involved / Download</h2>
+                <p>Frostfire is in the early stages of renewed development. Stay tuned for updates!</p>
+                <a href="#" class="cta-button disabled">Download Demo (Coming Soon) <i class="fas fa-download"></i></a>
+            </section>
+            <nav class="back-link-section">
+                <a href="#" onclick="event.preventDefault(); loadPage('home');" class="back-link"><i class="fas fa-arrow-left"></i> Back to All Games</a>
+            </nav>
+        </article>
+    </template>
+
+    <!-- 4. SMALL WORLD TEMPLATE -->
+    <template id="tpl-smallworld">
+        <article class="game-detail-content">
+            <header class="game-detail-header">
+                <h1>Small World <span class="release-year">[2010]</span></h1>
+                <p class="game-status"><i class="fas fa-cogs"></i> In Development</p>
+                <div class="game-detail-tags"><span class="tag">Puzzle</span><span class="tag">Adventure</span><span class="tag tag-dev">Miniature</span></div>
+            </header>
+            <section class="game-trailer">
+                <div class="video-placeholder"><p><img src="images/smallworld.jpg" alt="Small World"></p></div>
+            </section>
+            <section class="game-description-full">
+                <h2>Description</h2>
+                <p>Six heroes, each wielding distinct talents, must unite and shatter the iron-fisted grip of the overlords. Battle foes, solve puzzles, and strategically combine their skills to reclaim their world from encroaching darkness in Small World!</p>
+            </section>
+            <section class="game-screenshots">
+                <h2>Concepts</h2>
+                <div class="screenshot-grid">
+                    <img src="images/smallworld1.jpg" loading="lazy" alt="Small World 1">
+                    <img src="images/smallworld2.jpg" loading="lazy" alt="Small World 2">
+                    <img src="images/smallworld3.jpg" loading="lazy" alt="Small World 3">
+                    <img src="images/smallworld4.jpg" loading="lazy" alt="Small World 4">
+                </div>
+            </section>
+            <section class="game-features">
+                <h2>Key Features (Planned)</h2>
+                <ul>
+                    <li><i class="fas fa-check"></i> Explore Detailed Miniature Worlds</li>
+                    <li><i class="fas fa-check"></i> Engaging Environmental & Physics Puzzles</li>
+                    <li><i class="fas fa-check"></i> Interact with a Cast of Heroic Characters</li>
+                </ul>
+            </section>
+            <section class="game-download">
+                <h2>Download</h2>
+                 <p><a href="https://drive.google.com/drive/folders/1Kdi4AZDDK2omA4qoY-baAbtKvDdhIf9J?usp=drive_link" class="cta-button" target="_blank" rel="noopener noreferrer">Download Alpha Demo <i class="fas fa-download"></i></a></p>
+            </section>
+            <nav class="back-link-section">
+                <a href="#" onclick="event.preventDefault(); loadPage('home');" class="back-link"><i class="fas fa-arrow-left"></i> Back to All Games</a>
+            </nav>
+        </article>
+    </template>
+
+    <!-- 5. THE RETURN TEMPLATE -->
+    <template id="tpl-thereturn">
+        <article class="game-detail-content">
+            <header class="game-detail-header">
+                <h1>The Return <span class="release-year">[2010]</span></h1>
+                <p class="game-status"><i class="fas fa-cogs"></i> In Development</p>
+                 <div class="game-detail-tags"><span class="tag">Adventure</span><span class="tag">Story-Driven</span><span class="tag tag-dev">Atmospheric</span></div>
+            </header>
+            <section class="game-trailer">
+                <div class="video-placeholder"> <img src="images/thereturn.jpg" alt="The Return"></div>
+            </section>
+            <section class="game-description-full">
+                <h2>Description</h2>
+                <p>Risen from the grave with no memory but the pull of an eerie voice, Gregory must navigate a dangerous world shrouded in mystery and follow the haunting call to uncover his past.</p>
+            </section>
+            <section class="game-screenshots">
+                <h2>Concepts</h2>
+                <div class="screenshot-grid">
+                    <img src="images/return_environment_concept.png" loading="lazy" alt="Environment Concept">
+                    <img src="images/return_character_sketch.png" loading="lazy" alt="Character Sketch">
+                    <img src="images/placeholder_screenshot.png" loading="lazy" alt="Placeholder">
+                </div>
+            </section>
+            <section class="game-features">
+                <h2>Key Features (Planned)</h2>
+                <ul>
+                    <li><i class="fas fa-check"></i> Compelling Character-Driven Narrative</li>
+                    <li><i class="fas fa-check"></i> Atmospheric and Evocative World Design</li>
+                    <li><i class="fas fa-check"></i> Exploration Focused Gameplay</li>
+                </ul>
+            </section>
+            <section class="game-download">
+                <h2>Get Involved / Download</h2>
+                <p>Development on 'The Return' has recently resumed. Follow along for updates.</p>
+                <a href="#" class="cta-button disabled">Download Demo (Coming Soon) <i class="fas fa-download"></i></a>
+            </section>
+            <nav class="back-link-section">
+                <a href="#" onclick="event.preventDefault(); loadPage('home');" class="back-link"><i class="fas fa-arrow-left"></i> Back to All Games</a>
+            </nav>
+        </article>
+    </template>
+
+    <!-- 6. ASHES OF VERIDIAN TEMPLATE -->
+    <template id="tpl-ashes">
+        <article class="game-detail-content">
+            <header class="game-detail-header">
+                <h1>Ashes of Veridian <span class="release-year">[2010]</span></h1>
+                <p class="game-status"><i class="fas fa-cogs"></i> In Development</p>
+                <div class="game-detail-tags"><span class="tag">Action RPG</span><span class="tag">Isometric</span><span class="tag tag-dev">Post-Apocalyptic</span></div>
+            </header>
+            <section class="game-trailer">
+                <div class="video-placeholder"><img src="images/ashesofveridian.jpg" alt="Ashes of Veridian" class="game-image"></div>
+            </section>
+            <section class="game-description-full">
+                <h2>Description</h2>
+                <p>Once a legendary king, now a broken prisoner on the brink of despair. When a mysterious demon offers a chance to bring his deceased wife back from the dead, Cedric finds a new will to live. Journey through shadows in this isometric action RPG, battling hordes of enemies and uncovering dark secrets as you follow the demon's cryptic guidance.</p>
+            </section>
+            <section class="game-screenshots">
+                <h2>Concepts</h2>
+                <div class="screenshot-grid">
+                    <img src="images/shattered_world_concept.png" loading="lazy" alt="World Concept">
+                    <img src="images/shattered_ability_mockup.png" loading="lazy" alt="Ability Mockup">
+                    <img src="images/shattered_creature_design.png" loading="lazy" alt="Creature Design">
+                </div>
+            </section>
+            <section class="game-features">
+                <h2>Key Features (Planned)</h2>
+                <ul>
+                    <li><i class="fas fa-check"></i> Explore a Fragmented, Surreal World</li>
+                    <li><i class="fas fa-check"></i> Fast-Paced Combat with Reality-Bending Abilities</li>
+                    <li><i class="fas fa-check"></i> Deep Mystery and Lore</li>
+                </ul>
+            </section>
+            <section class="game-download">
+                <h2>Get Involved / Download</h2>
+                <p>This project is ambitious and currently being prototyped. Follow development news!</p>
+                <a href="#" class="cta-button disabled">Download Demo (Coming Soon) <i class="fas fa-download"></i></a>
+            </section>
+            <nav class="back-link-section">
+                <a href="#" onclick="event.preventDefault(); loadPage('home');" class="back-link"><i class="fas fa-arrow-left"></i> Back to All Games</a>
+            </nav>
+        </article>
+    </template>
+
+    <!-- 7. NINJA ARENA TEMPLATE -->
+    <template id="tpl-ninja">
+        <article class="game-detail-content">
+            <header class="game-detail-header">
+                <h1>Stick Ninja Showdown! <span class="release-year">[2011]</span></h1>
+                <p class="game-status"><i class="fas fa-cogs"></i> In Development</p>
+                <div class="game-detail-tags"><span class="tag">Action</span><span class="tag">Fighting</span><span class="tag tag-dev">Multiplayer</span></div>
+            </header>
+            <section class="game-trailer">
+                <div class="video-placeholder"><img src="images/ninjaarena.jpg" alt="Ninja Arena"></div>
+            </section>
+            <section class="game-description-full">
+                <h2>Description</h2>
+                <p>Step into the ninja arena as one of many charming stick figure ninjas! Choose from classes like archer, berserker, and wizard, master unique abilities and battle it out with up to 6 players in this platform fighting frenzy!</p>
+            </section>
+            <section class="game-screenshots">
+                <h2>Concepts</h2>
+                <div class="screenshot-grid">
+                    <img src="images/ninja_arena_char_concept.png" loading="lazy" alt="Character Concepts">
+                    <img src="images/ninja_arena_stage_concept.png" loading="lazy" alt="Arena Concept">
+                    <img src="images/ninja_arena_combat_mockup.png" loading="lazy" alt="Combat Mockup">
+                </div>
+            </section>
+            <section class="game-features">
+                <h2>Key Features (Planned)</h2>
+                <ul>
+                    <li><i class="fas fa-check"></i> Fast-Paced, Acrobatic Ninja Combat</li>
+                    <li><i class="fas fa-check"></i> Roster of Unique Ninja Characters</li>
+                    <li><i class="fas fa-check"></i> Dynamic Arenas with Interactable Elements</li>
+                    <li><i class="fas fa-check"></i> Online & Local Multiplayer Modes</li>
+                </ul>
+            </section>
+            <section class="game-download">
+                <h2>Get Involved / Download</h2>
+                <p>Prototyping for 'Ninja Arena' is underway. Follow for development insights!</p>
+                <a href="#" class="cta-button disabled">Download Demo (Coming Soon) <i class="fas fa-download"></i></a>
+            </section>
+            <nav class="back-link-section">
+                <a href="#" onclick="event.preventDefault(); loadPage('home');" class="back-link"><i class="fas fa-arrow-left"></i> Back to All Games</a>
+            </nav>
+        </article>
+    </template>
+
+
+    <!-- ====================================================== -->
+    <!--                 JAVASCRIPT ROUTING                     -->
+    <!-- ====================================================== -->
+    
+    <!-- Load original script for back-to-top functionality -->
+    <script src="script.js"></script>
+
+    <script>
+        const container = document.getElementById('app-container');
+        const navContainer = document.getElementById('dynamic-nav');
+
+        // 1. Function to Swap Content
+        function loadPage(pageName) {
+            const template = document.getElementById(`tpl-${pageName}`);
+            
+            if (!template) {
+                console.error("Template not found for: " + pageName);
+                loadPage('home'); // Fallback
+                return;
+            }
+
+            // Fade out effect
+            container.classList.add('fading-out');
+
+            setTimeout(() => {
+                // Clear current content
+                container.innerHTML = '';
+                
+                // Clone content from template
+                const clone = template.content.cloneNode(true);
+                container.appendChild(clone);
+                
+                // Update Browser URL (History API)
+                const newUrl = pageName === 'home' ? window.location.pathname : `?page=${pageName}`;
+                window.history.pushState({ path: newUrl, pageId: pageName }, '', newUrl);
+
+                // Scroll to top
+                window.scrollTo(0, 0);
+
+                // Fade In
+                container.classList.remove('fading-out');
+                
+                // Update Nav Bar (Optional polish)
+                updateNav(pageName);
+
+            }, 300); // Wait for CSS fade transition
+        }
+
+        // 2. Update Navigation based on page
+        function updateNav(pageName) {
+            if (pageName === 'home') {
+                // On Home, we can show links to sections if needed
+                // For now, we leave it empty or as is
+                navContainer.innerHTML = ''; 
+            } else {
+                // On Game Pages, show "Back to Games"
+                navContainer.innerHTML = `<a href="#" onclick="event.preventDefault(); loadPage('home');">Back to Games</a>`;
+            }
+        }
+
+        // 3. Handle Browser Back/Forward Buttons
+        window.onpopstate = function(event) {
+            // Read URL param
+            const params = new URLSearchParams(window.location.search);
+            const page = params.get('page') || 'home';
+            
+            // Load page (bypass pushState to avoid history loop)
+            const template = document.getElementById(`tpl-${page}`);
+            if (template) {
+                container.innerHTML = '';
+                container.appendChild(template.content.cloneNode(true));
+                updateNav(page);
+            }
+        };
+
+        // 4. Initial Load
+        window.addEventListener('DOMContentLoaded', () => {
+            // Set Copyright Year
+            const yearSpan = document.getElementById('current-year');
+            if(yearSpan) yearSpan.textContent = new Date().getFullYear();
+
+            // Check URL for ?page=xyz
+            const params = new URLSearchParams(window.location.search);
+            const page = params.get('page') || 'home';
+            loadPage(page);
+        });
+    </script>
+
+</body>
+</html>
