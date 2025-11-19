@@ -17,45 +17,39 @@
 
     <link rel="stylesheet" href="style.css">
 
-    <meta name="description" content="Explore the collection of unique indie games developed by Sora Ngin.">
-    <meta name="keywords" content="Sora Ngin, indie games, web games, html5 games, strategy games, puzzle games">
-
     <style>
-        /* Small helper for the transition effect */
+        /* Transition handling */
         #app-container {
-            transition: opacity 0.3s ease-in-out;
+            transition: opacity 0.2s ease-in-out;
             opacity: 1;
-            min-height: 60vh; /* Prevents footer jumping too much */
+            min-height: 80vh;
         }
-        .fading-out {
-            opacity: 0 !important;
-        }
+        .fading { opacity: 0 !important; }
     </style>
 </head>
 <body>
 
     <div class="noise-overlay"></div>
 
-    <!-- GLOBAL HEADER -->
+    <!-- HEADER -->
     <header class="site-header">
         <div class="header-content">
-            <!-- Clicking Logo always goes Home -->
             <a href="?page=home" onclick="event.preventDefault(); loadPage('home');" class="logo-link">
                 <img src="images/logo.png" alt="Sora Games Logo" class="logo-img">
                 <span class="logo-text">Sora Games</span>
             </a>
-            <nav class="main-nav" id="dynamic-nav">
-                <!-- Nav links can be injected via JS if needed, or kept static -->
-            </nav>
+            <!-- Navigation updates dynamically based on page -->
+            <nav class="main-nav" id="dynamic-nav"></nav>
         </div>
     </header>
 
-    <!-- DYNAMIC CONTENT AREA -->
-    <main id="app-container">
-        <!-- Javascript will inject the templates here -->
+    <!-- MAIN CONTENT CONTAINER -->
+    <!-- The class will change dynamically from 'content-area' to 'content-area game-detail-page' -->
+    <main id="app-container" class="content-area">
+        <!-- Content injects here -->
     </main>
 
-    <!-- GLOBAL FOOTER -->
+    <!-- FOOTER -->
     <footer class="site-footer">
         <div class="footer-content">
             <div class="footer-logo">
@@ -76,23 +70,20 @@
             <div class="footer-social"></div>
         </div>
     </footer>
-    
-    <!-- Back to Top Button -->
+
     <button id="back-to-top" title="Back to Top"><i class="fas fa-arrow-up"></i></button>
 
     <!-- ====================================================== -->
-    <!--                 TEMPLATES START HERE                   -->
-    <!--     Images inside <template> do not load until used    -->
+    <!-- ALL PAGE TEMPLATES -->
     <!-- ====================================================== -->
 
-    <!-- 1. HOME PAGE TEMPLATE -->
+    <!-- HOME TEMPLATE -->
     <template id="tpl-home">
-        <!-- Section 1: Featured Creations -->
+        <!-- Section 1: Featured -->
         <section id="main-games" class="game-section featured-games">
             <h2 class="section-title">Featured Creations</h2>
             <div class="game-grid">
-
-                <!-- Rota (External Link preserved) -->
+                <!-- Rota -->
                 <a href="rota" class="game-card" data-tags="Survival, Arcade">
                     <div class="card-image-container">
                         <img src="images/rota_screenshot.png" alt="Revenge of the Ants" class="game-image" data-static-src="images/rota_screenshot.png" data-gif-src="images/rota_anim.gif">
@@ -104,8 +95,7 @@
                         <div class="game-tags"><span class="tag">Survival</span><span class="tag">Arcade</span></div>
                     </div>
                 </a>
-
-                <!-- Knight's Gambit (External Link preserved) -->
+                <!-- Knight's Gambit -->
                 <a href="KnightsGambit/index.html" class="game-card" data-tags="Strategy, Turn-Based">
                     <div class="card-image-container">
                         <img src="images/knights_vs_goblins_screenshot.png" alt="Knight's Gambit" class="game-image" data-static-src="images/knights_vs_goblins_screenshot.png" data-gif-src="images/knights_gambit_anim.gif">
@@ -117,8 +107,7 @@
                         <div class="game-tags"><span class="tag">Strategy</span><span class="tag">Turn-Based</span></div>
                     </div>
                 </a>
-
-                <!-- Kingsfall Chess (External Link preserved) -->
+                <!-- Kingsfall Chess -->
                 <a href="KingsfallChess" class="game-card" data-tags="Strategy, Chess">
                      <div class="card-image-container">
                          <img src="images/chess_screenshot.jpg" alt="Kingsfall Chess" class="game-image" data-static-src="images/chess_screenshot.jpg" data-gif-src="images/chess_anim.gif">
@@ -130,8 +119,7 @@
                          <div class="game-tags"><span class="tag">Strategy</span><span class="tag">Chess</span></div>
                     </div>
                  </a>
-
-                 <!-- Risen Realms (External Link preserved) -->
+                 <!-- Risen Realms -->
                  <a href="tcg.html" class="game-card" data-tags="Card Game, Strategy">
                      <div class="card-image-container">
                          <img src="images/tcg_screenshot.png" alt="Risen Realms" class="game-image" data-static-src="images/tcg_screenshot.png" data-gif-src="images/tcg_anim.gif">
@@ -146,14 +134,14 @@
             </div>
         </section>
 
-        <!-- Section 2: In Development (Converted to Internal Links) -->
+        <!-- Section 2: In Development (Converted to internal links) -->
         <section id="in-development" class="game-section development-games">
             <h2 class="section-title">Upcoming Adventures</h2>
             <p class="section-subtitle">Current projects in active development. Click for more details!</p>
             <div class="game-grid">
 
-                <!-- Yoink the King -->
-                <a href="?page=yoink" onclick="event.preventDefault(); loadPage('yoink');" class="game-card" data-tags="Strategy, Multiplayer">
+                <!-- Yoink -->
+                <a href="?page=yoink-the-king" onclick="event.preventDefault(); loadPage('yoink-the-king');" class="game-card" data-tags="Strategy, Multiplayer">
                     <div class="card-image-container">
                         <img src="images/yoinktheking_anim.gif" alt="Yoink the King" class="game-image">
                         <div class="image-overlay"><i class="fas fa-info-circle play-icon"></i></div>
@@ -178,8 +166,8 @@
                     </div>
                 </a>
 
-                 <!-- Small World -->
-                <a href="?page=smallworld" onclick="event.preventDefault(); loadPage('smallworld');" class="game-card">
+                <!-- Small World -->
+                <a href="?page=small-world" onclick="event.preventDefault(); loadPage('small-world');" class="game-card">
                     <div class="card-image-container">
                         <img src="images/smallworld.jpg" alt="Small World" class="game-image">
                         <div class="image-overlay"><i class="fas fa-info-circle play-icon"></i></div>
@@ -192,7 +180,7 @@
                 </a>
 
                 <!-- The Return -->
-                <a href="?page=thereturn" onclick="event.preventDefault(); loadPage('thereturn');" class="game-card">
+                <a href="?page=the-return" onclick="event.preventDefault(); loadPage('the-return');" class="game-card">
                     <div class="card-image-container">
                         <img src="images/thereturn.jpg" alt="The Return" class="game-image">
                         <div class="image-overlay"><i class="fas fa-info-circle play-icon"></i></div>
@@ -204,8 +192,8 @@
                     </div>
                 </a>
 
-                <!-- Ashes of Veridian -->
-                <a href="?page=ashes" onclick="event.preventDefault(); loadPage('ashes');" class="game-card">
+                <!-- Ashes -->
+                <a href="?page=ashes-of-veridian" onclick="event.preventDefault(); loadPage('ashes-of-veridian');" class="game-card">
                     <div class="card-image-container">
                         <img src="images/ashesofveridian.jpg" alt="Ashes of Veridian" class="game-image">
                         <div class="image-overlay"><i class="fas fa-info-circle play-icon"></i></div>
@@ -218,7 +206,7 @@
                 </a>
 
                 <!-- Ninja Arena -->
-                <a href="?page=ninja" onclick="event.preventDefault(); loadPage('ninja');" class="game-card">
+                <a href="?page=ninja-arena" onclick="event.preventDefault(); loadPage('ninja-arena');" class="game-card">
                     <div class="card-image-container">
                         <img src="images/ninjaarena.jpg" alt="Ninja Arena" class="game-image">
                         <div class="image-overlay"><i class="fas fa-info-circle play-icon"></i></div>
@@ -229,16 +217,14 @@
                          <div class="game-tags"><span class="tag tag-dev">In Development</span><span class="tag">Multiplayer</span></div>
                     </div>
                 </a>
-
             </div>
         </section>
 
-        <!-- Section 3: Prototypes (Kept as is, assumes external links for now, but you can convert them too) -->
+        <!-- Section 3: Prototypes -->
         <section id="prototypes" class="game-section prototype-section">
             <h2 class="section-title">Prototypes & Experiments</h2>
             <p class="section-subtitle">Playground for new ideas and works-in-progress.</p>
              <div class="game-grid">
-                 <!-- Medieval Math -->
                  <a href="MedievalMath.html" class="game-card prototype-card">
                      <div class="card-image-container">
                          <img src="images/medieval_math_screenshot.jpg" alt="Medieval Math" class="game-image">
@@ -249,13 +235,14 @@
                          <div class="game-tags"><span class="tag tag-proto">Educational</span></div>
                      </div>
                  </a>
-                 <!-- Add other prototypes here as needed... -->
+                 <!-- Add your other prototypes here... -->
             </div>
         </section>
     </template>
 
-    <!-- 2. YOINK THE KING TEMPLATE -->
-    <template id="tpl-yoink">
+
+    <!-- GAME TEMPLATE: YOINK -->
+    <template id="tpl-yoink-the-king">
         <article class="game-detail-content">
             <header class="game-detail-header">
                 <h1>Yoink the King <span class="release-year">[2018]</span></h1>
@@ -266,20 +253,20 @@
             </header>
             <section class="game-trailer">
                 <div class="video-placeholder">
-                    <iframe src="https://www.youtube.com/embed/5ljmrYM_QV0?si=j_pmi0bv7n2kbn7t" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                    <iframe src="https://www.youtube.com/embed/5ljmrYM_QV0" title="YouTube video player" frameborder="0" allowfullscreen></iframe>
                 </div>
             </section>
             <section class="game-description-full">
                 <h2>Description</h2>
-                <p>Arrows, swords, and kidnapped kings... Dive into a hilariously chaotic strategy game where you control a swordsman and archer to outsmart opponents online or against the computer. Sneak through enemy bases by land, air, or underground to capture their king!</p>
+                <p>Arrows, swords, and kidnapped kings... Dive into a hilariously chaotic strategy game where you control a swordsman and archer to outsmart opponents online or against the computer.</p>
             </section>
             <section class="game-screenshots">
                 <h2>Screenshots & Concepts</h2>
                 <div class="screenshot-grid">
-                    <img src="images/yoinktheking_anim.gif" loading="lazy" alt="Yoink the King 1">
-                    <img src="images/yoink_gameplay_mockup_1.png" loading="lazy" alt="Yoink Gameplay">
-                    <img src="images/yoink_character_design.png" loading="lazy" alt="Yoink Characters">
-                    <img src="images/placeholder_screenshot.png" loading="lazy" alt="Placeholder">
+                    <img src="images/yoinktheking_anim.gif" alt="Yoink 1">
+                    <img src="images/yoink_gameplay_mockup_1.png" alt="Gameplay Mockup">
+                    <img src="images/yoink_character_design.png" alt="Character Designs">
+                    <img src="images/placeholder_screenshot.png" alt="Placeholder">
                 </div>
             </section>
             <section class="game-features">
@@ -287,7 +274,6 @@
                 <ul>
                     <li><i class="fas fa-check"></i> Hilarious & Chaotic Strategy Gameplay</li>
                     <li><i class="fas fa-check"></i> Online Multiplayer & Challenging AI</li>
-                    <li><i class="fas fa-check"></i> Simultaneous Control of Swordsman & Archer</li>
                     <li><i class="fas fa-check"></i> Capture-the-Flag Style Objective</li>
                 </ul>
             </section>
@@ -301,7 +287,8 @@
         </article>
     </template>
 
-    <!-- 3. FROSTFIRE TEMPLATE -->
+
+    <!-- GAME TEMPLATE: FROSTFIRE -->
     <template id="tpl-frostfire">
         <article class="game-detail-content">
             <header class="game-detail-header">
@@ -310,32 +297,35 @@
                 <div class="game-detail-tags"><span class="tag">Action RPG</span><span class="tag">Fantasy</span><span class="tag tag-dev">Elements</span></div>
             </header>
             <section class="game-trailer">
+                <!-- Fixed Path: Removed ../ -->
                 <div class="image-placeholder"><img src="images/frostfire0.jpg" alt="Frostfire Screenshot"></div>
             </section>
             <section class="game-description-full">
                 <h2>Description</h2>
-                <p>In a world ravaged by a fiery invasion, Roman the Wizard must harness his frost powers to stop the malevolent Fire Wizards from uniting a world-ending orb. Journey through ash-choked ruins and fiery fortresses, battling scorching enemies with potent frost magic in FrostFire!</p>
+                <p>In a world ravaged by a fiery invasion, Roman the Wizard must harness his frost powers to stop the malevolent Fire Wizards from uniting a world-ending orb.</p>
             </section>
             <section class="game-screenshots">
                 <h2>Concepts</h2>
                 <div class="screenshot-grid">
-                    <img src="images/frostfire1.jpg" loading="lazy" alt="Frostfire 1">
-                    <img src="images/frostfire_anim.gif" loading="lazy" alt="Frostfire GIF">
-                    <img src="images/frostfire3.gif" loading="lazy" alt="Frostfire GIF 2">
-                    <img src="images/frostfire4.jpg" loading="lazy" alt="Frostfire 4">
+                    <!-- Fixed Paths: Removed ../ -->
+                    <img src="images/frostfire1.jpg" alt="Frostfire 1">
+                    <img src="images/frostfire_anim.gif" alt="Frostfire GIF">
+                    <img src="images/frostfire3.gif" alt="Frostfire GIF 2">
+                    <img src="images/frostfire4.jpg" alt="Frostfire 4">
+                    <img src="images/frostfire5.jpg" alt="Frostfire 5">
                 </div>
             </section>
             <section class="game-features">
                 <h2>Key Features (Planned)</h2>
                 <ul>
                     <li><i class="fas fa-check"></i> Dynamic Dual-Element Combat System</li>
-                    <li><i class="fas fa-check"></i> Open-World Exploration across Diverse Biomes</li>
-                    <li><i class="fas fa-check"></i> Deep Character Progression & Skill Trees</li>
+                    <li><i class="fas fa-check"></i> Open-World Exploration</li>
+                    <li><i class="fas fa-check"></i> Deep Character Progression</li>
                 </ul>
             </section>
             <section class="game-download">
                 <h2>Get Involved / Download</h2>
-                <p>Frostfire is in the early stages of renewed development. Stay tuned for updates!</p>
+                <p>Frostfire is in the early stages of renewed development.</p>
                 <a href="#" class="cta-button disabled">Download Demo (Coming Soon) <i class="fas fa-download"></i></a>
             </section>
             <nav class="back-link-section">
@@ -344,8 +334,9 @@
         </article>
     </template>
 
-    <!-- 4. SMALL WORLD TEMPLATE -->
-    <template id="tpl-smallworld">
+
+    <!-- GAME TEMPLATE: SMALL WORLD -->
+    <template id="tpl-small-world">
         <article class="game-detail-content">
             <header class="game-detail-header">
                 <h1>Small World <span class="release-year">[2010]</span></h1>
@@ -353,27 +344,28 @@
                 <div class="game-detail-tags"><span class="tag">Puzzle</span><span class="tag">Adventure</span><span class="tag tag-dev">Miniature</span></div>
             </header>
             <section class="game-trailer">
+                <!-- Fixed Path: Removed ../ -->
                 <div class="video-placeholder"><p><img src="images/smallworld.jpg" alt="Small World"></p></div>
             </section>
             <section class="game-description-full">
                 <h2>Description</h2>
-                <p>Six heroes, each wielding distinct talents, must unite and shatter the iron-fisted grip of the overlords. Battle foes, solve puzzles, and strategically combine their skills to reclaim their world from encroaching darkness in Small World!</p>
+                <p>Six heroes, each wielding distinct talents, must unite and shatter the iron-fisted grip of the overlords.</p>
             </section>
             <section class="game-screenshots">
                 <h2>Concepts</h2>
                 <div class="screenshot-grid">
-                    <img src="images/smallworld1.jpg" loading="lazy" alt="Small World 1">
-                    <img src="images/smallworld2.jpg" loading="lazy" alt="Small World 2">
-                    <img src="images/smallworld3.jpg" loading="lazy" alt="Small World 3">
-                    <img src="images/smallworld4.jpg" loading="lazy" alt="Small World 4">
+                    <!-- Fixed Paths: Removed ../ -->
+                    <img src="images/smallworld1.jpg" alt="Small World 1">
+                    <img src="images/smallworld2.jpg" alt="Small World 2">
+                    <img src="images/smallworld3.jpg" alt="Small World 3">
+                    <img src="images/smallworld4.jpg" alt="Small World 4">
                 </div>
             </section>
             <section class="game-features">
                 <h2>Key Features (Planned)</h2>
                 <ul>
                     <li><i class="fas fa-check"></i> Explore Detailed Miniature Worlds</li>
-                    <li><i class="fas fa-check"></i> Engaging Environmental & Physics Puzzles</li>
-                    <li><i class="fas fa-check"></i> Interact with a Cast of Heroic Characters</li>
+                    <li><i class="fas fa-check"></i> Engaging Environmental Puzzles</li>
                 </ul>
             </section>
             <section class="game-download">
@@ -386,8 +378,9 @@
         </article>
     </template>
 
-    <!-- 5. THE RETURN TEMPLATE -->
-    <template id="tpl-thereturn">
+
+    <!-- GAME TEMPLATE: THE RETURN -->
+    <template id="tpl-the-return">
         <article class="game-detail-content">
             <header class="game-detail-header">
                 <h1>The Return <span class="release-year">[2010]</span></h1>
@@ -399,27 +392,27 @@
             </section>
             <section class="game-description-full">
                 <h2>Description</h2>
-                <p>Risen from the grave with no memory but the pull of an eerie voice, Gregory must navigate a dangerous world shrouded in mystery and follow the haunting call to uncover his past.</p>
+                <p>Risen from the grave with no memory but the pull of an eerie voice, Gregory must navigate a dangerous world shrouded in mystery.</p>
             </section>
             <section class="game-screenshots">
                 <h2>Concepts</h2>
                 <div class="screenshot-grid">
-                    <img src="images/return_environment_concept.png" loading="lazy" alt="Environment Concept">
-                    <img src="images/return_character_sketch.png" loading="lazy" alt="Character Sketch">
-                    <img src="images/placeholder_screenshot.png" loading="lazy" alt="Placeholder">
+                    <img src="images/return_environment_concept.png" alt="Environment Concept">
+                    <img src="images/return_character_sketch.png" alt="Character Sketch">
+                    <img src="images/placeholder_screenshot.png" alt="Placeholder">
                 </div>
             </section>
             <section class="game-features">
                 <h2>Key Features (Planned)</h2>
                 <ul>
                     <li><i class="fas fa-check"></i> Compelling Character-Driven Narrative</li>
-                    <li><i class="fas fa-check"></i> Atmospheric and Evocative World Design</li>
+                    <li><i class="fas fa-check"></i> Atmospheric World Design</li>
                     <li><i class="fas fa-check"></i> Exploration Focused Gameplay</li>
                 </ul>
             </section>
             <section class="game-download">
                 <h2>Get Involved / Download</h2>
-                <p>Development on 'The Return' has recently resumed. Follow along for updates.</p>
+                <p>Development has recently resumed. Follow along for updates.</p>
                 <a href="#" class="cta-button disabled">Download Demo (Coming Soon) <i class="fas fa-download"></i></a>
             </section>
             <nav class="back-link-section">
@@ -428,8 +421,9 @@
         </article>
     </template>
 
-    <!-- 6. ASHES OF VERIDIAN TEMPLATE -->
-    <template id="tpl-ashes">
+
+    <!-- GAME TEMPLATE: ASHES OF VERIDIAN -->
+    <template id="tpl-ashes-of-veridian">
         <article class="game-detail-content">
             <header class="game-detail-header">
                 <h1>Ashes of Veridian <span class="release-year">[2010]</span></h1>
@@ -441,27 +435,27 @@
             </section>
             <section class="game-description-full">
                 <h2>Description</h2>
-                <p>Once a legendary king, now a broken prisoner on the brink of despair. When a mysterious demon offers a chance to bring his deceased wife back from the dead, Cedric finds a new will to live. Journey through shadows in this isometric action RPG, battling hordes of enemies and uncovering dark secrets as you follow the demon's cryptic guidance.</p>
+                <p>Once a legendary king, now a broken prisoner. Journey through shadows in this isometric action RPG.</p>
             </section>
             <section class="game-screenshots">
                 <h2>Concepts</h2>
                 <div class="screenshot-grid">
-                    <img src="images/shattered_world_concept.png" loading="lazy" alt="World Concept">
-                    <img src="images/shattered_ability_mockup.png" loading="lazy" alt="Ability Mockup">
-                    <img src="images/shattered_creature_design.png" loading="lazy" alt="Creature Design">
+                    <img src="images/shattered_world_concept.png" alt="World Concept">
+                    <img src="images/shattered_ability_mockup.png" alt="Ability Mockup">
+                    <img src="images/shattered_creature_design.png" alt="Creature Design">
                 </div>
             </section>
             <section class="game-features">
                 <h2>Key Features (Planned)</h2>
                 <ul>
                     <li><i class="fas fa-check"></i> Explore a Fragmented, Surreal World</li>
-                    <li><i class="fas fa-check"></i> Fast-Paced Combat with Reality-Bending Abilities</li>
+                    <li><i class="fas fa-check"></i> Fast-Paced Combat</li>
                     <li><i class="fas fa-check"></i> Deep Mystery and Lore</li>
                 </ul>
             </section>
             <section class="game-download">
                 <h2>Get Involved / Download</h2>
-                <p>This project is ambitious and currently being prototyped. Follow development news!</p>
+                <p>This project is ambitious and currently being prototyped.</p>
                 <a href="#" class="cta-button disabled">Download Demo (Coming Soon) <i class="fas fa-download"></i></a>
             </section>
             <nav class="back-link-section">
@@ -470,8 +464,9 @@
         </article>
     </template>
 
-    <!-- 7. NINJA ARENA TEMPLATE -->
-    <template id="tpl-ninja">
+
+    <!-- GAME TEMPLATE: NINJA ARENA -->
+    <template id="tpl-ninja-arena">
         <article class="game-detail-content">
             <header class="game-detail-header">
                 <h1>Stick Ninja Showdown! <span class="release-year">[2011]</span></h1>
@@ -483,14 +478,14 @@
             </section>
             <section class="game-description-full">
                 <h2>Description</h2>
-                <p>Step into the ninja arena as one of many charming stick figure ninjas! Choose from classes like archer, berserker, and wizard, master unique abilities and battle it out with up to 6 players in this platform fighting frenzy!</p>
+                <p>Step into the ninja arena as one of many charming stick figure ninjas! Battle it out with up to 6 players.</p>
             </section>
             <section class="game-screenshots">
                 <h2>Concepts</h2>
                 <div class="screenshot-grid">
-                    <img src="images/ninja_arena_char_concept.png" loading="lazy" alt="Character Concepts">
-                    <img src="images/ninja_arena_stage_concept.png" loading="lazy" alt="Arena Concept">
-                    <img src="images/ninja_arena_combat_mockup.png" loading="lazy" alt="Combat Mockup">
+                    <img src="images/ninja_arena_char_concept.png" alt="Character Concepts">
+                    <img src="images/ninja_arena_stage_concept.png" alt="Arena Concept">
+                    <img src="images/ninja_arena_combat_mockup.png" alt="Combat Mockup">
                 </div>
             </section>
             <section class="game-features">
@@ -498,13 +493,12 @@
                 <ul>
                     <li><i class="fas fa-check"></i> Fast-Paced, Acrobatic Ninja Combat</li>
                     <li><i class="fas fa-check"></i> Roster of Unique Ninja Characters</li>
-                    <li><i class="fas fa-check"></i> Dynamic Arenas with Interactable Elements</li>
                     <li><i class="fas fa-check"></i> Online & Local Multiplayer Modes</li>
                 </ul>
             </section>
             <section class="game-download">
                 <h2>Get Involved / Download</h2>
-                <p>Prototyping for 'Ninja Arena' is underway. Follow for development insights!</p>
+                <p>Prototyping for 'Ninja Arena' is underway.</p>
                 <a href="#" class="cta-button disabled">Download Demo (Coming Soon) <i class="fas fa-download"></i></a>
             </section>
             <nav class="back-link-section">
@@ -515,87 +509,88 @@
 
 
     <!-- ====================================================== -->
-    <!--                 JAVASCRIPT ROUTING                     -->
+    <!-- JAVASCRIPT LOGIC -->
     <!-- ====================================================== -->
     
-    <!-- Load original script for back-to-top functionality -->
     <script src="script.js"></script>
 
     <script>
         const container = document.getElementById('app-container');
         const navContainer = document.getElementById('dynamic-nav');
 
-        // 1. Function to Swap Content
         function loadPage(pageName) {
             const template = document.getElementById(`tpl-${pageName}`);
             
             if (!template) {
-                console.error("Template not found for: " + pageName);
-                loadPage('home'); // Fallback
+                console.error("Template not found: " + pageName);
                 return;
             }
 
-            // Fade out effect
-            container.classList.add('fading-out');
+            // 1. Fade Out
+            container.classList.add('fading');
 
             setTimeout(() => {
-                // Clear current content
+                // 2. Swap content
                 container.innerHTML = '';
-                
-                // Clone content from template
                 const clone = template.content.cloneNode(true);
                 container.appendChild(clone);
                 
-                // Update Browser URL (History API)
+                // 3. UPDATE CLASSES TO RESTORE FORMATTING
+                // Your CSS likely relies on .game-detail-page for formatting game pages
+                if (pageName === 'home') {
+                    container.className = 'content-area'; 
+                    // Remove the class that styles game pages
+                } else {
+                    container.className = 'content-area game-detail-page'; 
+                    // Add the class so images and layouts appear correctly
+                }
+
+                // 4. Update URL & Scroll
                 const newUrl = pageName === 'home' ? window.location.pathname : `?page=${pageName}`;
                 window.history.pushState({ path: newUrl, pageId: pageName }, '', newUrl);
-
-                // Scroll to top
                 window.scrollTo(0, 0);
 
-                // Fade In
-                container.classList.remove('fading-out');
-                
-                // Update Nav Bar (Optional polish)
+                // 5. Fade In
+                container.classList.remove('fading');
                 updateNav(pageName);
 
-            }, 300); // Wait for CSS fade transition
+            }, 200);
         }
 
-        // 2. Update Navigation based on page
         function updateNav(pageName) {
             if (pageName === 'home') {
-                // On Home, we can show links to sections if needed
-                // For now, we leave it empty or as is
-                navContainer.innerHTML = ''; 
+                navContainer.innerHTML = ''; // Or your standard menu links
             } else {
-                // On Game Pages, show "Back to Games"
                 navContainer.innerHTML = `<a href="#" onclick="event.preventDefault(); loadPage('home');">Back to Games</a>`;
             }
         }
 
-        // 3. Handle Browser Back/Forward Buttons
         window.onpopstate = function(event) {
-            // Read URL param
             const params = new URLSearchParams(window.location.search);
             const page = params.get('page') || 'home';
             
-            // Load page (bypass pushState to avoid history loop)
+            // Handle back button without full reload logic
             const template = document.getElementById(`tpl-${page}`);
-            if (template) {
+            if(template) {
                 container.innerHTML = '';
                 container.appendChild(template.content.cloneNode(true));
+                
+                // Important: Re-apply the class logic here too
+                if (page === 'home') {
+                    container.className = 'content-area';
+                } else {
+                    container.className = 'content-area game-detail-page';
+                }
                 updateNav(page);
             }
         };
 
-        // 4. Initial Load
         window.addEventListener('DOMContentLoaded', () => {
-            // Set Copyright Year
+            // Copyright year logic
             const yearSpan = document.getElementById('current-year');
             if(yearSpan) yearSpan.textContent = new Date().getFullYear();
 
-            // Check URL for ?page=xyz
+            // Load initial page
             const params = new URLSearchParams(window.location.search);
             const page = params.get('page') || 'home';
             loadPage(page);
