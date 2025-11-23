@@ -1,51 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <!-- Correct viewport for mobile, prevent user zoom -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Knight's Gambit</title>
     <link rel="icon" href="images/favicon_knightsgambit.ico" type="image/x-icon">
     <link rel="stylesheet" href="style.css">
-    <!-- Preloads (Optional, browser might ignore if not used quickly) -->
-    <link rel="preload" href="./sprites/achievement_locked.png" as="image">
-    <link rel="preload" href="./sprites/achievement_unlocked.png" as="image">
-    <link rel="preload" href="./sprites/armor.png" as="image"> <!-- Base armor sprite -->
-    <link rel="preload" href="./sprites/spellbook.png" as="image">
-    <link rel="preload" href="./sprites/rogue.png" as="image">
-    <link rel="preload" href="./sprites/rogue_portrait.png" as="image">
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <link rel="preload" href="./images/titlescreen.jpg" as="image">
+    <link rel="preload" href="./sprites/world_map.png" as="image">
+    <link rel="preload" href="./sprites/items.png" as="image">
+    <link rel="preload" href="./sprites/armor.png" as="image">
+    <link rel="preload" href="./sprites/humans_grey.png" as="image">
+    <link rel="preload" href="./sprites/goblins_green.png" as="image">
 </head>
+
 <body>
     <div id="game-container">
+
         <div id="game-board-wrapper">
             <div id="game-board">
                 <div id="grid-content">
-                    <!-- HP Bars overlay remains -->
                     <div id="unit-hp-bars-overlay"></div>
                 </div>
-                <!-- Feedback area remains -->
-                <div id="board-feedback-area"></div>
+                <div id="board-feedback-area" role="alert" aria-live="polite"></div>
             </div>
-            <!-- Reset View Button remains -->
-            <button id="default-view-button" class="icon-button hidden" title="Reset View (Home)">⌂</button>
+            <button type="button" id="default-view-button" class="icon-button hidden"
+                title="Reset View (Home)">⌂</button>
         </div>
 
-        <div id="ui-panel">
+        <aside id="ui-panel">
             <div class="panel-content-wrapper">
-                <!-- Top Bar UI remains -->
+
                 <div id="top-bar-ui">
-                    <div id="level-display">Level: 1</div>
-                    <div id="actions-left-display">Actions Left: 0</div>
-                    <button id="menu-button" class="icon-button" title="Menu (Esc)">☰</button>
+                    <div id="level-display" aria-live="polite">Level: 1</div>
+                    <div id="actions-left-display" aria-live="polite">Actions Left: 0</div>
+                    <button type="button" id="menu-button" class="icon-button" title="Menu (Esc)"
+                        aria-label="Open Menu">☰</button>
                 </div>
 
-                <!-- Unit Info remains -->
-                <div id="unit-info">
+                <section id="unit-info" aria-labelledby="unit-name">
                     <div class="unit-visuals">
-                        <img id="unit-portrait" alt="Unit Portrait">
-                        <div class="unit-hp-bar-container info-panel-hp-bar">
-                            <div class="unit-hp-bar" style="--hp-percent: 100%;"></div>
-                            <span class="unit-hp-text">HP: -/-</span>
+                        <div id="unit-portrait" role="img" aria-label="Selected Unit Portrait"></div>
+                        <div class="unit-hp-bar-container info-panel-hp-bar" aria-label="Unit Health">
+                            <div class="unit-hp-bar"></div>
+                            <span class="unit-hp-text" aria-live="polite">HP: -/-</span>
                         </div>
                     </div>
                     <div id="unit-details">
@@ -53,153 +57,212 @@
                         <p id="unit-atk">ATK: -</p>
                         <p id="unit-mov">MOV: -</p>
                         <p id="unit-rng">RNG: -</p>
-                        <p id="unit-status"></p>
+                        <p id="unit-status" aria-live="polite"></p>
                     </div>
+                </section>
+
+                <div id="unit-abilities">
+                    <button type="button" id="ability-stealth" class="ability-button hidden" data-ability="stealth"
+                        title="Stealth: Become hidden, +1 ATK on first strike.">Stealth</button>
+                    <button type="button" id="ability-quick-strike" class="ability-button hidden"
+                        data-ability="quickStrike" title="Quick Strike: Attack twice this turn. Reduced movement.">Quick
+                        Strike</button>
                 </div>
 
-                <!-- Spell Area remains -->
-                <div id="spell-area">
-                    <div id="fireball-container" class="spell-container"><div id="fireball-spell" class="spell-icon locked" data-spell-name="fireball" title="Unlock at Level 4"><span class="hotkey-display">1</span></div><span class="spell-label">Fireball</span></div>
-                    <div id="flame-wave-container" class="spell-container"><div id="flame-wave-spell" class="spell-icon locked" data-spell-name="flameWave" title="Unlock at Level 8"><span class="hotkey-display">2</span></div><span class="spell-label">Flame Wave</span></div>
-                    <div id="frost-nova-container" class="spell-container"><div id="frost-nova-spell" class="spell-icon locked" data-spell-name="frostNova" title="Unlock at Level 12"><span class="hotkey-display">3</span></div><span class="spell-label">Frost Nova</span></div>
-                    <div id="heal-container" class="spell-container"><div id="heal-spell" class="spell-icon locked" data-spell-name="heal" title="Unlock at Level 16"><span class="hotkey-display">4</span></div><span class="spell-label">Heal</span></div>
-                </div>
-                <!-- End Turn Button remains -->
-                <button id="end-turn-button" class="primary-button" title="End Player Turn (E)"><span class="hotkey-e">E</span>nd Turn</button>
+                <section id="spell-area" aria-label="Spells">
+                    <div class="spell-container">
+                        <button type="button" id="fireball-spell" class="spell-icon locked icon icon-spell-fireball"
+                            data-spell-name="fireball" title="Unlock at Level 4" aria-label="Fireball Spell (Locked)">
+                            <span class="hotkey-display" aria-hidden="true">1</span>
+                        </button>
+                        <span class="spell-label">Fireball</span>
+                    </div>
+                    <div class="spell-container">
+                        <button type="button" id="flame-wave-spell" class="spell-icon locked icon icon-spell-flameWave"
+                            data-spell-name="flameWave" title="Unlock at Level 8"
+                            aria-label="Flame Wave Spell (Locked)">
+                            <span class="hotkey-display" aria-hidden="true">2</span>
+                        </button>
+                        <span class="spell-label">Flame Wave</span>
+                    </div>
+                    <div class="spell-container">
+                        <button type="button" id="frost-nova-spell" class="spell-icon locked icon icon-spell-frostNova"
+                            data-spell-name="frostNova" title="Unlock at Level 12"
+                            aria-label="Frost Nova Spell (Locked)">
+                            <span class="hotkey-display" aria-hidden="true">3</span>
+                        </button>
+                        <span class="spell-label">Frost Nova</span>
+                    </div>
+                    <div class="spell-container">
+                        <button type="button" id="heal-spell" class="spell-icon locked icon icon-spell-heal"
+                            data-spell-name="heal" title="Unlock at Level 16" aria-label="Heal Spell (Locked)">
+                            <span class="hotkey-display" aria-hidden="true">4</span>
+                        </button>
+                        <span class="spell-label">Heal</span>
+                    </div>
+                </section>
+
+                <button type="button" id="end-turn-button" class="primary-button end-turn-style"
+                    title="End Player Turn (E)"><span class="hotkey-e">E</span>nd Turn</button>
+
             </div>
-        </div>
+        </aside>
 
-        <!-- Main Menu: Add Achievements Button -->
-        <div id="main-menu" class="overlay visible">
-            <div class="overlay-content styled-overlay-content main-menu-background">
-                <img id="main-menu-title-image" src="./sprites/title.png" alt="Knight's Gambit Title">
+        <div id="main-menu" class="overlay visible" role="dialog" aria-modal="true" aria-labelledby="main-menu-title">
+            <div class="overlay-content main-menu-background">
+                <h1 id="main-menu-title" class="visually-hidden">Knight's Gambit Main Menu</h1>
                 <div class="main-menu-buttons">
-                    <button id="start-game-button" class="primary-button">Play</button>
-                    <button id="achievements-menu-button" class="primary-button">Achievements</button>
-                    <button id="leaderboard-menu-button" class="primary-button">Leaderboard</button>
-                    <button id="settings-menu-button" class="primary-button">Options</button>
+                    <button type="button" id="start-game-button" class="primary-button">Play</button>
+                    <button type="button" id="achievements-menu-button" class="primary-button">Achievements</button>
+                    <button type="button" id="leaderboard-menu-button" class="primary-button">Leaderboard</button>
+                    <button type="button" id="settings-menu-button" class="primary-button">Options</button>
                 </div>
             </div>
         </div>
 
-        <!-- Level Complete Screen remains largely the same structure, add noArmor bonus li -->
-        <div id="level-complete-screen" class="overlay">
+        <div id="level-complete-screen" class="overlay" role="dialog" aria-modal="true"
+            aria-labelledby="level-complete-title">
             <div class="overlay-content styled-overlay-content">
                 <div class="decorative-frame"></div>
                 <h2 id="level-complete-title" class="overlay-title">Level Complete!</h2>
                 <div id="level-complete-stats" class="inset-panel">
                     <p>Enemies Slain: <span id="stats-enemies-killed">-</span></p>
                     <p>Units Lost: <span id="stats-units-lost">-</span></p>
-                    <p>Base Gold Gained: <span id="stats-gold-gained">-</span> <img src="./sprites/gold.png" alt="Gold Icon" class="gold-icon-inline"></p> <!-- Changed label -->
+                    <p>Base Gold Gained: <span id="stats-gold-gained">-</span> <span class="icon icon-inline icon-gold"
+                            title="Gold" aria-label="Gold"></span></p>
                     <div id="level-complete-bonuses">
                         <p>Bonuses:</p>
-                        <ul id="stats-bonus-list">
-                           <li class="bonus-item hidden" data-bonus="noSpells"><img src="./sprites/bonus_mightovermagic.png" class="bonus-icon" title="Used no spells" alt="No Spells Bonus"><span class="bonus-amount">0</span> <img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></li>
-                           <li class="bonus-item hidden" data-bonus="fullHp"><img src="./sprites/bonus_flawlessvictory.png" class="bonus-icon" title="Flawless victory" alt="Flawless Victory Bonus"><span class="bonus-amount">0</span> <img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></li>
-                           <li class="bonus-item hidden" data-bonus="noLosses"><img src="./sprites/bonus_nomanleftbehind.png" class="bonus-icon" title="No units lost" alt="No Losses Bonus"><span class="bonus-amount">0</span> <img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></li>
-                           <li class="bonus-item hidden" data-bonus="noArmor"><img src="./sprites/bonus_no_armor.png" class="bonus-icon" title="No Armor Equipped" alt="No Armor Bonus"><span class="bonus-amount">0</span> <img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></li> <!-- Added No Armor Bonus -->
+                        <ul id="stats-bonus-list" aria-label="Level Completion Bonuses">
+                            <li class="bonus-item hidden" data-bonus="noSpells"><span
+                                    class="icon bonus-icon icon-bonus-mightovermagic" title="Used no spells"
+                                    aria-label="Might Over Magic Bonus"></span><span class="bonus-amount">0</span> <span
+                                    class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></li>
+                            <li class="bonus-item hidden" data-bonus="fullHp"><span
+                                    class="icon bonus-icon icon-bonus-flawlessvictory" title="Flawless victory"
+                                    aria-label="Flawless Victory Bonus"></span><span class="bonus-amount">0</span> <span
+                                    class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></li>
+                            <li class="bonus-item hidden" data-bonus="noLosses"><span
+                                    class="icon bonus-icon icon-bonus-nomanleftbehind" title="No units lost"
+                                    aria-label="No Man Left Behind Bonus"></span><span class="bonus-amount">0</span>
+                                <span class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span>
+                            </li>
+                            <li class="bonus-item hidden" data-bonus="noArmor"><span
+                                    class="icon bonus-icon icon-bonus-noarmor" title="No Armor Equipped (No Losses)"
+                                    aria-label="No Armor Bonus"></span><span class="bonus-amount">0</span> <span
+                                    class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></li>
                         </ul>
                     </div>
-                    <p>Total Gold Earned: <span id="stats-total-gold">-</span> <img src="./sprites/gold.png" alt="Gold Icon" class="gold-icon-inline"></p>
-                    <p>Your Total Gold: <span id="level-complete-total-gold">-</span> <img src="./sprites/gold.png" alt="Gold Icon" class="gold-icon-inline"></p>
+                    <p>Total Gold Earned: <span id="stats-total-gold">-</span> <span class="icon icon-inline icon-gold"
+                            title="Gold" aria-label="Gold"></span></p>
+                    <p>Your Total Gold: <span id="level-complete-total-gold">-</span> <span
+                            class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
                 </div>
-                <div class="level-complete-buttons">
-                    <button id="level-complete-shop-button" class="primary-button" title="Shop (S)">🛒 Shop</button>
-                    <button id="next-level-button" class="primary-button" title="Next Level (E)">Next Level</button>
+                <div class="level-complete-buttons button-group">
+                    <button type="button" id="level-complete-shop-button" class="primary-button" title="Shop (S)">🛒
+                        Shop</button>
+                    <button type="button" id="next-level-button" class="primary-button" title="Next Level (E)">Next
+                        Level</button>
                 </div>
             </div>
         </div>
 
-        <!-- Game Over Screen remains largely the same structure -->
-        <div id="game-over-screen" class="overlay">
+        <div id="game-over-screen" class="overlay" role="dialog" aria-modal="true" aria-labelledby="game-over-title">
             <div class="overlay-content styled-overlay-content">
                 <div class="decorative-frame red-glow"></div>
                 <h2 id="game-over-title" class="overlay-title defeat-title">Defeat!</h2>
                 <p id="game-over-message"></p>
-                <div class="game-over-buttons">
-                    <button id="restart-button" class="primary-button">Restart Level</button>
-                    <button id="game-over-to-title-button" class="secondary-button">Back to Title</button>
+                <div class="game-over-buttons button-group">
+                    <button type="button" id="restart-button" class="primary-button">Restart Level</button>
+                    <button type="button" id="game-over-to-title-button" class="secondary-button">Back to Title</button>
                 </div>
             </div>
         </div>
 
-        <!-- Level Select Screen remains largely the same structure -->
-        <div id="level-select-screen" class="overlay">
+        <div id="level-select-screen" class="overlay" role="dialog" aria-modal="true">
             <div class="overlay-content level-select-content no-style">
+                <h2 class="visually-hidden">Level Select</h2>
                 <div id="level-select-map-container">
-                    <div id="level-select-map"></div>
-                    <div id="level-select-dots-layer"></div>
+                    <div id="level-select-map" aria-label="World Map"></div>
+                    <div id="level-select-dots-layer" aria-hidden="true"></div>
                 </div>
-                 <div id="level-select-pagination" class="level-select-pagination">
-                    <button id="level-select-prev-page" class="pagination-button hidden">< Prev</button>
-                    <span id="level-select-page-info">Page 1</span>
-                    <button id="level-select-next-page" class="pagination-button hidden">Next ></button>
+                <div id="level-select-pagination" class="level-select-pagination">
+                    <button type="button" id="level-select-prev-page" class="pagination-button hidden"
+                        title="Previous Page" aria-label="Previous Level Page">&lt; Prev</button>
+                    <span id="level-select-page-info" aria-live="polite">Page 1</span>
+                    <button type="button" id="level-select-next-page" class="pagination-button hidden" title="Next Page"
+                        aria-label="Next Level Page">Next &gt;</button>
                 </div>
                 <div class="level-select-bottom-bar bottom-bar-style">
-                   <button id="level-select-shop-button" class="primary-button" title="Shop (S)">🛒 Shop</button>
-                   <button id="level-select-troops-button" class="primary-button">Choose Troops</button>
-                   <button id="back-to-main-menu-button" class="secondary-button">Back to Title</button>
+                    <button type="button" id="level-select-shop-button" class="primary-button" title="Shop (S)">🛒
+                        Shop</button>
+                    <button type="button" id="level-select-troops-button" class="primary-button">Choose Troops</button>
+                    <button type="button" id="back-to-main-menu-button" class="secondary-button">Back to Title</button>
                 </div>
             </div>
         </div>
 
-        <!-- Leaderboard Overlay remains largely the same structure -->
-        <div id="leaderboard-overlay" class="overlay">
+        <div id="leaderboard-overlay" class="overlay" role="dialog" aria-modal="true"
+            aria-labelledby="leaderboard-title">
             <div class="overlay-content styled-overlay-content">
                 <div class="decorative-frame"></div>
-                <h2 class="overlay-title">Leaderboard</h2>
+                <h2 id="leaderboard-title" class="overlay-title">Leaderboard</h2>
                 <p>Highest Level Reached / Gold</p>
-                 <div id="leaderboard-entry" class="inset-panel leaderboard-input hidden">
+                <div id="leaderboard-entry" class="inset-panel leaderboard-input hidden">
                     <label for="player-name-input">Enter Your Name:</label>
                     <input type="text" id="player-name-input" maxlength="12" placeholder="Hero Name">
-                    <button id="submit-score-button" class="primary-button green-accent">Submit Score</button>
+                    <button type="button" id="submit-score-button" class="primary-button green-accent">Submit
+                        Score</button>
                 </div>
-                <ul id="leaderboard-list"></ul>
-                <button id="close-leaderboard-button" class="secondary-button">Close</button>
+                <ul id="leaderboard-list" aria-live="polite"></ul>
+                <button type="button" id="close-leaderboard-button" class="secondary-button"
+                    aria-label="Close Leaderboard">Close</button>
             </div>
         </div>
 
-        <!-- In-Game Menu Overlay - Replaced inline icons with Options button -->
-        <div id="menu-overlay" class="overlay">
+        <div id="menu-overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title">
             <div class="overlay-content styled-overlay-content">
                 <div class="decorative-frame"></div>
-                <h2 class="overlay-title">Menu</h2>
+                <h2 id="menu-title" class="overlay-title">Menu</h2>
                 <div id="menu-gold-display" class="gold-display menu-like-gold-display">
-                    <img src="./sprites/gold.png" alt="Gold" class="gold-icon-menu">
+                    <span class="icon icon-menu icon-gold" title="Gold" aria-label="Gold"></span>
                     <span id="menu-gold-amount">0</span>
                 </div>
-                 <div id="menu-buttons-container">
-                    <button id="menu-options-button" class="primary-button">Options</button> <!-- NEW -->
-                    <button id="quit-button" class="primary-button" title="Quit to Level Select" data-action="quit">Quit Game</button>
-                    <button id="quit-to-main-menu-button" class="secondary-button" title="Quit to Main Menu">Quit to Main Menu</button>
+                <div id="menu-buttons-container">
+                    <button type="button" id="menu-options-button" class="primary-button">Options</button>
+                    <button type="button" id="quit-button" class="primary-button" title="Quit to Level Select"
+                        data-action="quit">Quit Game</button>
+                    <button type="button" id="quit-to-main-menu-button" class="secondary-button"
+                        title="Quit to Main Menu">Quit to Main Menu</button>
                 </div>
-                <button id="close-menu-button" class="secondary-button">Close Menu</button>
+                <button type="button" id="close-menu-button" class="secondary-button" aria-label="Close Menu">Close
+                    Menu</button>
             </div>
         </div>
 
-         <!-- Settings/Options Overlay - Content added -->
-         <div id="settings-overlay" class="overlay">
+        <div id="settings-overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="settings-title">
             <div class="overlay-content styled-overlay-content">
                 <div class="decorative-frame"></div>
-                <h2 class="overlay-title">Options</h2>
+                <h2 id="settings-title" class="overlay-title">Options</h2>
                 <div class="settings-container inset-panel">
                     <div class="setting-item">
                         <label for="music-volume">Music Volume:</label>
-                        <input type="range" id="music-volume" min="0" max="1" step="0.1" value="0.3">
-                        <span class="volume-value">30%</span>
+                        <input type="range" id="music-volume" min="0" max="1" step="0.1" value="0.3"
+                            aria-labelledby="music-volume">
+                        <span class="volume-value" aria-hidden="true">30%</span>
                     </div>
                     <div class="setting-item">
                         <label for="sfx-volume">SFX Volume:</label>
-                        <input type="range" id="sfx-volume" min="0" max="1" step="0.1" value="0.6">
-                         <span class="volume-value">60%</span>
+                        <input type="range" id="sfx-volume" min="0" max="1" step="0.1" value="0.6"
+                            aria-labelledby="sfx-volume">
+                        <span class="volume-value" aria-hidden="true">60%</span>
                     </div>
-                     <div class="setting-item">
+                    <div class="setting-item">
                         <label class="setting-toggle">
                             <input type="checkbox" id="toggle-mute-setting"> Mute All Audio
                         </label>
                     </div>
                     <div class="setting-item">
-                       <label class="setting-toggle">
+                        <label class="setting-toggle">
                             <input type="checkbox" id="toggle-fullscreen-setting"> Fullscreen Mode
                         </label>
                     </div>
@@ -208,213 +271,303 @@
                             <input type="checkbox" id="toggle-hp-bars-setting"> Show Unit HP Bars
                         </label>
                     </div>
-                    <!-- Add more settings as needed -->
                     <div class="setting-item">
                         <label for="player-name-setting">Player Name:</label>
-                        <input type="text" id="player-name-setting" maxlength="12" placeholder="Hero Name">
+                        <input type="text" id="player-name-setting" maxlength="12" placeholder="Hero Name"
+                            aria-labelledby="player-name-setting">
                     </div>
-                    <button id="restart-level-setting-button" class="secondary-button icon-button" title="Restart Current Level"><span>🔄 Restart Level</span></button>
+                    <button type="button" id="restart-level-setting-button" class="secondary-button icon-button"
+                        title="Restart Current Level"><span>🔄 Restart Level</span></button>
                 </div>
-                <button id="close-settings-button" class="secondary-button">Close</button>
+                <button type="button" id="close-settings-button" class="secondary-button"
+                    aria-label="Close Options">Close</button>
             </div>
         </div>
 
-        <!-- Achievements Overlay - Basic Structure -->
-        <div id="achievements-overlay" class="overlay">
+        <div id="achievements-overlay" class="overlay" role="dialog" aria-modal="true"
+            aria-labelledby="achievements-title">
             <div class="overlay-content styled-overlay-content">
                 <div class="decorative-frame"></div>
-                <h2 class="overlay-title">Achievements</h2>
-                <div id="achievements-list" class="inset-panel">
-                    <!-- Achievements populated by JS -->
+                <h2 id="achievements-title" class="overlay-title">Achievements</h2>
+                <div id="achievements-list" class="inset-panel" aria-live="polite">
                 </div>
-                 <p id="achievement-completion-status">Completion: 0 / X</p>
-                <button id="close-achievements-button" class="secondary-button">Close</button>
+                <p id="achievement-completion-status" aria-live="polite">Completion: 0 / X</p>
+                <button type="button" id="close-achievements-button" class="secondary-button"
+                    aria-label="Close Achievements">Close</button>
             </div>
         </div>
 
-        <!-- Shop Screen - Revamped Layout -->
-        <div id="shop-screen" class="overlay">
+        <div id="shop-screen" class="overlay" role="dialog" aria-modal="true" aria-labelledby="shop-title">
             <div class="overlay-content styled-overlay-content shop-content">
                 <div class="decorative-frame gold-glow"></div>
-                <h2 class="overlay-title shop-title">Shop</h2>
+                <div class="shop-header-container">
+                    <h2 id="shop-title" class="overlay-title shop-title">Shop</h2>
+                    <div id="shop-gold-display" class="gold-display menu-like-gold-display">
+                        <span class="icon icon-menu icon-gold" title="Gold" aria-label="Gold"></span>
+                        <span id="shop-gold-amount">0</span>
+                    </div>
+                </div>
                 <div id="shop-items-container">
-                    <!-- Recruit Section -->
-                    <h3 class="shop-section-header">Recruit Units</h3>
-                    <div class="shop-item selectable" data-item-id="recruit_knight" data-unit-type="knight" data-max="12" data-cost="50" data-type="recruit">
-                        <h4><span class="shop-icon-container"><img src="./sprites/knight.png" class="shop-item-icon" alt="Knight Icon"></span> Knight (<span class="unit-count">0</span>/12)</h4>
-                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">50</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
+                    <h3 class="shop-section-header" id="shop-recruit-header">Recruit Units</h3>
+                    <div class="shop-item selectable" data-item-id="recruit_knight" data-unit-type="knight"
+                        data-max="12" data-cost="50" data-type="recruit" role="button" tabindex="0"
+                        aria-labelledby="shop-recruit-header">
+                        <h4><span class="shop-icon-container"><span class="shop-item-icon icon icon-unit-knight"
+                                    title="Knight Icon" aria-hidden="true"></span></span> Knight <span
+                                class="unit-count">0</span>/12</h4>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">50</span><span
+                                class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
                     </div>
-                    <div class="shop-item selectable" data-item-id="recruit_archer" data-unit-type="archer" data-max="12" data-cost="80" data-type="recruit">
-                        <h4><span class="shop-icon-container"><img src="./sprites/archer.png" class="shop-item-icon" alt="Archer Icon"></span> Archer (<span class="unit-count">0</span>/12)</h4>
-                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">80</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
+                    <div class="shop-item selectable" data-item-id="recruit_archer" data-unit-type="archer"
+                        data-max="12" data-cost="80" data-type="recruit" role="button" tabindex="0"
+                        aria-labelledby="shop-recruit-header">
+                        <h4><span class="shop-icon-container"><span class="shop-item-icon icon icon-unit-archer"
+                                    title="Archer Icon" aria-hidden="true"></span></span> Archer (<span
+                                class="unit-count">0</span>/12)</h4>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">80</span><span
+                                class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
                     </div>
-                    <div class="shop-item selectable" data-item-id="recruit_champion" data-unit-type="champion" data-max="12" data-cost="120" data-type="recruit">
-                       <h4><span class="shop-icon-container"><img src="./sprites/champion.png" class="shop-item-icon" alt="Champion Icon"></span> Champion (<span class="unit-count">0</span>/12)</h4>
-                       <p class="shop-cost-line">Cost: <span class="shop-item-cost">120</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
+                    <div class="shop-item selectable" data-item-id="recruit_champion" data-unit-type="champion"
+                        data-max="12" data-cost="120" data-type="recruit" role="button" tabindex="0"
+                        aria-labelledby="shop-recruit-header">
+                        <h4><span class="shop-icon-container"><span class="shop-item-icon icon icon-unit-champion"
+                                    title="Champion Icon" aria-hidden="true"></span></span> Champion (<span
+                                class="unit-count">0</span>/12)</h4>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">120</span><span
+                                class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
                     </div>
-                     <div class="shop-item selectable" data-item-id="recruit_rogue" data-unit-type="rogue" data-max="12" data-cost="150" data-type="recruit">
-                       <h4><span class="shop-icon-container"><img src="./sprites/rogue.png" class="shop-item-icon" alt="Rogue Icon"></span> Rogue (<span class="unit-count">0</span>/12)</h4>
-                       <p class="shop-cost-line">Cost: <span class="shop-item-cost">150</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
-                    </div>
-
-                    <!-- Unit Upgrades Section -->
-                    <h3 class="shop-section-header">Unit Upgrades</h3>
-                    <div class="shop-item selectable" data-item-id="upgrade_knight_hp" data-cost="50" data-type="unit_upgrade">
-                        <h4><span class="shop-icon-container"><img src="./sprites/knight.png" class="shop-item-icon" alt="Knight Icon"></span> Knight HP +1</h4>
-                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">50</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
-                    </div>
-                     <div class="shop-item selectable" data-item-id="upgrade_knight_atk" data-cost="50" data-type="unit_upgrade">
-                        <h4><span class="shop-icon-container"><img src="./sprites/knight.png" class="shop-item-icon" alt="Knight Icon"></span> Knight ATK +1</h4>
-                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">50</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
-                    </div>
-                    <div class="shop-item selectable" data-item-id="upgrade_archer_hp" data-cost="50" data-type="unit_upgrade">
-                        <h4><span class="shop-icon-container"><img src="./sprites/archer.png" class="shop-item-icon" alt="Archer Icon"></span> Archer HP +1</h4>
-                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">50</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
-                    </div>
-                    <div class="shop-item selectable" data-item-id="upgrade_archer_atk" data-cost="80" data-type="unit_upgrade">
-                        <h4><span class="shop-icon-container"><img src="./sprites/archer.png" class="shop-item-icon" alt="Archer Icon"></span> Archer ATK +1</h4>
-                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">80</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
-                    </div>
-                    <div class="shop-item selectable" data-item-id="upgrade_champion_hp" data-cost="100" data-type="unit_upgrade">
-                       <h4><span class="shop-icon-container"><img src="./sprites/champion.png" class="shop-item-icon" alt="Champion Icon"></span> Champion HP +1</h4>
-                       <p class="shop-cost-line">Cost: <span class="shop-item-cost">100</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
-                    </div>
-                    <div class="shop-item selectable" data-item-id="upgrade_champion_atk" data-cost="100" data-type="unit_upgrade">
-                       <h4><span class="shop-icon-container"><img src="./sprites/champion.png" class="shop-item-icon" alt="Champion Icon"></span> Champion ATK +1</h4>
-                       <p class="shop-cost-line">Cost: <span class="shop-item-cost">100</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
-                    </div>
-                     <div class="shop-item selectable" data-item-id="upgrade_rogue_hp" data-cost="75" data-type="unit_upgrade">
-                       <h4><span class="shop-icon-container"><img src="./sprites/rogue.png" class="shop-item-icon" alt="Rogue Icon"></span> Rogue HP +1</h4>
-                       <p class="shop-cost-line">Cost: <span class="shop-item-cost">75</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
-                    </div>
-                    <div class="shop-item selectable" data-item-id="upgrade_rogue_atk" data-cost="75" data-type="unit_upgrade">
-                       <h4><span class="shop-icon-container"><img src="./sprites/rogue.png" class="shop-item-icon" alt="Rogue Icon"></span> Rogue ATK +1</h4>
-                       <p class="shop-cost-line">Cost: <span class="shop-item-cost">75</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
-                    </div>
-                    <!-- NEW: Rogue Special Ability -->
-                    <div class="shop-item selectable" data-item-id="upgrade_rogue_quickstrike" data-cost="100" data-type="ability_upgrade" data-max="1">
-                       <h4><span class="shop-icon-container"><img src="./sprites/rogue.png" class="shop-item-icon" alt="Rogue Icon"></span> Rogue: Quick Strike</h4>
-                       <p class="shop-cost-line">Cost: <span class="shop-item-cost">100</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
+                    <div class="shop-item selectable" data-item-id="recruit_rogue" data-unit-type="rogue" data-max="12"
+                        data-cost="150" data-type="recruit" role="button" tabindex="0"
+                        aria-labelledby="shop-recruit-header">
+                        <h4><span class="shop-icon-container"><span class="shop-item-icon icon icon-unit-rogue"
+                                    title="Rogue Icon" aria-hidden="true"></span></span> Rogue (<span
+                                class="unit-count">0</span>/12)</h4>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">150</span><span
+                                class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
                     </div>
 
-                    <!-- Spell Upgrades Section -->
-                    <h3 class="shop-section-header">Spell Upgrades</h3>
-                    <div class="shop-item selectable locked" data-item-id="upgrade_spell_fireball" data-spell-name="fireball" data-level="0" data-required-level="6" data-type="spell_upgrade">
-                        <h4><span class="shop-icon-container"><img src="./sprites/fireball.png" class="shop-item-icon" alt="Fireball Icon"></span> Fireball [Lvl <span class="spell-level">2</span>]</h4>
-                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">80</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
+                    <h3 class="shop-section-header" id="shop-upgrade-header">Unit Upgrades</h3>
+                    <div class="shop-item selectable" data-item-id="upgrade_knight_hp" data-cost="50"
+                        data-type="unit_upgrade" role="button" tabindex="0" aria-labelledby="shop-upgrade-header">
+                        <h4><span class="shop-icon-container"><span class="shop-item-icon icon icon-unit-knight"
+                                    title="Knight Icon" aria-hidden="true"></span></span> Knight HP +1</h4>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">50</span><span
+                                class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
                     </div>
-                    <div class="shop-item selectable locked" data-item-id="upgrade_spell_flamewave" data-spell-name="flameWave" data-level="0" data-required-level="10" data-type="spell_upgrade">
-                        <h4><span class="shop-icon-container"><img src="./sprites/flame_wave.png" class="shop-item-icon" alt="Flame Wave Icon"></span> Flame Wave [Lvl <span class="spell-level">2</span>]</h4>
-                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">100</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
+                    <div class="shop-item selectable" data-item-id="upgrade_knight_atk" data-cost="50"
+                        data-type="unit_upgrade" role="button" tabindex="0" aria-labelledby="shop-upgrade-header">
+                        <h4><span class="shop-icon-container"><span class="shop-item-icon icon icon-unit-knight"
+                                    title="Knight Icon" aria-hidden="true"></span></span> Knight ATK +1</h4>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">50</span><span
+                                class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
                     </div>
-                    <div class="shop-item selectable locked" data-item-id="upgrade_spell_frostnova" data-spell-name="frostNova" data-level="0" data-required-level="14" data-type="spell_upgrade">
-                        <h4><span class="shop-icon-container"><img src="./sprites/frostbolt.png" class="shop-item-icon" alt="Frost Nova Icon"></span> Frost Nova [Lvl <span class="spell-level">2</span>]</h4>
-                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">80</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
+                    <div class="shop-item selectable" data-item-id="upgrade_archer_hp" data-cost="50"
+                        data-type="unit_upgrade" role="button" tabindex="0" aria-labelledby="shop-upgrade-header">
+                        <h4><span class="shop-icon-container"><span class="shop-item-icon icon icon-unit-archer"
+                                    title="Archer Icon" aria-hidden="true"></span></span> Archer HP +1</h4>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">50</span><span
+                                class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
                     </div>
-                    <div class="shop-item selectable locked" data-item-id="upgrade_spell_heal" data-spell-name="heal" data-level="0" data-required-level="18" data-type="spell_upgrade">
-                        <h4><span class="shop-icon-container"><img src="./sprites/heal.png" class="shop-item-icon" alt="Heal Icon"></span> Heal [Lvl <span class="spell-level">2</span>]</h4>
-                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">80</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
+                    <div class="shop-item selectable" data-item-id="upgrade_archer_atk" data-cost="80"
+                        data-type="unit_upgrade" role="button" tabindex="0" aria-labelledby="shop-upgrade-header">
+                        <h4><span class="shop-icon-container"><span class="shop-item-icon icon icon-unit-archer"
+                                    title="Archer Icon" aria-hidden="true"></span></span> Archer ATK +1</h4>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">80</span><span
+                                class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
+                    </div>
+                    <div class="shop-item selectable" data-item-id="upgrade_champion_hp" data-cost="100"
+                        data-type="unit_upgrade" role="button" tabindex="0" aria-labelledby="shop-upgrade-header">
+                        <h4><span class="shop-icon-container"><span class="shop-item-icon icon icon-unit-champion"
+                                    title="Champion Icon" aria-hidden="true"></span></span> Champion HP +1</h4>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">100</span><span
+                                class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
+                    </div>
+                    <div class="shop-item selectable" data-item-id="upgrade_champion_atk" data-cost="100"
+                        data-type="unit_upgrade" role="button" tabindex="0" aria-labelledby="shop-upgrade-header">
+                        <h4><span class="shop-icon-container"><span class="shop-item-icon icon icon-unit-champion"
+                                    title="Champion Icon" aria-hidden="true"></span></span> Champion ATK +1</h4>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">100</span><span
+                                class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
+                    </div>
+                    <div class="shop-item selectable" data-item-id="upgrade_rogue_hp" data-cost="75"
+                        data-type="unit_upgrade" role="button" tabindex="0" aria-labelledby="shop-upgrade-header">
+                        <h4><span class="shop-icon-container"><span class="shop-item-icon icon icon-unit-rogue"
+                                    title="Rogue Icon" aria-hidden="true"></span></span> Rogue HP +1</h4>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">75</span><span
+                                class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
+                    </div>
+                    <div class="shop-item selectable" data-item-id="upgrade_rogue_atk" data-cost="75"
+                        data-type="unit_upgrade" role="button" tabindex="0" aria-labelledby="shop-upgrade-header">
+                        <h4><span class="shop-icon-container"><span class="shop-item-icon icon icon-unit-rogue"
+                                    title="Rogue Icon" aria-hidden="true"></span></span> Rogue ATK +1</h4>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">75</span><span
+                                class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
+                    </div>
+                    <div class="shop-item selectable" data-item-id="upgrade_rogue_quickstrike" data-cost="100"
+                        data-type="ability_upgrade" data-max="1" role="button" tabindex="0"
+                        aria-labelledby="shop-upgrade-header">
+                        <h4><span class="shop-icon-container"><span class="shop-item-icon icon icon-unit-rogue"
+                                    title="Rogue Icon" aria-hidden="true"></span></span> Rogue: Quick Strike</h4>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">100</span><span
+                                class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
                     </div>
 
-                    <!-- Passives Section -->
-                    <h3 class="shop-section-header">Passives</h3>
-                    <div class="shop-item" data-item-id="passive_gold_magnet" data-cost="0" data-type="passive"> <!-- Not selectable/purchasable directly -->
-                        <h4><span class="shop-icon-container"><img src="./sprites/gold_magnet.png" class="shop-item-icon" alt="Gold Magnet Icon"></span> Gold Magnet (<span class="passive-level">Lvl 0</span>)</h4>
+                    <h3 class="shop-section-header" id="shop-spell-header">Spell Upgrades</h3>
+                    <div class="shop-item selectable locked" data-item-id="upgrade_spell_fireball"
+                        data-spell-name="fireball" data-level="0" data-required-level="6" data-type="spell_upgrade"
+                        data-cost="80" role="button" tabindex="0" aria-labelledby="shop-spell-header">
+                        <h4><span class="shop-icon-container"><span class="icon icon-shop icon-spell-fireball"
+                                    aria-hidden="true"></span></span> Fireball Lvl <span class="spell-level">Lvl
+                                2</span>
+                        </h4>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">80</span><span
+                                class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
+                    </div>
+                    <div class="shop-item selectable locked" data-item-id="upgrade_spell_flamewave"
+                        data-spell-name="flameWave" data-level="0" data-required-level="10" data-type="spell_upgrade"
+                        data-cost="100" role="button" tabindex="0" aria-labelledby="shop-spell-header">
+                        <h4><span class="shop-icon-container"><span class="icon icon-shop icon-spell-flameWave"
+                                    aria-hidden="true"></span></span> Flame Wave Lvl <span class="spell-level">2</span>
+                        </h4>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">100</span><span
+                                class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
+                    </div>
+                    <div class="shop-item selectable locked" data-item-id="upgrade_spell_frostnova"
+                        data-spell-name="frostNova" data-level="0" data-required-level="14" data-type="spell_upgrade"
+                        data-cost="80" role="button" tabindex="0" aria-labelledby="shop-spell-header">
+                        <h4><span class="shop-icon-container"><span class="icon icon-shop icon-spell-frostNova"
+                                    aria-hidden="true"></span></span> Frost Nova Lvl <span class="spell-level">2</span>
+                        </h4>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">80</span><span
+                                class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
+                    </div>
+                    <div class="shop-item selectable locked" data-item-id="upgrade_spell_heal" data-spell-name="heal"
+                        data-level="0" data-required-level="18" data-type="spell_upgrade" data-cost="80" role="button"
+                        tabindex="0" aria-labelledby="shop-spell-header">
+                        <h4><span class="shop-icon-container"><span class="icon icon-shop icon-spell-heal"
+                                    aria-hidden="true"></span></span> Heal Lvl <span class="spell-level">2</span></h4>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">80</span><span
+                                class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
+                    </div>
+
+                    <h3 class="shop-section-header" id="shop-passive-header">Passives</h3>
+                    <div class="shop-item" data-item-id="passive_gold_magnet" data-cost="0" data-type="passive"
+                        aria-labelledby="shop-passive-header">
+                        <h4><span class="shop-icon-container"><span class="icon icon-shop icon-goldmagnet"
+                                    aria-hidden="true"></span></span> Gold Magnet<span class="passive-level">Lvl
+                                0</span></h4>
                         <p class="shop-cost-line"><span class="shop-item-cost">Drop Only</span></p>
                     </div>
-                    <div class="shop-item selectable locked" data-item-id="tactical_command" data-cost="200" data-required-units="8" data-type="passive_purchase">
-                        <h4><span class="shop-icon-container"><img src="./sprites/icon_troop_increase.png" class="shop-item-icon" alt="Tactical Command Icon"></span> Tactical Command</h4>
-                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">200</span><img src="./sprites/gold.png" class="gold-icon-inline" alt="Gold"></p>
+                    <div class="shop-item selectable locked" data-item-id="tactical_command" data-cost="200"
+                        data-required-units="8" data-type="passive_purchase" role="button" tabindex="0"
+                        aria-labelledby="shop-passive-header">
+                        <h4><span class="shop-icon-container"><span class="icon icon-shop icon-tacticalcommand"
+                                    aria-hidden="true"></span></span> Tactical Command</h4>
+                        <p class="shop-cost-line">Cost: <span class="shop-item-cost">200</span><span
+                                class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
                     </div>
 
-                    <!-- Equipment/Items Section (Armor) -->
-                    <h3 class="shop-section-header">Equipment</h3>
-                     <div class="shop-item selectable" data-item-id="armor_none" data-armor-id="none" data-type="armor">
-                       <h4><span class="shop-icon-container"><img src="./sprites/armor.png" class="shop-item-icon" alt="No Armor Icon"></span> No Armor</h4>
-                       <p class="shop-cost-line">Unequip Armor</p>
-                       <p class="shop-item-description">All Units: +1 MOV, 1 HP Max</p>
+                    <h3 class="shop-section-header" id="shop-equipment-header">Equipment</h3>
+                    <div class="shop-item selectable" data-item-id="armor_none" data-armor-id="none" data-type="armor"
+                        role="button" tabindex="0" aria-labelledby="shop-equipment-header">
+                        <h4><span class="shop-icon-container"><span
+                                    class="shop-item-icon icon icon-armor icon-armor-none"
+                                    title="No Armor Icon"></span></span> No Armor</h4>
+                        <p class="shop-item-description">+1 MOV</p>
+                        <p class="shop-item-description">1 Max HP</p>
                     </div>
-                    <div class="shop-item selectable" data-item-id="armor_grey" data-armor-id="grey" data-type="armor"> <!-- Grey is selectable by default -->
-                       <h4><span class="shop-icon-container"><img src="./sprites/armor.png" class="shop-item-icon" alt="Grey Armor Icon"></span> Grey Armor</h4>
-                       <p class="shop-cost-line">Basic Armor</p>
-                       <p class="shop-item-description">No special bonuses.</p>
+                    <div class="shop-item selectable" data-item-id="armor_grey" data-armor-id="grey" data-type="armor"
+                        role="button" tabindex="0" aria-labelledby="shop-equipment-header">
+                        <h4><span class="shop-icon-container"><span
+                                    class="shop-item-icon icon icon-armor icon-armor-grey"
+                                    title="Grey Armor Icon"></span></span> Grey Armor</h4>
+                        <p class="shop-item-description">No special bonuses.</p>
                     </div>
-                     <div class="shop-item selectable hidden" data-item-id="armor_forest" data-armor-id="forest" data-type="armor"> <!-- Hidden initially -->
-                       <h4><span class="shop-icon-container"><img src="./sprites/armor.png" class="shop-item-icon" alt="Forest Armor Icon"></span> Forest Armor (<span class="armor-level">Lvl 1</span>)</h4>
-                       <p class="shop-cost-line">Equip</p>
-                       <p class="shop-item-description">Activate: -1 ATK from enemies (1 turn, once/level).</p>
+                    <div class="shop-item selectable hidden" data-item-id="armor_green" data-armor-id="green"
+                        data-type="armor" role="button" tabindex="0" aria-labelledby="shop-equipment-header">
+                        <h4><span class="shop-icon-container"><span
+                                    class="shop-item-icon icon icon-armor icon-armor-green"
+                                    title="Forest Armor Icon"></span></span> Forest Armor<span class="armor-level">Lvl
+                                1</span></h4>
+                        <p class="shop-item-description">-1 ATK from enemies (1 Turn)</p>
                     </div>
-                    <div class="shop-item selectable hidden" data-item-id="armor_azure" data-armor-id="azure" data-type="armor">
-                       <h4><span class="shop-icon-container"><img src="./sprites/armor.png" class="shop-item-icon" alt="Azure Armor Icon"></span> Azure Armor (<span class="armor-level">Lvl 1</span>)</h4>
-                       <p class="shop-cost-line">Equip</p>
-                       <p class="shop-item-description">All Units: +1 Max HP.</p>
-                       <p class="shop-item-resistance hidden">+1 Frost Resistance</p>
+                    <div class="shop-item selectable hidden" data-item-id="armor_blue" data-armor-id="blue"
+                        data-type="armor" role="button" tabindex="0" aria-labelledby="shop-equipment-header">
+                        <h4><span class="shop-icon-container"><span
+                                    class="shop-item-icon icon icon-armor icon-armor-blue"
+                                    title="Azure Armor Icon"></span></span> Azure Armor<span class="armor-level">Lvl
+                                1</span></h4>
+                        <p class="shop-item-description">+1 HP</p>
+                        <p class="shop-item-resistance hidden">+1 Frost Resistance</p>
                     </div>
-                    <div class="shop-item selectable hidden" data-item-id="armor_ember" data-armor-id="ember" data-type="armor">
-                       <h4><span class="shop-icon-container"><img src="./sprites/armor.png" class="shop-item-icon" alt="Ember Armor Icon"></span> Ember Armor (<span class="armor-level">Lvl 1</span>)</h4>
-                       <p class="shop-cost-line">Equip</p>
-                       <p class="shop-item-description">All Units: +1 ATK.</p>
-                       <p class="shop-item-resistance hidden">+1 Fire Resistance</p>
+                    <div class="shop-item selectable hidden" data-item-id="armor_red" data-armor-id="red"
+                        data-type="armor" role="button" tabindex="0" aria-labelledby="shop-equipment-header">
+                        <h4><span class="shop-icon-container"><span
+                                    class="shop-item-icon icon icon-armor icon-armor-red"
+                                    title="Ember Armor Icon"></span></span> Ember Armor<span class="armor-level">Lvl
+                                1</span></h4>
+                        <p class="shop-item-description">+1 ATK</p>
+                        <p class="shop-item-resistance hidden">+1 Fire Resistance</p>
                     </div>
-                     <div class="shop-item selectable hidden" data-item-id="armor_sand" data-armor-id="sand" data-type="armor">
-                       <h4><span class="shop-icon-container"><img src="./sprites/armor.png" class="shop-item-icon" alt="Sand Armor Icon"></span> Sand Armor (<span class="armor-level">Lvl 1</span>)</h4>
-                       <p class="shop-cost-line">Equip</p>
-                       <p class="shop-item-description">All Units: +1 MOV.</p>
+                    <div class="shop-item selectable hidden" data-item-id="armor_yellow" data-armor-id="yellow"
+                        data-type="armor" role="button" tabindex="0" aria-labelledby="shop-equipment-header">
+                        <h4><span class="shop-icon-container"><span
+                                    class="shop-item-icon icon icon-armor icon-armor-yellow"
+                                    title="Sand Armor Icon"></span></span> Sand Armor<span class="armor-level">Lvl
+                                1</span></h4>
+                        <p class="shop-item-description">+1 MOV</p>
                     </div>
-
                 </div>
-                <!-- NEW Shop Bottom Bar -->
-                <div class="shop-bottom-bar bottom-bar-style">
-                   <div class="shop-left-buttons">
-                        <button id="shop-troops-button" class="primary-button">Choose Troops</button>
-                   </div>
-                   <div class="shop-center-area">
-                       <div id="shop-selected-item-info" class="shop-message">Select an item above...</div>
-                       <div id="shop-feedback" class="shop-message"></div>
-                       <div id="shop-gold-display" class="gold-display menu-like-gold-display">
-                           <img src="./sprites/gold.png" alt="Gold" class="gold-icon-menu">
-                           <span id="shop-gold-amount">0</span>
-                       </div>
-                   </div>
-                   <div class="shop-right-buttons">
-                        <button id="shop-action-button" class="primary-button green-accent hidden" data-action="buy">Buy</button>
-                        <button id="shop-exit-button" class="secondary-button" title="Continue (E)">Continue</button>
-                   </div>
-                </div>
-            </div>
-       </div>
 
-        <!-- Choose Troops Screen remains largely the same structure -->
-        <div id="choose-troops-screen" class="overlay">
-            <div class="overlay-content styled-overlay-content choose-troops-content">
-                 <div class="decorative-frame gold-glow"></div>
-                 <h2 id="choose-troops-title" class="overlay-title">Choose Troops</h2>
-                 <div class="troops-section current-troops">
-                     <h3>Current Roster (<span id="current-roster-count">0</span>/<span id="max-roster-size">8</span>)</h3>
-                     <div id="current-troops-list" class="troops-list"></div>
-                 </div>
-                 <div class="troops-section available-troops">
-                     <h3>Available Troops (Reserve)</h3>
-                     <div id="available-troops-list" class="troops-list"></div>
-                 </div>
-                 <div id="choose-troops-feedback" class="shop-message"></div>
-                 <div class="choose-troops-buttons bottom-bar-style">
-                     <button id="troops-back-button" class="secondary-button">Back</button>
-                     <button id="confirm-troops-button" class="primary-button green-accent">Confirm</button>
-                 </div>
+                <div id="shop-selected-item-info" class="shop-message" aria-live="polite">Select an item
+                    above.</div>
+                <div id="shop-feedback" class="shop-message" aria-live="polite"></div>
+
+                <div class="shop-bottom-bar">
+                    <button type="button" id="shop-troops-button" class="primary-button">Choose Troops</button>
+
+
+
+                    <button type="button" id="shop-action-button" class="primary-button green-accent hidden"
+                        data-action="buy">Buy</button>
+                    <button type="button" id="shop-exit-button" class="secondary-button"
+                        title="Continue (E)">Continue</button>
+                </div>
             </div>
         </div>
 
-        <!-- Tooltip remains -->
-        <div id="tooltip"></div>
-        <!-- Recolor Canvas remains -->
-        <canvas id="recolor-canvas" style="display: none;"></canvas>
+        <div id="choose-troops-screen" class="overlay" role="dialog" aria-modal="true"
+            aria-labelledby="choose-troops-title">
+            <div class="overlay-content styled-overlay-content choose-troops-content">
+                <div class="decorative-frame gold-glow"></div>
+                <h2 id="choose-troops-title" class="overlay-title">Choose Troops</h2>
+                <div class="troops-section current-troops">
+                    <h3 id="current-roster-header">Current Roster (<span id="current-roster-count">0</span>/<span
+                            id="max-roster-size">8</span>)</h3>
+                    <div id="current-troops-list" class="troops-list" aria-labelledby="current-roster-header"></div>
+                </div>
+                <div class="troops-section available-troops">
+                    <h3 id="available-troops-header">Available Troops (Reserve)</h3>
+                    <div id="available-troops-list" class="troops-list" aria-labelledby="available-troops-header"></div>
+                </div>
+                <div id="choose-troops-feedback" class="shop-message" aria-live="polite"></div>
+                <div class="choose-troops-buttons bottom-bar-style">
+                    <button type="button" id="troops-back-button" class="secondary-button">Back</button>
+                    <button type="button" id="confirm-troops-button"
+                        class="primary-button green-accent">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="tooltip" role="tooltip"></div>
+
+        <canvas id="recolor-canvas" width="40" height="40" style="display: none;"></canvas>
 
     </div>
 
-    <!-- JS files remain -->
     <script src="config.js" defer></script>
     <script src="gameLogic.js" defer></script>
     <script src="ui.js" defer></script>
 </body>
+
 </html>
