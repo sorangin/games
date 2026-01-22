@@ -1345,7 +1345,40 @@
 
         <div id="game-area" style="display: none;">
             <div id="board-and-panels">
-                <div id="board"></div>
+                <div id="board" style="position: relative;">
+                    <!-- Setup Overlay -->
+                    <div id="online-setup-overlay"
+                        style="display: none; position: absolute; inset: 0; background: rgba(9, 9, 11, 0.95); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; backdrop-filter: blur(5px);">
+                        <h2 style="color: #fbbf24; margin-bottom: 20px;">War Council</h2>
+
+                        <div
+                            style="display: flex; gap: 40px; margin-bottom: 30px; width: 100%; justify-content: center;">
+                            <!-- Race Selection (Both) -->
+                            <div style="flex: 1; max-width: 250px;">
+                                <h3 style="font-size: 1rem; color: #3b82f6;">Select Army</h3>
+                                <div id="setup-race-list" class="shop-grid"
+                                    style="grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 15px;"></div>
+                            </div>
+
+                            <!-- Tileset Selection (Host Only) -->
+                            <div id="setup-tileset-section" style="flex: 1; max-width: 250px; display: none;">
+                                <h3 style="font-size: 1rem; color: #3b82f6;">Select Terrain</h3>
+                                <div id="setup-tileset-list" class="tileset-selector" style="margin-top: 15px;"></div>
+                            </div>
+                        </div>
+
+                        <div id="setup-status-msg" style="color: #a1a1aa; margin-bottom: 20px; font-style: italic;">
+                            Waiting for opponent...</div>
+
+                        <div style="display: flex; gap: 15px;">
+                            <button id="ready-btn"
+                                style="padding: 12px 30px; background: #10b981; border-color: #10b981; font-weight: 700;">Ready
+                                to Battle</button>
+                            <button onclick="quitToLobby()"
+                                style="padding: 12px 20px; background: transparent; border-color: #ef4444; color: #ef4444;">Quit</button>
+                        </div>
+                    </div>
+                </div>
                 <div id="panel">
                     <div id="current-level-display">Level 1: Goblin Outpost</div>
                     <div id="status">Your Turn</div>
@@ -1438,6 +1471,19 @@
         </div>
     </div>
 
+    <div id="race-selection-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="color: #fbbf24;">Choose Your Army</h2>
+            <p style="color: #a1a1aa; margin-bottom: 20px;">Select your faction for this battle.</p>
+            <div id="online-race-options" class="shop-grid"
+                style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px;">
+                <!-- Races will be injected here -->
+            </div>
+            <button onclick="toggleModal('race-selection-modal', false)"
+                style="width: 100%; padding: 14px; margin-top: 20px; background: transparent; border-color: var(--panel-border);">Cancel</button>
+        </div>
+    </div>
+
     <!-- Online Multiplayer Modals -->
     <div id="name-modal" class="modal-overlay">
         <div class="modal-content">
@@ -1459,8 +1505,18 @@
                 <!-- Players will be injected here -->
                 <div style="color: #71717a; padding: 20px;">Searching for other warriors...</div>
             </div>
+
+            <div style="margin-top: 25px; text-align: left;">
+                <h3
+                    style="color: #fbbf24; font-size: 1rem; margin-bottom: 10px; border-bottom: 1px solid rgba(251,191,36,0.2); padding-bottom: 5px;">
+                    Active Battles</h3>
+                <div id="active-games-list" class="lobby-list" style="max-height: 150px; overflow-y: auto;">
+                    <div style="color: #71717a; padding: 10px;">No active battles...</div>
+                </div>
+            </div>
+
             <button onclick="quitLobby()"
-                style="width: 100%; padding: 14px; background: transparent; border-color: var(--panel-border);">Leave
+                style="width: 100%; padding: 14px; background: transparent; border-color: var(--panel-border); margin-top: 20px;">Leave
                 Lobby</button>
         </div>
     </div>
@@ -1496,6 +1552,7 @@
         let currentGameId = null;
         let isOnlineGame = false;
         let onlinePlayerColor = 'w';
+        let isSpectator = false;
         let invitationRef = null;
 
         function initFirebase() {
@@ -1518,6 +1575,10 @@
         document.getElementById('mode-online').onclick = () => {
             if (!initFirebase()) return;
             toggleModal('name-modal', true);
+            setTimeout(() => {
+                const nameInput = document.getElementById('player-name-input');
+                if (nameInput) nameInput.focus();
+            }, 100);
         };
 
         document.getElementById('join-online-btn').onclick = async () => {
@@ -1537,7 +1598,8 @@
                 playerRef.set({
                     name: onlinePlayerName,
                     status: 'available',
-                    lastSeen: firebase.database.ServerValue.TIMESTAMP
+                    lastSeen: firebase.database.ServerValue.TIMESTAMP,
+                    race: whiteRaceSelect.value // Default race from selection
                 });
 
                 // Remove on disconnect
@@ -1589,9 +1651,19 @@
                     count++;
                     const div = document.createElement('div');
                     div.className = 'lobby-player';
+
+                    const cooldown = inviteCooldowns[id];
+                    const buttonText = cooldown ? (inviteDeclines[id] >= 2 ? 'Blocked' : 'Declined') : 'Invite';
+                    const isDisabled = cooldown || (inviteDeclines[id] >= 2);
+
                     div.innerHTML = `
                         <span>${p.name}</span>
-                        <button onclick="sendInvite('${id}', '${p.name}')">Invite</button>
+                        <button id="invite-btn-${id}" 
+                                onclick="sendInvite(this, '${id}', '${p.name}')"
+                                ${isDisabled ? 'disabled' : ''}
+                                style="${isDisabled ? 'opacity: 0.6; cursor: default;' : ''}${cooldown && inviteDeclines[id] < 2 ? 'background: #ef4444;' : ''}">
+                            ${buttonText}
+                        </button>
                     `;
                     listEl.appendChild(div);
                 }
@@ -1603,64 +1675,203 @@
                     listEl.appendChild(emptyMsg);
                 }
             });
+            listenToActiveGames();
         }
 
-        function sendInvite(targetId, targetName) {
-            db.ref('invites/' + targetId).set({
-                fromId: onlinePlayerId,
-                fromName: onlinePlayerName,
-                timestamp: firebase.database.ServerValue.TIMESTAMP
-            });
-            alert("Invite sent to " + targetName);
-        }
+        function listenToActiveGames() {
+            db.ref('games').orderByChild('timestamp').limitToLast(10).on('value', (snapshot) => {
+                const games = snapshot.val() || {};
+                const listEl = document.getElementById('active-games-list');
+                listEl.innerHTML = '';
 
-        function listenToInvites() {
-            invitationRef = db.ref('invites/' + onlinePlayerId);
-            invitationRef.on('value', (snapshot) => {
-                const invite = snapshot.val();
-                if (invite) {
-                    document.getElementById('inviter-name').textContent = invite.fromName;
-                    document.getElementById('invite-toast').style.display = 'flex';
+                let count = 0;
+                for (let id in games) {
+                    const g = games[id];
+                    if (g.status !== 'playing') continue;
 
-                    document.getElementById('accept-invite-btn').onclick = () => acceptInvite(invite);
-                    document.getElementById('decline-invite-btn').onclick = () => declineInvite();
+                    // Don't show our own game here if we are already in it, but lobby hides anyway
+                    count++;
+                    const div = document.createElement('div');
+                    div.className = 'lobby-player';
+                    div.innerHTML = `
+                        <div style="flex-grow: 1;">
+                            <span style="color: #fff;">${g.whiteName}</span> 
+                            <span style="color: #71717a; margin: 0 5px;">vs</span> 
+                            <span style="color: #fff;">${g.blackName}</span>
+                        </div>
+                        <button onclick="startSpectating('${id}')" style="background: #6366f1; font-size: 0.75rem; padding: 6px 12px;">Watch</button>
+                    `;
+                    listEl.appendChild(div);
+                }
+
+                if (count === 0) {
+                    listEl.innerHTML = '<div style="color: #71717a; padding: 10px;">No active battles...</div>';
                 }
             });
+        }
 
-            // Listen for NEW games created involve us (threshold of 1 minute)
-            const threshold = Date.now() - 60000;
-            db.ref('games').on('child_added', (snapshot) => {
-                const game = snapshot.val();
-                if (game.status === 'playing' && game.timestamp > threshold && (game.white === onlinePlayerId || game.black === onlinePlayerId)) {
-                    if (currentGameId !== snapshot.key) {
-                        startOnlineGame(snapshot.key, game);
-                    }
+        function startSpectating(gameId) {
+            db.ref('games/' + gameId).once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    isSpectator = true;
+                    startOnlineGame(gameId, data);
+                }
+            });
+        }
+
+        let inviteCooldowns = {};
+        let inviteDeclines = {}; // targetId -> count
+
+        function sendInvite(btn, targetId, targetName) {
+            if (inviteCooldowns[targetId]) return;
+            if (inviteDeclines[targetId] >= 2) {
+                alert("You have been declined too many times by " + targetName + ". Please wait a while.");
+                return;
+            }
+
+            const inviteRef = db.ref('invites/' + targetId);
+            inviteRef.set({
+                fromId: onlinePlayerId,
+                fromName: onlinePlayerName,
+                fromRace: whiteRaceSelect.value,
+                status: 'pending',
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+
+            btn.textContent = 'Invited';
+            btn.disabled = true;
+
+            // Listen for decline/acceptance on the whole object for better reliability
+            inviteRef.off(); // Clear any previous listener
+            inviteRef.on('value', (snapshot) => {
+                const inviteData = snapshot.val();
+                if (!inviteData) return;
+
+                const status = inviteData.status;
+                console.log(`Host Debug: Invite for ${targetId} state: ${status}`);
+
+                if (status === 'declined') {
+                    inviteRef.off();
+                    inviteCooldowns[targetId] = true;
+                    inviteDeclines[targetId] = (inviteDeclines[targetId] || 0) + 1;
+
+                    alert(`Invitation to ${targetName} was declined.`);
+
+                    // 10s Cooldown with Visual Timer
+                    let timeLeft = 10;
+                    const timerInterval = setInterval(() => {
+                        const timerBtn = document.getElementById('invite-btn-' + targetId);
+                        if (timerBtn) {
+                            if (inviteDeclines[targetId] >= 2) {
+                                timerBtn.textContent = 'Blocked';
+                                timerBtn.disabled = true;
+                                timerBtn.style.background = '#3f3f46';
+                                clearInterval(timerInterval);
+                            } else {
+                                timerBtn.textContent = `Declined (${timeLeft}s)`;
+                                timerBtn.style.background = '#ef4444';
+                                timerBtn.disabled = true;
+                            }
+                        }
+                        if (timeLeft <= 0) {
+                            clearInterval(timerInterval);
+                            inviteCooldowns[targetId] = false;
+                            if (timerBtn && inviteDeclines[targetId] < 2) {
+                                timerBtn.textContent = 'Invite';
+                                timerBtn.disabled = false;
+                                timerBtn.style.opacity = '1';
+                                timerBtn.style.background = '#3b82f6';
+                            }
+                            inviteRef.remove().catch(e => { });
+                        }
+                        timeLeft--;
+                    }, 1000);
+
+                } else if (status === 'accepted') {
+                    // Host transitions when they see activeGameId in their lobby entry (already handled by listener)
+                    inviteRef.off();
+                    inviteDeclines[targetId] = 0;
                 }
             });
         }
 
         function acceptInvite(invite) {
+            // Receiver creates the game object for max reliability
             const gameId = 'game_' + Math.random().toString(36).substr(2, 9);
             const gameData = {
-                white: invite.fromId, // Inviter is white
-                black: onlinePlayerId, // Invitee is black
+                white: invite.fromId,
+                black: onlinePlayerId,
                 whiteName: invite.fromName,
                 blackName: onlinePlayerName,
-                status: 'playing',
+                whiteRace: invite.fromRace || 'human',
+                blackRace: 'human', // Placeholder
+                status: 'setup',
+                theme: 'classic',
                 currentPlayer: 'w',
-                boardSeed: Math.random(), // Seed for identical random coins
+                setup: {
+                    whiteReady: false,
+                    blackReady: false
+                },
                 timestamp: firebase.database.ServerValue.TIMESTAMP
             };
 
-            db.ref('games/' + gameId).set(gameData);
-            db.ref('invites/' + onlinePlayerId).remove();
+            // 1. Set status to accepted so Host knows
+            db.ref('invites/' + onlinePlayerId + '/status').set('accepted');
+
+            // 2. Create the game and assign to both
+            db.ref('games/' + gameId).set(gameData).then(() => {
+                return Promise.all([
+                    db.ref('lobby/' + invite.fromId + '/activeGameId').set(gameId),
+                    db.ref('lobby/' + onlinePlayerId + '/activeGameId').set(gameId)
+                ]);
+            }).then(() => {
+                db.ref('invites/' + onlinePlayerId).remove();
+            });
+
             document.getElementById('invite-toast').style.display = 'none';
         }
 
         function declineInvite() {
-            db.ref('invites/' + onlinePlayerId).remove();
+            db.ref('invites/' + onlinePlayerId + '/status').set('declined');
             document.getElementById('invite-toast').style.display = 'none';
         }
+
+        function listenToInvites() {
+            console.log("Listening for invites as:", onlinePlayerId);
+            invitationRef = db.ref('invites/' + onlinePlayerId);
+            invitationRef.on('value', (snapshot) => {
+                const invite = snapshot.val();
+                if (invite && invite.status === 'pending') {
+                    console.log("New invite detected:", invite);
+                    document.getElementById('inviter-name').textContent = invite.fromName;
+                    document.getElementById('invite-toast').style.display = 'flex';
+
+                    document.getElementById('accept-invite-btn').onclick = () => acceptInvite(invite);
+                    document.getElementById('decline-invite-btn').onclick = () => declineInvite();
+                } else {
+                    document.getElementById('invite-toast').style.display = 'none';
+                }
+            });
+
+            // Listen for our active game ID (Reliable sync for both players)
+            db.ref('lobby/' + onlinePlayerId + '/activeGameId').on('value', (snapshot) => {
+                const gameId = snapshot.val();
+                if (gameId && currentGameId !== gameId) {
+                    console.log("Active game assigned:", gameId);
+                    db.ref('games/' + gameId).once('value', (snap) => {
+                        const gameData = snap.val();
+                        if (gameData) {
+                            console.log("Joined active match:", gameId);
+                            startOnlineGame(gameId, gameData);
+                        } else {
+                            alert("Error: Game data not found for " + gameId);
+                        }
+                    });
+                }
+            });
+        }
+
 
         function quitLobby() {
             if (onlinePlayerId) {
@@ -1669,55 +1880,210 @@
                 db.ref('lobby').off();
                 db.ref('games').off();
             }
+            isSpectator = false;
             toggleModal('lobby-modal', false);
+
+            document.getElementById('game-area').style.display = 'none';
+            document.getElementById('mode-selection').style.display = 'block';
         }
 
         function startOnlineGame(gameId, data) {
             currentGameId = gameId;
             isOnlineGame = true;
-            onlinePlayerColor = (data.white === onlinePlayerId) ? 'w' : 'b';
+            console.log("Starting online game:", gameId, data);
 
-            // Set global game state
-            gameMode = 'ONLINE';
-            playerColor = onlinePlayerColor;
+            if (isSpectator) {
+                onlinePlayerColor = 'spectator';
+                playerColor = 'w';
+                boardOrientation = 'w';
+            } else {
+                onlinePlayerColor = (data.white === onlinePlayerId) ? 'w' : 'b';
+                playerColor = onlinePlayerColor;
+                boardOrientation = onlinePlayerColor;
+                const sideName = playerColor === 'w' ? "WHITE" : "BLACK";
+                alert(`You are playing as ${sideName}. ID: ${onlinePlayerId.substring(0, 6)}...`);
+                console.log("My assigned color:", playerColor, "Board Orientation:", boardOrientation);
+            }
 
-            // Designate random seed if needed (for coins)
-            this.onlineBoardSeed = data.boardSeed;
-
-            // Hide UI
-            toggleModal('lobby-modal', false);
+            document.getElementById('lobby-modal').classList.remove('visible');
             document.getElementById('mode-selection').style.display = 'none';
             document.getElementById('game-area').style.display = 'block';
 
-            // Mark as busy in lobby
-            db.ref('lobby/' + onlinePlayerId + '/status').set('playing');
+            if (data.status === 'setup') {
+                renderOnlineSetupUI(gameId, data);
+            } else {
+                document.getElementById('online-setup-overlay').style.display = 'none';
+                gameMode = 'ONLINE';
+                whiteRace = data.whiteRace || 'human';
+                blackRace = data.blackRace || 'human';
+                selectedTileset = data.theme || 'classic';
 
-            // Set up board and sync
-            setupBoard();
-            listenToMoves();
+                setupBoard(data.boardSeed);
+
+                // Unified Status/Move Listeners
+                let initialMovesDone = false;
+                const movesRef = db.ref('games/' + gameId + '/moves');
+                movesRef.off();
+                movesRef.on('child_added', (snapshot) => {
+                    if (!initialMovesDone) return;
+                    const move = snapshot.val();
+                    if (move.player !== onlinePlayerColor) {
+                        console.log("Remote move received:", move);
+                        if (move.promo) {
+                            executeMove(move.sr, move.sc, move.er, move.ec, move.promo);
+                        } else {
+                            executeMove(move.sr, move.sc, move.er, move.ec, true);
+                        }
+                    }
+                });
+                movesRef.once('value', () => { initialMovesDone = true; });
+
+                db.ref('games/' + gameId + '/status').off();
+                db.ref('games/' + gameId + '/status').on('value', (snap) => {
+                    const status = snap.val();
+                    if (!status || gameOver) return;
+                    if (status === 'resigned') {
+                        showGameOverModal('Opponent Resigned', (onlinePlayerColor === 'w' ? 'White' : 'Black') + ' Wins!');
+                        gameOver = true;
+                        db.ref('lobby/' + onlinePlayerId + '/status').set('available');
+                    } else if (status === 'checkmate') {
+                        renderBoard();
+                        updateStatus();
+                    } else if (status === 'draw') {
+                        showGameOverModal('Stalemate!', 'The game is a draw.');
+                        gameOver = true;
+                        db.ref('lobby/' + onlinePlayerId + '/status').set('available');
+                    }
+                });
+            }
         }
 
-        function listenToMoves() {
-            db.ref('games/' + currentGameId + '/moves').on('child_added', (snapshot) => {
-                const move = snapshot.val();
-                if (move.player !== onlinePlayerColor) {
-                    // Execute move from other player
-                    executeMove(move.sr, move.sc, move.er, move.ec, true);
-                }
+        function renderOnlineSetupUI(gameId, data) {
+            const overlay = document.getElementById('online-setup-overlay');
+            overlay.style.display = 'flex';
+
+            const raceList = document.getElementById('setup-race-list');
+            raceList.innerHTML = '';
+            const tilesetSection = document.getElementById('setup-tileset-section');
+            const tilesetList = document.getElementById('setup-tileset-list');
+
+            const isHost = (data.white === onlinePlayerId);
+            const myRole = isHost ? 'white' : 'black';
+
+            // Factions
+            const factions = (campaignData && campaignData.unlockedFactions) ? campaignData.unlockedFactions : ['human'];
+            factions.forEach(f => {
+                const div = document.createElement('div');
+                div.className = 'shop-item';
+                div.style.cursor = 'pointer';
+                div.style.padding = '5px';
+                const prefix = raceSpritePrefix[f] || 'w';
+                div.innerHTML = `
+                    <div class="piece ${prefix}King ${f}" style="width: 30px; height: 30px; margin: 0 auto 5px; background-size: contain;"></div>
+                    <div style="font-size: 0.75rem;">${f.charAt(0).toUpperCase() + f.slice(1)}</div>
+                `;
+                div.setAttribute('data-faction', f);
+                div.onclick = () => {
+                    db.ref('games/' + gameId + '/' + myRole + 'Race').set(f);
+                };
+                raceList.appendChild(div);
             });
 
-            // Listen for resign/exit
-            db.ref('games/' + currentGameId + '/status').on('value', (snapshot) => {
-                if (snapshot.val() === 'resigned' && !gameOver) {
-                    const winner = onlinePlayerColor === 'w' ? 'White' : 'Black';
-                    showGameOverModal('Opponent Resigned', winner + ' Wins!');
-                    gameOver = true;
+            // Tilesets (Host only) - Initial Build
+            if (isHost) {
+                tilesetSection.style.display = 'block';
+                tilesetList.innerHTML = '';
+                const myTilesets = (campaignData && campaignData.unlockedTilesets) ? campaignData.unlockedTilesets : ['classic'];
+                availableTilesets.forEach(ts => {
+                    if (!myTilesets.includes(ts.id)) return;
+                    const btn = document.createElement('div');
+                    btn.className = 'tileset-btn';
+                    btn.setAttribute('data-tileset', ts.id);
+                    if (ts.id === 'classic') btn.style.background = 'linear-gradient(45deg, #eeeed2 50%, #769656 50%)';
+                    else if (ts.texture) btn.style.backgroundImage = `url('textures/${ts.texture}')`;
+                    btn.onclick = () => {
+                        db.ref('games/' + gameId + '/theme').set(ts.id);
+                    };
+                    tilesetList.appendChild(btn);
+                });
+            }
+
+            const readyBtn = document.getElementById('ready-btn');
+            readyBtn.disabled = false;
+            readyBtn.textContent = 'Ready to Battle';
+            readyBtn.onclick = () => {
+                db.ref('games/' + gameId + '/setup/' + myRole + 'Ready').set(true);
+                readyBtn.disabled = true;
+                readyBtn.textContent = 'Ready!';
+            };
+
+            // Listen for changes and render
+            db.ref('games/' + gameId).on('value', (snap) => {
+                const liveData = snap.val();
+                if (!liveData || !liveData.setup) return;
+
+                // Update Race List Borders
+                document.querySelectorAll('#setup-race-list .shop-item').forEach(el => {
+                    const faction = el.getAttribute('data-faction');
+                    el.style.borderColor = (liveData[myRole + 'Race'] === faction) ? '#fbbf24' : 'var(--panel-border)';
+                });
+
+                // Update Tilesets selected class
+                if (isHost) {
+                    document.querySelectorAll('#setup-tileset-list .tileset-btn').forEach(el => {
+                        const tsId = el.getAttribute('data-tileset');
+                        el.classList.toggle('selected', liveData.theme === tsId);
+                    });
+                }
+                const msg = document.getElementById('setup-status-msg');
+                const hostReady = liveData.setup.whiteReady;
+                const guestReady = liveData.setup.blackReady;
+
+                if (isHost) msg.textContent = guestReady ? "Opponent is Ready!" : "Opponent is deciding...";
+                else msg.textContent = hostReady ? "Host is Ready!" : "Host is deciding...";
+
+                if (liveData.status === 'playing') {
+                    db.ref('games/' + gameId).off('value');
+                    overlay.style.display = 'none';
+                    startOnlineGame(gameId, liveData);
+                } else if (isHost && hostReady && guestReady) {
+                    // Start match!
+                    db.ref('games/' + gameId).update({
+                        status: 'playing',
+                        boardSeed: Math.random() // Set seed now
+                    });
                 }
             });
         }
-    </script>
 
-    <script>
+        function quitToLobby() {
+            if (isOnlineGame && currentGameId && !isSpectator) {
+                db.ref('games/' + currentGameId + '/status').set('resigned');
+            }
+
+            // Clean up game listeners
+            if (currentGameId) {
+                db.ref('games/' + currentGameId + '/moves').off();
+                db.ref('games/' + currentGameId + '/status').off();
+            }
+
+            // Reset player status to available
+            if (onlinePlayerId && !isSpectator) {
+                db.ref('lobby/' + onlinePlayerId + '/status').set('available');
+                db.ref('lobby/' + onlinePlayerId + '/activeGameId').remove();
+            }
+
+            currentGameId = null;
+            isOnlineGame = false;
+            isSpectator = false;
+            gameOver = false;
+
+            document.getElementById('game-area').style.display = 'none';
+            document.getElementById('online-setup-overlay').style.display = 'none';
+            document.getElementById('game-over-modal').classList.remove('visible');
+            toggleModal('lobby-modal', true);
+        }
+
         // --- CHESS ENGINE & LOGIC ---
         let board = [], currentPlayer = 'w', playerColor = 'w', boardOrientation = 'w';
         let currentlyDragging = { isDragging: false, pieceElement: null, startRow: -1, startCol: -1, pieceCode: null, validMoves: [] };
@@ -1732,7 +2098,7 @@
         let frozenPieces = []; // [{ row, col, turnsLeft }]
 
         function handleSquareClick(e) {
-            if (justDragged) return;
+            if (justDragged || isSpectator) return;
             if (currentlyDragging.isDragging || isAnimating || isComputerTurn || gameOver) return;
 
             // Critical: If a spell is active, we handle it on mousedown and prevent the 'click' event 
@@ -1766,6 +2132,8 @@
                     executeMove(selectedSquare.row, selectedSquare.col, r, c);
                     clearSelection();
                 } else if (clickedPiece && clickedPiece[0] === currentPlayer) {
+                    // Critical online check: can only select own pieces
+                    if (isOnlineGame && clickedPiece[0] !== playerColor) return;
                     // Select a different piece
                     selectPiece(r, c, clickedPiece);
                 } else {
@@ -1774,6 +2142,8 @@
             } else {
                 // Select a piece
                 if (clickedPiece && clickedPiece[0] === currentPlayer) {
+                    // Critical online check: can only select own pieces
+                    if (isOnlineGame && clickedPiece[0] !== playerColor) return;
                     selectPiece(r, c, clickedPiece);
                 }
             }
@@ -2208,7 +2578,7 @@
         const blackRaceSelect = document.getElementById('black-race-select');
         const startGameButton = document.getElementById('start-game-button');
 
-        function setupBoard() {
+        function setupBoard(seed = null) {
             if (gameMode === 'CAMPAIGN' && campaignLevel && campaignLevel.setup) {
                 board = JSON.parse(JSON.stringify(campaignLevel.setup));
             } else {
@@ -2224,7 +2594,7 @@
             document.documentElement.style.setProperty('--board-rows', rows);
             document.documentElement.style.setProperty('--board-cols', cols);
 
-            // Reset all game and spell states for a new match
+            // Reset states
             gameOver = false;
             isAnimating = false;
             activeSpell = null;
@@ -2235,17 +2605,12 @@
             boardElement.classList.remove('spell-active');
             boardElement.style.cursor = 'default';
             renderActiveSpells();
-            renderBoard();
 
             if (gameMode !== 'CAMPAIGN' && gameMode !== 'ONLINE') {
                 whiteRace = whiteRaceSelect.value;
                 blackRace = blackRaceSelect.value;
                 document.getElementById('current-level-display').style.display = 'none';
             } else if (gameMode === 'ONLINE') {
-                // For online, everyone uses human for now to ensure consistency 
-                // (or we can sync races in gameData later)
-                whiteRace = 'human';
-                blackRace = 'human';
                 document.getElementById('current-level-display').style.display = 'block';
                 document.getElementById('current-level-display').textContent = "Online Battle";
             }
@@ -2256,25 +2621,21 @@
             capturedPieces = { w: [], b: [] };
             lastMove = { start: null, end: null };
             moveHistory = [];
+
+            if (seed !== null) {
+                // For future deterministic logic if needed
+            }
+
+            renderBoard();
             saveState();
 
-            // Random Coin Pickups (Adventure Mode & Online Only)
-            if (gameMode === 'CAMPAIGN' || gameMode === 'ONLINE') {
+            // Random Coin Pickups (Adventure Mode Only)
+            if (gameMode === 'CAMPAIGN') {
                 let coinsPlaced = 0;
                 let attempts = 0;
-
-                // Use seed for online to ensure same coins for both players
-                let seededRandom = () => {
-                    if (gameMode === 'ONLINE') {
-                        let x = Math.sin(this.onlineBoardSeed++) * 10000;
-                        return x - Math.floor(x);
-                    }
-                    return Math.random();
-                };
-
                 while (coinsPlaced < 2 && attempts < 20) {
-                    const r = Math.floor(seededRandom() * rows);
-                    const c = Math.floor(seededRandom() * cols);
+                    const r = Math.floor(Math.random() * rows);
+                    const c = Math.floor(Math.random() * cols);
                     if (!board[r][c]) {
                         board[r][c] = 'coin';
                         coinsPlaced++;
@@ -2649,7 +3010,7 @@
         }
 
         function handleDragStart(e) {
-            if (isAnimating || isComputerTurn || gameOver) { e.preventDefault(); return; }
+            if (isAnimating || isComputerTurn || gameOver || isSpectator) { e.preventDefault(); return; }
             const piece = e.target.closest('.piece'); if (!piece) return;
             const sq = piece.closest('.square');
             const r = parseInt(sq.dataset.row), c = parseInt(sq.dataset.col), code = board[r][c];
@@ -2688,15 +3049,34 @@
         }
 
         function executeMove(sr, sc, er, ec, isFromRemote = false) {
-            const target = board[er][ec], p = board[sr][sc];
+            // isFromRemote can be true/false OR the promotion choice character (q, r, n, b)
+            let promoChoice = null;
+            if (typeof isFromRemote === 'string') {
+                promoChoice = isFromRemote;
+                isFromRemote = true;
+            }
 
-            // If online, sync move to Firebase
+            if (isSpectator && !isFromRemote) return;
+
+            // Safety check for desync
+            const p = board[sr][sc];
+            if (!p) {
+                console.error("Move Desync: No piece at source", sr, sc);
+                return;
+            }
+            const target = board[er][ec];
+
+            // If online, sync move to Firebase (unless it's a promotion - that syncs after choice)
             if (isOnlineGame && !isFromRemote && p[0] === onlinePlayerColor) {
-                db.ref('games/' + currentGameId + '/moves').push({
-                    sr, sc, er, ec,
-                    player: onlinePlayerColor,
-                    timestamp: firebase.database.ServerValue.TIMESTAMP
-                });
+                // If this is a promotion move, we wait for finalizeMove or handle it specially
+                const isPromotion = p[1] === 'p' && (er === 0 || er === 7);
+                if (!isPromotion) {
+                    db.ref('games/' + currentGameId + '/moves').push({
+                        sr, sc, er, ec,
+                        player: onlinePlayerColor,
+                        timestamp: firebase.database.ServerValue.TIMESTAMP
+                    });
+                }
             }
 
             // Handle specific interactions
@@ -2753,7 +3133,25 @@
 
             // Check for promotion
             if (finalPiece[1] === 'p' && (er === 0 || er === 7)) {
-                if (gameMode !== '2P' && finalPiece[0] !== playerColor) {
+                if (gameMode === 'ONLINE') {
+                    if (isFromRemote) {
+                        // Apply the piece choice received from the other player (default to queen if missing)
+                        board[er][ec] = finalPiece[0] + (promoChoice || 'q');
+                        finalizeMove();
+                    } else {
+                        showPromotionModal(er, ec, finalPiece[0], (choice) => {
+                            board[er][ec] = finalPiece[0] + choice;
+                            // SYNC PROMOTION MOVE NOW
+                            db.ref('games/' + currentGameId + '/moves').push({
+                                sr, sc, er, ec,
+                                promo: choice,
+                                player: onlinePlayerColor,
+                                timestamp: firebase.database.ServerValue.TIMESTAMP
+                            });
+                            finalizeMove();
+                        });
+                    }
+                } else if (gameMode !== '2P' && finalPiece[0] !== playerColor) {
                     // Computer always chooses Queen
                     board[er][ec] = finalPiece[0] + 'q';
                     finalizeMove();
@@ -2780,16 +3178,26 @@
                 gameOver = true;
                 const inCheck = isKingAttacked(currentPlayer);
                 if (inCheck) {
-                    const winner = currentPlayer === 'w' ? 'Black' : 'White';
-                    const playerWon = winner === 'White';
+                    const winnerDescription = currentPlayer === 'w' ? 'Black' : 'White';
+                    const playerWon = winnerDescription === 'White';
                     updatePlayerRating(playerWon, false);
-                    if (gameMode === 'CAMPAIGN' && winner === 'White') {
+
+                    if (isOnlineGame && currentGameId) {
+                        db.ref('games/' + currentGameId + '/status').set('checkmate');
+                        db.ref('lobby/' + onlinePlayerId + '/status').set('available');
+                    }
+
+                    if (gameMode === 'CAMPAIGN' && winnerDescription === 'White') {
                         handleCampaignWin();
-                        showGameOverModal('Checkmate!', winner + ' Wins!', true);
+                        showGameOverModal('Checkmate!', winnerDescription + ' Wins!', true);
                     } else {
-                        showGameOverModal('Checkmate!', winner + ' Wins!');
+                        showGameOverModal('Checkmate!', winnerDescription + ' Wins!');
                     }
                 } else {
+                    if (isOnlineGame && currentGameId) {
+                        db.ref('games/' + currentGameId + '/status').set('draw');
+                        db.ref('lobby/' + onlinePlayerId + '/status').set('available');
+                    }
                     showGameOverModal('Stalemate!', 'The game is a draw. You can undo to continue.');
                     updatePlayerRating(false, true);
                     // Don't set gameOver = true for stalemate - allow undo
@@ -2839,7 +3247,7 @@
 
             renderBoard();
 
-            if (gameMode !== '2P' && currentPlayer !== playerColor) {
+            if ((gameMode === 'CPU' || gameMode === 'CAMPAIGN') && currentPlayer !== playerColor) {
                 isComputerTurn = true;
                 makeComputerMove();
             } else {
@@ -2920,6 +3328,7 @@
             });
         }
         function undoMove() {
+            if (isSpectator) return;
             if (moveHistory.length > 1) {
                 if (computerMoveTimeout) clearTimeout(computerMoveTimeout);
 
@@ -2968,12 +3377,17 @@
         function toggleOptionsMenu(show = true) { document.getElementById('options-menu').classList.toggle('visible', show); }
         function quitGame() { location.reload(); }
         function resignGame() {
+            if (isOnlineGame && currentGameId) {
+                db.ref('games/' + currentGameId + '/status').set('resigned');
+                db.ref('lobby/' + onlinePlayerId + '/status').set('available');
+            }
+
             gameOver = true;
             // Cooldowns reset on match end
             for (let s in spellCooldowns) spellCooldowns[s] = 0;
             renderActiveSpells();
-            const winner = currentPlayer === 'w' ? 'Black' : 'White';
-            showGameOverModal('Resigned', winner + ' Wins!');
+            const winnerString = (isOnlineGame) ? (onlinePlayerColor === 'w' ? 'Black' : 'White') : (currentPlayer === 'w' ? 'Black' : 'White');
+            showGameOverModal('Resigned', winnerString + ' Wins!');
             renderBoard();
             updateStatus();
         }
@@ -3039,8 +3453,15 @@
             // Reset visibilities
             backToMapBtn.style.display = 'none';
             nextLevelBtn.style.display = 'none';
-            mainMenuBtn.style.display = 'block';
+            mainMenuBtn.style.display = isOnlineGame ? 'none' : 'block';
             undoBtn.style.display = 'none';
+
+            if (isOnlineGame) {
+                nextLevelBtn.style.display = 'block';
+                nextLevelBtn.textContent = "Return to Lobby";
+                nextLevelBtn.style.background = "#3b82f6";
+                nextLevelBtn.onclick = quitToLobby;
+            }
 
             if (gameMode === 'CAMPAIGN') {
                 if (isCampaignVictory) {
@@ -3396,6 +3817,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            console.log("Kingsfall Script Initialized");
             boardElement.addEventListener('click', handleSquareClick);
             boardElement.addEventListener('mousedown', handleSquareClick);
 
