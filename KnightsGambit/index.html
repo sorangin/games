@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Knight's Gambit</title>
+    <link rel="icon" href="images/favicon_knightsgambit.ico" type="image/x-icon">
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <link rel="preload" href="./images/titlescreen.jpg" as="image">
+    <link rel="preload" href="./sprites/world_map.png" as="image">
+    <link rel="preload" href="./sprites/items.png" as="image">
+    <link rel="preload" href="./sprites/armor.png" as="image">
+    <link rel="preload" href="./sprites/humans_grey.png" as="image">
+    <link rel="preload" href="./sprites/goblins_green.png" as="image">
+</head>
+
+<body>
+    <div id="game-container">
+
+        <div id="game-board-wrapper">
+            <div id="game-board">
+                <div id="grid-content">
+                    <div id="unit-hp-bars-overlay"></div>
+                </div>
+                <div id="board-feedback-area" role="alert" aria-live="polite"></div>
+            </div>
+            <button type="button" id="default-view-button" class="icon-button hidden"
+                title="Reset View (Home)">⌂</button>
+            <button type="button" id="fill-width-button" class="icon-button hidden" title="Fit to Width">↔</button>
+        </div>
+
+        <aside id="ui-panel">
+            <div class="panel-content-wrapper">
+
+                <div id="top-bar-ui">
+                    <div id="level-display" aria-live="polite">Level: 1</div>
+
+
+                    <button type="button" id="menu-button" class="icon-button" title="Menu (Esc)"
+                        aria-label="Open Menu">☰</button>
+                </div>
+
+                <section id="unit-info" aria-labelledby="unit-name">
+                    <div class="unit-visuals">
+                        <div id="unit-portrait" role="img" aria-label="Selected Unit Portrait"></div>
+                        <div class="unit-hp-bar-container info-panel-hp-bar" aria-label="Unit Health">
+                            <div class="unit-hp-bar"></div>
+                            <span class="unit-hp-text" aria-live="polite">HP: -/-</span>
+                        </div>
+                    </div>
+                    <div id="unit-details">
+                        <h3 id="unit-name">Unit Info</h3>
+                        <p id="unit-atk">ATK: -</p>
+                        <p id="unit-mov">MOV: -</p>
+                        <p id="unit-rng">RNG: -</p>
+                        <p id="unit-status" aria-live="polite"></p>
+                    </div>
+                </section>
+
+                <div id="unit-abilities">
+                    <button type="button" id="ability-stealth"
+                        class="ability-button spell-icon hidden icon icon-ability-stealth" data-ability="stealth"
+                        title="Stealth: Become hidden, +1 ATK on first strike." aria-label="Stealth Ability"></button>
+                    <button type="button" id="ability-quick-strike"
+                        class="ability-button spell-icon hidden icon icon-ability-quickStrike"
+                        data-ability="quickStrike" title="Quick Strike: Attack twice this turn. Reduced movement."
+                        aria-label="Quick Strike Ability"></button>
+                </div>
+
+                <div class="panel-bottom-group">
+                    <section id="spell-area" aria-label="Spells">
+                        <div class="spell-container">
+                            <button type="button" id="fireball-spell" class="spell-icon locked icon icon-spell-fireball"
+                                data-spell-name="fireball" title="Unlock at Level 4"
+                                aria-label="Fireball Spell (Locked)">
+                                <span class="hotkey-display" aria-hidden="true">1</span>
+                            </button>
+                            <span class="spell-label">Fireball</span>
+                        </div>
+                        <div class="spell-container">
+                            <button type="button" id="flame-wave-spell"
+                                class="spell-icon locked icon icon-spell-flameWave" data-spell-name="flameWave"
+                                title="Unlock at Level 8" aria-label="Flame Wave Spell (Locked)">
+                                <span class="hotkey-display" aria-hidden="true">2</span>
+                            </button>
+                            <span class="spell-label">Flame Wave</span>
+                        </div>
+                        <div class="spell-container">
+                            <button type="button" id="frost-nova-spell"
+                                class="spell-icon locked icon icon-spell-frostNova" data-spell-name="frostNova"
+                                title="Unlock at Level 12" aria-label="Frost Nova Spell (Locked)">
+                                <span class="hotkey-display" aria-hidden="true">3</span>
+                            </button>
+                            <span class="spell-label">Frost Nova</span>
+                        </div>
+                        <div class="spell-container">
+                            <button type="button" id="heal-spell" class="spell-icon locked icon icon-spell-heal"
+                                data-spell-name="heal" title="Unlock at Level 16" aria-label="Heal Spell (Locked)">
+                                <span class="hotkey-display" aria-hidden="true">4</span>
+                            </button>
+                            <span class="spell-label">Heal</span>
+                        </div>
+                        <div class="spell-container" id="forest-armor-container">
+                            <button type="button" id="forest-armor-ability"
+                                class="spell-icon locked icon-spell-forestArmor" data-ability-name="forestArmor"
+                                title="Activate Forest Armor. -1 damage from all enemy attacks for 1 turn."
+                                aria-label="Forest Armor Ability">
+                                <span class="hotkey-display" aria-hidden="true">5</span>
+                            </button>
+                            <span class="spell-label">Forest Armor</span>
+                        </div>
+                    </section>
+
+                    <button type="button" id="end-turn-button" class="primary-button end-turn-style"
+                        title="End Player Turn (E)"><span class="hotkey-highlight">E</span>nd Turn</button>
+                </div>
+
+            </div>
+        </aside>
+
+        <div id="main-menu" class="overlay visible" role="dialog" aria-modal="true" aria-labelledby="main-menu-title">
+            <div class="overlay-content main-menu-background">
+                <h1 id="main-menu-title" class="visually-hidden">Knight's Gambit Main Menu</h1>
+                <div class="main-menu-buttons">
+                    <button type="button" id="start-game-button" class="primary-button"><span
+                            class="hotkey-highlight">E</span>nter</button>
+                    <button type="button" id="achievements-menu-button" class="primary-button"><span
+                            class="hotkey-highlight">A</span>chievements</button>
+                    <button type="button" id="leaderboard-menu-button" class="primary-button"><span
+                            class="hotkey-highlight">L</span>eaderboard</button>
+                    <button type="button" id="settings-menu-button" class="primary-button"><span
+                            class="hotkey-highlight">O</span>ptions</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="level-complete-screen" class="overlay" role="dialog" aria-modal="true"
+            aria-labelledby="level-complete-title">
+            <div class="overlay-content styled-overlay-content">
+                <div class="decorative-frame"></div>
+                <div class="overlay-scroll-container">
+                    <h2 id="level-complete-title" class="overlay-title">Level Complete!</h2>
+                    <div id="level-complete-stats" class="inset-panel">
+                        <div class="stats-row">
+                            <p>Enemies Slain: <span id="stats-enemies-killed">-</span></p>
+                            <p>Units Lost: <span id="stats-units-lost">-</span></p>
+                        </div>
+                        <p>Gold Collected: <span id="stats-gold-gained">-</span> <span
+                                class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
+                        <div id="level-complete-bonuses">
+                            <p id="bonuses-header">Bonuses:</p>
+                            <ul id="stats-bonus-list" aria-label="Level Completion Bonuses">
+                                <li class="bonus-item hidden" data-bonus="noSpells">
+                                    <span class="icon bonus-icon icon-bonus-mightovermagic" title="Used no spells"
+                                        aria-label="Might Over Magic Bonus"></span>
+                                    <div class="bonus-value-container">
+                                        <span class="bonus-amount">0</span> <span class="icon icon-inline icon-gold"
+                                            title="Gold" aria-label="Gold"></span>
+                                    </div>
+                                </li>
+                                <li class="bonus-item hidden" data-bonus="fullHp">
+                                    <span class="icon bonus-icon icon-bonus-flawlessvictory" title="Flawless victory"
+                                        aria-label="Flawless Victory Bonus"></span>
+                                    <div class="bonus-value-container">
+                                        <span class="bonus-amount">0</span> <span class="icon icon-inline icon-gold"
+                                            title="Gold" aria-label="Gold"></span>
+                                    </div>
+                                </li>
+                                <li class="bonus-item hidden" data-bonus="noLosses">
+                                    <span class="icon bonus-icon icon-bonus-nomanleftbehind" title="No units lost"
+                                        aria-label="No Man Left Behind Bonus"></span>
+                                    <div class="bonus-value-container">
+                                        <span class="bonus-amount">0</span> <span class="icon icon-inline icon-gold"
+                                            title="Gold" aria-label="Gold"></span>
+                                    </div>
+                                </li>
+                                <li class="bonus-item hidden" data-bonus="noArmor">
+                                    <span class="icon bonus-icon icon-bonus-ultimate"
+                                        title="No Armor Equipped (No Losses)" aria-label="No Armor Bonus"></span>
+                                    <div class="bonus-value-container">
+                                        <span class="bonus-amount">0</span> <span class="icon icon-inline icon-gold"
+                                            title="Gold" aria-label="Gold"></span>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        <p>Gold Earned: <span id="stats-total-gold">-</span> <span class="icon icon-inline icon-gold"
+                                title="Gold" aria-label="Gold"></span></p>
+                    </div>
+                    <div class="level-complete-footer">
+                        <div class="gold-display level-complete-gold-box">
+                            <span class="icon icon-menu icon-gold" title="Total Gold" aria-label="Gold"></span>
+                            <span id="level-complete-total-gold">-</span>
+                        </div>
+                        <div class="level-complete-buttons button-group">
+                            <button type="button" id="level-complete-shop-button" class="primary-button"
+                                title="Shop (S)">💰 <span class="hotkey-highlight">S</span>hop</button>
+                            <button type="button" id="next-level-button" class="primary-button"
+                                title="Next Level (E)">N<span class="hotkey-highlight">e</span>xt Level</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="game-over-screen" class="overlay" role="dialog" aria-modal="true" aria-labelledby="game-over-title">
+            <div class="overlay-content styled-overlay-content">
+                <div class="decorative-frame red-glow"></div>
+                <div class="overlay-scroll-container">
+                    <h2 id="game-over-title" class="overlay-title defeat-title">Defeat!</h2>
+                    <p id="game-over-message"></p>
+                    <div class="game-over-buttons button-group">
+                        <button type="button" id="restart-button" class="primary-button"><span
+                                class="hotkey-highlight">R</span>estart Level</button>
+                        <button type="button" id="game-over-to-title-button" class="secondary-button">Continu<span
+                                class="hotkey-highlight">e</span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="level-select-screen" class="overlay" role="dialog" aria-modal="true">
+            <div class="overlay-content level-select-content no-style">
+                <h2 class="visually-hidden">Level Select</h2>
+                <div id="level-select-map-container">
+                    <div id="level-select-map" aria-label="World Map"></div>
+                    <div id="level-select-dots-layer" aria-hidden="true"></div>
+                </div>
+                <div id="level-select-pagination" class="level-select-pagination">
+                    <button type="button" id="level-select-prev-page" class="pagination-button hidden"
+                        title="Previous Page" aria-label="Previous Level Page">&lt; Prev</button>
+                    <span id="level-select-page-info" aria-live="polite">Page 1</span>
+                    <button type="button" id="level-select-next-page" class="pagination-button hidden" title="Next Page"
+                        aria-label="Next Level Page">Next &gt;</button>
+                </div>
+                <div class="level-select-bottom-bar bottom-bar-style">
+                    <button type="button" id="back-to-main-menu-button" class="secondary-button" title="Back (B)"><span
+                            class="hotkey-highlight">B</span>ack</button>
+                    <button type="button" id="level-select-shop-button" class="primary-button"
+                        title="Shop (S)">💰&nbsp;<span><span class="hotkey-highlight">S</span>hop</span></button>
+                    <button type="button" id="level-select-troops-button" class="primary-button">Choose&nbsp;<span
+                            class="hotkey-highlight">T</span>roops</button>
+                </div>
+            </div>
+            <div id="profile-display-area" class="profile-display-bar">
+                <button type="button" id="current-profile-name" class="profile-name-button">Hero</button>
+            </div>
+        </div>
+
+        <div id="leaderboard-overlay" class="overlay" role="dialog" aria-modal="true"
+            aria-labelledby="leaderboard-title">
+            <div class="overlay-content styled-overlay-content">
+                <div class="decorative-frame"></div>
+                <div class="overlay-scroll-container">
+                    <h2 id="leaderboard-title" class="overlay-title">Leaderboard</h2>
+                    <div id="leaderboard-entry" class="inset-panel leaderboard-input hidden">
+                        <label for="player-name-input">Name:</label>
+                        <input type="text" id="player-name-input" maxlength="12" placeholder="Hero Name">
+                        <button type="button" id="submit-score-button"
+                            class="primary-button green-accent">Submit</button>
+                    </div>
+                    <div class="leaderboard-tabs">
+                        <button type="button" class="leaderboard-tab-button active" id="leaderboard-tab-all"
+                            data-filter="all">All</button>
+                        <button type="button" class="leaderboard-tab-button" id="leaderboard-tab-regular"
+                            data-filter="regular">Regular</button>
+                        <button type="button" class="leaderboard-tab-button" id="leaderboard-tab-naked"
+                            data-filter="naked">🛡️ Naked</button>
+                    </div>
+                    <div class="leaderboard-table-wrapper">
+                        <div class="leaderboard-header">
+                            <span>Rank</span>
+                            <span>Name</span>
+                            <span>Level</span>
+                            <span>Achievements</span>
+                            <span>Date</span>
+                        </div>
+
+                        <ul id="leaderboard-list" aria-live="polite"></ul>
+                    </div>
+                    <button type="button" id="close-leaderboard-button" class="secondary-button"
+                        aria-label="Close Leaderboard"><span class="hotkey-highlight">B</span>ack</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="menu-overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title">
+            <div class="overlay-content styled-overlay-content">
+                <div class="decorative-frame"></div>
+                <div class="overlay-scroll-container">
+                    <h2 id="menu-title" class="overlay-title">Menu</h2>
+                    <div id="menu-gold-display" class="gold-display menu-like-gold-display">
+                        <span class="icon icon-menu icon-gold" title="Gold" aria-label="Gold"></span>
+                        <span id="menu-gold-amount">0</span>
+                    </div>
+                    <div id="menu-buttons-container">
+                        <div class="menu-icon-row">
+                            <button type="button" id="menu-options-button" class="primary-button icon-button"
+                                title="Options"><span>⚙️</span></button>
+                            <button type="button" id="restart-level-setting-button" class="primary-button icon-button"
+                                title="Restart Current Level"><span>🔄</span></button>
+                        </div>
+                        <button type="button" id="quit-button" class="primary-button" title="Quit to Level Select"
+                            data-action="quit">Quit Game</button>
+                        <button type="button" id="quit-to-main-menu-button" class="secondary-button"
+                            title="Quit to Main Menu">Quit to Main Menu</button>
+                    </div>
+                    <button type="button" id="close-menu-button" class="secondary-button" aria-label="Close Menu"><span
+                            class="hotkey-highlight">B</span>ack</button>
+                </div>
+            </div>
+        </div>
+        <div id="accounts-overlay" class="overlay hidden" role="dialog" aria-modal="true">
+            <div class="overlay-content accounts-content">
+                <h2>Select Hero</h2>
+                <div id="profiles-list-container" class="profiles-list">
+                    <!-- Profiles will be injected here -->
+                </div>
+                <div class="accounts-actions">
+                    <button type="button" id="new-game-profile-button" class="primary-button">New Game</button>
+                    <button type="button" id="close-accounts-button" class="secondary-button">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="new-profile-overlay" class="overlay hidden" role="dialog" aria-modal="true">
+            <div class="overlay-content miniature-content">
+                <h3>Enter Player Name</h3>
+                <input type="text" id="new-profile-name-input" maxlength="15" placeholder="Knight Name">
+                <div class="modal-buttons">
+                    <button type="button" id="confirm-new-profile-button" class="primary-button">Start</button>
+                    <button type="button" id="cancel-new-profile-button" class="secondary-button">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="delete-confirm-overlay" class="overlay hidden" role="dialog" aria-modal="true" style="z-index: 1000;">
+            <div class="overlay-content miniature-content">
+                <h3 style="color: var(--color-error);">Delete Hero?</h3>
+                <p id="delete-hero-name" style="font-size: 1.2rem; color: var(--color-gold-light);"></p>
+                <div class="modal-buttons">
+                    <button type="button" id="confirm-delete-button" class="primary-button"
+                        style="background: var(--color-error);">Confirm</button>
+                    <button type="button" id="cancel-delete-button" class="secondary-button">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="naked-challenge-overlay" class="overlay hidden" role="dialog" aria-modal="true" style="z-index: 1000;">
+            <div class="overlay-content miniature-content">
+                <h3 style="color: var(--color-gold-light);">🏆 Naked Challenge</h3>
+                <p style="text-align: center; margin: 10px 0;">Beat the entire game with <strong>No Armor</strong>!</p>
+                <p style="text-align: center; color: var(--color-error); font-size: 0.9rem;">⚠️ You will be locked to No
+                    Armor permanently on this save.</p>
+                <div class="modal-buttons">
+                    <button type="button" id="accept-naked-challenge-button" class="primary-button green-accent">Accept
+                        Challenge</button>
+                    <button type="button" id="decline-naked-challenge-button" class="secondary-button">Just
+                        Equip</button>
+                </div>
+            </div>
+        </div>
+
+
+        <div id="settings-overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+            <div class="overlay-content styled-overlay-content">
+                <div class="decorative-frame"></div>
+                <div class="overlay-scroll-container">
+                    <h2 id="settings-title" class="overlay-title">Options</h2>
+                    <div class="settings-container inset-panel">
+                        <div class="settings-row">
+                            <div class="setting-item half-width">
+                                <label for="music-volume">Music:</label>
+                                <input type="range" id="music-volume" min="0" max="1" step="0.1" value="0.3"
+                                    aria-labelledby="music-volume">
+                                <span class="volume-value" aria-hidden="true">30%</span>
+                            </div>
+                            <div class="setting-item half-width">
+                                <label for="sfx-volume">SFX:</label>
+                                <input type="range" id="sfx-volume" min="0" max="1" step="0.1" value="0.6"
+                                    aria-labelledby="sfx-volume">
+                                <span class="volume-value" aria-hidden="true">60%</span>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-toggle">
+                                <input type="checkbox" id="toggle-mute-setting"> Mute
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-toggle">
+                                <input type="checkbox" id="toggle-fullscreen-setting"> Fullscreen
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-toggle">
+                                <input type="checkbox" id="toggle-hp-bars-setting"> Show Unit HP Bars
+                            </label>
+                        </div>
+
+
+                    </div>
+                    <button type="button" id="close-settings-button" class="secondary-button"
+                        aria-label="Close Options"><span class="hotkey-highlight">B</span>ack</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="name-prompt-overlay" class="overlay" role="dialog" aria-modal="true"
+            aria-labelledby="name-prompt-title">
+            <div class="overlay-content styled-overlay-content">
+                <div class="decorative-frame gold-glow"></div>
+                <div class="overlay-scroll-container">
+                    <h2 id="name-prompt-title" class="overlay-title">Welcome, Hero</h2>
+                    <p class="center-text">Enter your name to begin your journey.</p>
+                    <div class="inset-panel name-input-panel">
+                        <label for="initial-player-name-input">Name:</label>
+                        <input type="text" id="initial-player-name-input" maxlength="12" placeholder="Hero Name">
+                        <button type="button" id="confirm-name-button"
+                            class="primary-button green-accent">Begin</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="achievements-overlay" class="overlay" role="dialog" aria-modal="true"
+            aria-labelledby="achievements-title">
+            <div class="overlay-content styled-overlay-content">
+                <div class="decorative-frame"></div>
+                <div class="overlay-scroll-container">
+                    <h2 id="achievements-title" class="overlay-title">Achievements</h2>
+                    <div id="achievements-list" class="inset-panel" aria-live="polite">
+                    </div>
+                    <p id="achievement-completion-status" aria-live="polite">Completion: 0 / X</p>
+                    <button type="button" id="close-achievements-button" class="secondary-button"
+                        aria-label="Close Achievements"><span class="hotkey-highlight">B</span>ack</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="shop-screen" class="overlay" role="dialog" aria-modal="true" aria-labelledby="shop-title">
+            <div class="overlay-content styled-overlay-content shop-content">
+                <div class="decorative-frame"></div>
+                <div class="overlay-scroll-container">
+                    <div class="shop-header-container">
+                        <div class="shop-tabs">
+                            <button type="button" class="shop-tab-button active" id="shop-tab-main"
+                                data-tab="main">Shop</button>
+                            <button type="button" class="shop-tab-button" id="shop-tab-armory"
+                                data-tab="armory">Armory</button>
+                        </div>
+                        <div id="shop-gold-display" class="gold-display menu-like-gold-display">
+                            <span class="icon icon-menu icon-gold" title="Gold" aria-label="Gold"></span>
+                            <span id="shop-gold-amount">0</span>
+                        </div>
+                    </div>
+                    <div id="shop-items-container">
+                        <h3 class="shop-section-header" id="shop-recruit-header">Recruit Units</h3>
+                        <div class="shop-item selectable" data-item-id="recruit_knight" data-unit-type="knight"
+                            data-max="12" data-cost="50" data-type="recruit" role="button" tabindex="0"
+                            aria-labelledby="shop-recruit-header">
+                            <h4><span class="shop-icon-container"><span class="shop-item-icon icon icon-unit-knight"
+                                        title="Knight Icon" aria-hidden="true"></span></span> Knight <span
+                                    class="unit-count">0</span>/12</h4>
+                            <p class="shop-cost-line">Cost: <span class="shop-item-cost">50</span><span
+                                    class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
+                        </div>
+                        <div class="shop-item selectable" data-item-id="recruit_archer" data-unit-type="archer"
+                            data-max="12" data-cost="80" data-type="recruit" role="button" tabindex="0"
+                            aria-labelledby="shop-recruit-header">
+                            <h4><span class="shop-icon-container"><span class="shop-item-icon icon icon-unit-archer"
+                                        title="Archer Icon" aria-hidden="true"></span></span> Archer (<span
+                                    class="unit-count">0</span>/12)</h4>
+                            <p class="shop-cost-line">Cost: <span class="shop-item-cost">80</span><span
+                                    class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
+                        </div>
+                        <div class="shop-item selectable" data-item-id="recruit_champion" data-unit-type="champion"
+                            data-max="12" data-cost="120" data-type="recruit" role="button" tabindex="0"
+                            aria-labelledby="shop-recruit-header">
+                            <h4><span class="shop-icon-container"><span class="shop-item-icon icon icon-unit-champion"
+                                        title="Champion Icon" aria-hidden="true"></span></span> Champion (<span
+                                    class="unit-count">0</span>/12)</h4>
+                            <p class="shop-cost-line">Cost: <span class="shop-item-cost">120</span><span
+                                    class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
+                        </div>
+                        <div class="shop-item selectable" data-item-id="recruit_rogue" data-unit-type="rogue"
+                            data-max="12" data-cost="150" data-type="recruit" role="button" tabindex="0"
+                            aria-labelledby="shop-recruit-header">
+                            <h4><span class="shop-icon-container"><span class="shop-item-icon icon icon-unit-rogue"
+                                        title="Rogue Icon" aria-hidden="true"></span></span> Rogue (<span
+                                    class="unit-count">0</span>/12)</h4>
+                            <p class="shop-cost-line">Cost: <span class="shop-item-cost">150</span><span
+                                    class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
+                        </div>
+                        <div class="shop-item selectable" data-item-id="recruit_wizard" data-unit-type="wizard"
+                            data-max="1" data-cost="250" data-type="recruit" role="button" tabindex="0"
+                            aria-labelledby="shop-recruit-header">
+                            <h4><span class="shop-icon-container"><span class="shop-item-icon icon icon-unit-wizard"
+                                        title="Wizard Icon" aria-hidden="true"></span></span> Wizard (<span
+                                    class="unit-count">0</span>/1)</h4>
+                            <p class="shop-cost-line">Cost: <span class="shop-item-cost">250</span><span
+                                    class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
+                        </div>
+
+                        <h3 class="shop-section-header" id="shop-upgrade-header">Unit Upgrades</h3>
+                        <!-- Condensed Armory Cards generated by JS -->
+
+
+                        <h3 class="shop-section-header" id="shop-specializations-header">Specializations</h3>
+                        <div class="shop-item selectable" data-item-id="upgrade_rogue_quickstrike" data-cost="100"
+                            data-type="ability_upgrade" data-max="1" role="button" tabindex="0"
+                            aria-labelledby="shop-specializations-header">
+                            <h4><span class="shop-icon-container"><span class="shop-item-icon icon icon-unit-rogue"
+                                        title="Rogue Icon" aria-hidden="true"></span></span> Rogue: Quick Strike</h4>
+                            <p class="shop-cost-line">Cost: <span class="shop-item-cost">100</span><span
+                                    class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
+                        </div>
+                        <div class="shop-item selectable" data-item-id="upgrade_wizard_polymorph" data-cost="500"
+                            data-type="ability_upgrade" data-max="1" role="button" tabindex="0"
+                            aria-labelledby="shop-specializations-header">
+                            <h4><span class="shop-icon-container"><span class="shop-item-icon icon icon-unit-wizard"
+                                        title="Wizard Icon" aria-hidden="true"></span></span> Wizard: Polymorph</h4>
+                            <p class="shop-cost-line">Cost: <span class="shop-item-cost">500</span><span
+                                    class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
+                        </div>
+
+
+                        <h3 class="shop-section-header" id="shop-spell-header">Spell Upgrades</h3>
+                        <div class="shop-item selectable locked" data-item-id="upgrade_spell_fireball"
+                            data-spell-name="fireball" data-level="0" data-required-level="6" data-type="spell_upgrade"
+                            data-cost="80" role="button" tabindex="0" aria-labelledby="shop-spell-header">
+                            <h4><span class="shop-icon-container"><span class="icon icon-shop icon-spell-fireball"
+                                        aria-hidden="true"></span></span> Fireball Lvl <span class="spell-level">Lvl
+                                    2</span>
+                            </h4>
+                            <p class="shop-cost-line">Cost: <span class="shop-item-cost">80</span><span
+                                    class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
+                        </div>
+                        <div class="shop-item selectable locked" data-item-id="upgrade_spell_flamewave"
+                            data-spell-name="flameWave" data-level="0" data-required-level="10"
+                            data-type="spell_upgrade" data-cost="100" role="button" tabindex="0"
+                            aria-labelledby="shop-spell-header">
+                            <h4><span class="shop-icon-container"><span class="icon icon-shop icon-spell-flameWave"
+                                        aria-hidden="true"></span></span> Flame Wave Lvl <span
+                                    class="spell-level">2</span>
+                            </h4>
+                            <p class="shop-cost-line">Cost: <span class="shop-item-cost">100</span><span
+                                    class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
+                        </div>
+                        <div class="shop-item selectable locked" data-item-id="upgrade_spell_frostnova"
+                            data-spell-name="frostNova" data-level="0" data-required-level="14"
+                            data-type="spell_upgrade" data-cost="80" role="button" tabindex="0"
+                            aria-labelledby="shop-spell-header">
+                            <h4><span class="shop-icon-container"><span class="icon icon-shop icon-spell-frostNova"
+                                        aria-hidden="true"></span></span> Frost Nova Lvl <span
+                                    class="spell-level">2</span>
+                            </h4>
+                            <p class="shop-cost-line">Cost: <span class="shop-item-cost">80</span><span
+                                    class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
+                        </div>
+                        <div class="shop-item selectable locked" data-item-id="upgrade_spell_heal"
+                            data-spell-name="heal" data-level="0" data-required-level="18" data-type="spell_upgrade"
+                            data-cost="80" role="button" tabindex="0" aria-labelledby="shop-spell-header">
+                            <h4><span class="shop-icon-container"><span class="icon icon-shop icon-spell-heal"
+                                        aria-hidden="true"></span></span> Heal Lvl <span class="spell-level">2</span>
+                            </h4>
+                            <p class="shop-cost-line">Cost: <span class="shop-item-cost">80</span><span
+                                    class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
+                        </div>
+
+                        <h3 class="shop-section-header" id="shop-passive-header">Passives</h3>
+                        <div class="shop-item" data-item-id="passive_gold_magnet" data-cost="0" data-type="passive"
+                            aria-labelledby="shop-passive-header">
+                            <h4><span class="shop-icon-container"><span class="icon icon-shop icon-goldmagnet"
+                                        aria-hidden="true"></span></span> Gold Magnet<span class="passive-level">Lvl
+                                    0</span></h4>
+                            <p class="shop-cost-line"><span class="shop-item-cost">Drop Only</span></p>
+                        </div>
+                        <div class="shop-item selectable locked" data-item-id="tactical_command" data-cost="200"
+                            data-required-units="8" data-type="passive_purchase" role="button" tabindex="0"
+                            aria-labelledby="shop-passive-header">
+                            <h4><span class="shop-icon-container"><span class="icon icon-shop icon-tacticalcommand"
+                                        aria-hidden="true"></span></span> Tactical Command</h4>
+                            <p class="shop-cost-line">Cost: <span class="shop-item-cost">200</span><span
+                                    class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
+                        </div>
+
+                        <h3 class="shop-section-header" id="shop-equipment-header">Equipment</h3>
+                        <div class="shop-item selectable" data-item-id="armor_none" data-armor-id="none"
+                            data-type="armor" role="button" tabindex="0" aria-labelledby="shop-equipment-header">
+                            <h4><span class="shop-icon-container"><span
+                                        class="shop-item-icon icon icon-armor icon-armor-none"
+                                        title="No Armor Icon"></span></span> No Armor</h4>
+                            <p class="shop-item-description">+1 MOV, Max HP: 1</p>
+                        </div>
+                        <div class="shop-item selectable" data-item-id="armor_grey" data-armor-id="grey"
+                            data-type="armor" role="button" tabindex="0" aria-labelledby="shop-equipment-header">
+                            <h4><span class="shop-icon-container"><span
+                                        class="shop-item-icon icon icon-armor icon-armor-grey"
+                                        title="Grey Armor Icon"></span></span> Grey Armor</h4>
+                            <p class="shop-item-description">No special bonuses.</p>
+                        </div>
+                        <div class="shop-item selectable hidden" data-item-id="armor_green" data-armor-id="green"
+                            data-type="armor" role="button" tabindex="0" aria-labelledby="shop-equipment-header">
+                            <h4 class="item-uncommon"><span class="shop-icon-container"><span
+                                        class="shop-item-icon icon icon-armor icon-armor-green"
+                                        title="Forest Armor Icon"></span></span> Forest Armor<span
+                                    class="armor-level">Lvl
+                                    1</span></h4>
+                            <p class="shop-item-description">Activate Forest Armor. -1 damage from all enemy attacks for
+                                1 turn.</p>
+                        </div>
+                        <div class="shop-item selectable hidden" data-item-id="armor_red" data-armor-id="red"
+                            data-type="armor" role="button" tabindex="0" aria-labelledby="shop-equipment-header">
+                            <h4 class="item-uncommon"><span class="shop-icon-container"><span
+                                        class="shop-item-icon icon icon-armor icon-armor-red"
+                                        title="Ember Armor Icon"></span></span> Ember Armor<span class="armor-level">Lvl
+                                    1</span></h4>
+                            <p class="shop-item-description">+1 ATK</p>
+                            <p class="shop-item-resistance hidden">+1 Fire Resistance</p>
+                        </div>
+                        <div class="shop-item selectable hidden" data-item-id="armor_yellow" data-armor-id="yellow"
+                            data-type="armor" role="button" tabindex="0" aria-labelledby="shop-equipment-header">
+                            <h4 class="item-uncommon"><span class="shop-icon-container"><span
+                                        class="shop-item-icon icon icon-armor icon-armor-yellow"
+                                        title="Sand Armor Icon"></span></span> Sand Armor<span class="armor-level">Lvl
+                                    1</span></h4>
+                            <p class="shop-item-description">+1 MOV</p>
+                        </div>
+                        <div class="shop-item selectable hidden" data-item-id="armor_blue" data-armor-id="blue"
+                            data-type="armor" role="button" tabindex="0" aria-labelledby="shop-equipment-header">
+                            <h4 class="item-uncommon"><span class="shop-icon-container"><span
+                                        class="shop-item-icon icon icon-armor icon-armor-blue"
+                                        title="Azure Armor Icon"></span></span> Azure Armor<span class="armor-level">Lvl
+                                    1</span></h4>
+                            <p class="shop-item-description">+1 HP</p>
+                            <p class="shop-item-resistance hidden">+1 Frost Resistance</p>
+                        </div>
+                        <div class="shop-item selectable hidden" data-item-id="armor_goblin_mother_skull"
+                            data-armor-id="goblin_mother_skull" data-type="helmet" role="button" tabindex="0"
+                            aria-labelledby="shop-equipment-header">
+                            <h4 class="item-uncommon"><span class="shop-icon-container"><span
+                                        class="shop-item-icon icon icon-armor icon-armor-goblin_mother_skull"
+                                        title="Goblin Mother Skull Icon"></span></span> Goblin Mother Skull <span
+                                    class="armor-level">Lvl 1</span></h4>
+                            <p class="shop-item-description"></p>
+                        </div>
+                        <div class="shop-item selectable hidden" data-item-id="war_bow" data-type="equipment"
+                            role="button" tabindex="0" aria-labelledby="shop-equipment-header">
+                            <h4 class="item-uncommon"><span class="shop-icon-container"><span
+                                        class="shop-item-icon icon icon-warbow" title="War Bow Icon"
+                                        aria-hidden="true"></span></span> War Bow</h4>
+                            <p class="shop-item-description"></p>
+                        </div>
+                        <div class="shop-item selectable hidden" data-item-id="flame_cloak" data-type="cloak"
+                            role="button" tabindex="0" aria-labelledby="shop-equipment-header">
+                            <h4 class="item-rare"><span class="shop-icon-container"><span
+                                        class="shop-item-icon icon icon-flame-cloak" title="Flame Cloak Icon"
+                                        aria-hidden="true"></span></span> Flame Cloak</h4>
+                            <p class="shop-item-description"></p>
+                        </div>
+                        <div class="shop-item selectable hidden" data-item-id="flame_ring" data-type="ring"
+                            role="button" tabindex="0" aria-labelledby="shop-equipment-header">
+                            <h4 class="item-epic"><span class="shop-icon-container"><span
+                                        class="shop-item-icon icon icon-flame-ring" title="Flame Ring Icon"
+                                        aria-hidden="true"></span></span> Flame Ring</h4>
+                            <p class="shop-item-description"></p>
+                        </div>
+                    </div>
+
+                    <div id="shop-selected-item-info" class="shop-message" aria-live="polite">Select an item
+                        above.</div>
+                    <div id="shop-feedback" class="shop-message" aria-live="polite"></div>
+
+                    <div class="shop-bottom-bar">
+                        <button type="button" id="shop-troops-button" class="primary-button">Choose&nbsp;<span
+                                class="hotkey-highlight">T</span>roops</button>
+                        <button type="button" id="shop-action-button" class="primary-button green-accent hidden"
+                            data-action="buy">Buy</button>
+                        <button type="button" id="shop-exit-button" class="secondary-button"
+                            title="Continue (E)">Continu<span class="hotkey-highlight">e</span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="choose-troops-screen" class="overlay" role="dialog" aria-modal="true"
+            aria-labelledby="choose-troops-title">
+            <div class="overlay-content styled-overlay-content choose-troops-content">
+                <div class="decorative-frame gold-glow"></div>
+                <div class="overlay-scroll-container">
+                    <h2 id="choose-troops-title" class="overlay-title">Choose Troops</h2>
+                    <div class="troops-section current-troops">
+                        <h3 id="current-roster-header">Active (<span id="current-roster-count">0</span>/<span
+                                id="max-roster-size">8</span>)</h3>
+                        <div id="current-troops-list" class="troops-list" aria-labelledby="current-roster-header"></div>
+                    </div>
+                    <div class="troops-section available-troops">
+                        <h3 id="available-troops-header">Inactive</h3>
+                        <div id="available-troops-list" class="troops-list" aria-labelledby="available-troops-header">
+                        </div>
+                    </div>
+                    <div id="choose-troops-feedback" class="shop-message" aria-live="polite"></div>
+                    <div class="choose-troops-buttons bottom-bar-style">
+                        <button type="button" id="troops-back-button" class="secondary-button" title="Back (B)"><span
+                                class="hotkey-highlight">B</span>ack</button>
+                        <button type="button" id="confirm-troops-button"
+                            class="primary-button green-accent">Continu<span class="hotkey-highlight">e</span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="debug-spawner-overlay" class="overlay hidden" role="dialog" aria-modal="true">
+            <div class="overlay-content styled-overlay-content debug-spawner-content">
+                <div class="overlay-scroll-container">
+                    <div id="debug-enemy-grid" class="debug-enemy-grid"></div>
+                    <button type="button" id="close-debug-spawner-button" class="secondary-button">Close (ESC)</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="tooltip" role="tooltip"></div>
+
+        <canvas id="recolor-canvas" width="40" height="40" style="display: none;"></canvas>
+
+    </div>
+
+    <!-- Firebase Compat for file:// protocol support -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="leaderboard.js"></script>
+
+    <script src="config.js" defer></script>
+    <script src="gameLogic.js" defer></script>
+    <script src="ui.js" defer></script>
+</body>
+
+</html>
