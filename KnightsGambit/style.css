@@ -1923,9 +1923,9 @@ body {
 .icon-spell-arcaneJolt,
 .icon-spell-polymorph,
 .icon-ability-quickStrike,
-.icon-skill-tacticalCommand {
+.icon-skill-tacticalcommand {
     background-image: url('./sprites/skills.png') !important;
-    background-size: 500% 200% !important;
+    background-size: 500% 300% !important;
     background-repeat: no-repeat;
 }
 
@@ -1950,11 +1950,11 @@ body {
 }
 
 .icon-ability-quickStrike {
-    background-position: 0% 100%;
+    background-position: 0% 50%;
 }
 
-.icon-skill-tacticalCommand {
-    background-position: 25% 100%;
+.icon-skill-tacticalcommand {
+    background-position: 25% 50%;
 }
 
 .end-turn-style {
@@ -3663,13 +3663,13 @@ button:disabled,
 
 .shop-icon-container .icon.icon-shop.icon-spell-flameWave {
     background-image: url('./sprites/skills.png') !important;
-    background-size: 500% 200% !important;
+    background-size: 500% 300% !important;
     background-position: 0% 0% !important;
 }
 
 .shop-icon-container .icon.icon-shop.icon-spell-frostNova {
     background-image: url('./sprites/skills.png') !important;
-    background-size: 500% 200% !important;
+    background-size: 500% 300% !important;
     background-position: 25% 0% !important;
 }
 
@@ -3677,7 +3677,7 @@ button:disabled,
 .icon-spell-frostNova,
 .icon-spell-heal {
     background-image: url('./sprites/skills.png') !important;
-    background-size: 500% 200% !important;
+    background-size: 500% 300% !important;
 }
 
 /* Projectile Styles */
@@ -3709,7 +3709,7 @@ button:disabled,
 
 .shop-icon-container .icon.icon-shop.icon-spell-heal {
     background-image: url('./sprites/skills.png') !important;
-    background-size: 500% 200% !important;
+    background-size: 500% 300% !important;
     background-position: 50% 0% !important;
 }
 
@@ -3720,11 +3720,41 @@ button:disabled,
 }
 
 /* Tactical Command - User specified: skills.png, Col 1 Row 1 (2nd col, 2nd row -> 25% 100%) */
-.shop-icon-container .icon.icon-shop.icon-tacticalcommand {
+/* Passive Icons on the new 5x3 skills.png sheet */
+.shop-icon-container .icon.icon-shop.icon-skill-tacticalcommand,
+.shop-icon-container .icon.icon-shop.icon-skill-loothoarder,
+.shop-icon-container .icon.icon-shop.icon-skill-evasion,
+.shop-icon-container .icon.icon-shop.icon-skill-thorns,
+.shop-icon-container .icon.icon-shop.icon-skill-vampiricaura {
     background-image: url('./sprites/skills.png') !important;
-    background-size: 500% 200% !important;
-    background-position: 25% 100% !important;
+    background-size: 500% 300% !important;
 }
+
+.shop-icon-container .icon.icon-shop.icon-skill-tacticalcommand {
+    background-position: 25% 50% !important;
+}
+
+/* Row 1, Col 1 */
+.shop-icon-container .icon.icon-shop.icon-skill-loothoarder {
+    background-position: 50% 50% !important;
+}
+
+/* Row 1, Col 2 */
+.shop-icon-container .icon.icon-shop.icon-skill-evasion {
+    background-position: 75% 50% !important;
+}
+
+/* Row 1, Col 3 */
+.shop-icon-container .icon.icon-shop.icon-skill-thorns {
+    background-position: 100% 50% !important;
+}
+
+/* Row 1, Col 4 */
+.shop-icon-container .icon.icon-shop.icon-skill-vampiricaura {
+    background-position: 0% 100% !important;
+}
+
+/* Row 2, Col 0 */
 
 /* Equipment Icons - Target .icon generic class as they lack .icon-shop */
 .shop-icon-container .icon.icon-warbow {
@@ -3748,14 +3778,14 @@ button:disabled,
 /* Rogue Quick Strike (Armory) - skills.png Col 0 Row 1 */
 .shop-icon-container .icon.icon-ability-quickStrike {
     background-image: url('./sprites/skills.png') !important;
-    background-size: 500% 200% !important;
-    background-position: 0% 100% !important;
+    background-size: 500% 300% !important;
+    background-position: 0% 50% !important;
 }
 
 /* Wizard Polymorph (Armory) - skills.png Col 4 Row 0 */
 .shop-icon-container .icon.icon-spell-polymorph {
     background-image: url('./sprites/skills.png') !important;
-    background-size: 500% 200% !important;
+    background-size: 500% 300% !important;
     background-position: 100% 0% !important;
 }
 
@@ -3811,16 +3841,22 @@ button:disabled,
     cursor: not-allowed !important;
 }
 
-/* Ensure active passives (which are technically "maxed") stay fully visible */
+/* Ensure active passives (which are technically "maxed") stay IDENTICAL to unpurchased cards */
 .shop-item[data-type="passive_purchase"].maxed,
 .shop-item[data-type="passive"].maxed {
     opacity: 1 !important;
     background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.45)) !important;
-    background-image: none !important;
-    /* Ensure no underlying images from .shop-item base class */
     border-color: rgba(255, 255, 255, 0.1) !important;
     filter: none !important;
     cursor: default !important;
+}
+
+/* Tactical Command - Legacy class support */
+.shop-icon-container .icon.icon-shop.icon-tacticalcommand,
+.shop-icon-container .icon.icon-shop.icon-skill-tacticalcommand {
+    background-image: url('./sprites/skills.png') !important;
+    background-size: 500% 300% !important;
+    background-position: 25% 50% !important;
 }
 
 .shop-item[data-type="armor"].hidden {
@@ -4093,7 +4129,7 @@ p.shop-item-resistance {
 (max-aspect-ratio: 1/1) {
     :root {
         font-size: clamp(10px, 2.3vmin, 15px);
-        --level-dot-size: clamp(12px, 2vmin, 12px);
+        --level-dot-size: clamp(48px, 6vmin, 54px);
         --icon-button-size: 40px;
         --ui-panel-width: 100%;
     }
@@ -5938,18 +5974,18 @@ p.shop-item-resistance {
 }
 
 .icon-skill-quickStrike {
-    background-position: 0 100%;
+    background-position: 0 50%;
 }
 
-.icon-skill-tacticalCommand {
-    background-position: 25% 100%;
+.icon-skill-tacticalcommand {
+    background-position: 25% 50%;
 }
 
 .skill-icon {
     width: 40px;
     height: 40px;
     background-image: var(--spritesheet-skills);
-    background-size: 500% 200%;
+    background-size: 500% 300%;
     display: inline-block;
     image-rendering: pixelated;
 }
@@ -6056,8 +6092,8 @@ p.shop-item-resistance {
 /* Override .icon class for Quick Strike button - use skills.png instead of items.png */
 #unit-abilities .icon.icon-ability-quickStrike {
     background-image: url('./sprites/skills.png') !important;
-    background-size: 500% 200% !important;
-    background-position: 25% 100% !important;
+    background-size: 500% 300% !important;
+    background-position: 0% 50% !important;
 }
 
 /* Disabled/locked ability buttons should still show icons, just darkened */
@@ -6588,7 +6624,7 @@ p.shop-item-resistance {
 
     /* Enable the map to pan further on zoomed views */
     .level-dot {
-        transform: translate(-50%, -50%) scale(1.5);
+        transform: translate(-50%, -50%) scale(2.5);
         /* Make dots bigger for easier tapping */
     }
 }

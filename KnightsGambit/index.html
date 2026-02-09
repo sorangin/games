@@ -298,14 +298,47 @@
                 <div class="overlay-scroll-container">
                     <h2 id="menu-title" class="overlay-title">Menu</h2>
                     <div id="menu-buttons-container">
-                        <div class="menu-icon-row">
-                            <button type="button" id="menu-options-button" class="primary-button icon-button"
-                                title="Options"><span>⚙️</span></button>
-                            <button type="button" id="restart-level-setting-button" class="primary-button icon-button"
-                                title="Restart Current Level"><span>🔄</span></button>
+                        <div class="settings-container inset-panel" style="margin-bottom: 20px;">
+                            <div class="settings-row">
+                                <div class="setting-item half-width">
+                                    <label for="menu-music-volume">Music:</label>
+                                    <input type="range" id="menu-music-volume" class="music-volume-slider" min="0"
+                                        max="1" step="0.1" value="0.3">
+                                    <span class="volume-value music-volume-value" aria-hidden="true">30%</span>
+                                </div>
+                                <div class="setting-item half-width">
+                                    <label for="menu-sfx-volume">SFX:</label>
+                                    <input type="range" id="menu-sfx-volume" class="sfx-volume-slider" min="0" max="1"
+                                        step="0.1" value="0.6">
+                                    <span class="volume-value sfx-volume-value" aria-hidden="true">60%</span>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <label class="setting-toggle">
+                                    <input type="checkbox" id="menu-toggle-mute-setting" class="mute-toggle-checkbox">
+                                    Mute
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <label class="setting-toggle">
+                                    <input type="checkbox" id="menu-toggle-fullscreen-setting"
+                                        class="fullscreen-toggle-checkbox"> Fullscreen
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <label class="setting-toggle">
+                                    <input type="checkbox" id="menu-toggle-hp-bars-setting"
+                                        class="hp-bars-toggle-checkbox"> Show Unit HP Bars
+                                </label>
+                            </div>
                         </div>
-                        <button type="button" id="quit-button" class="primary-button" title="Quit to Level Select"
-                            data-action="quit">Quit Game</button>
+
+                        <div class="menu-action-row" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <button type="button" id="restart-level-setting-button" class="primary-button"
+                                style="flex: 1;" title="Restart Current Level">Restart Level</button>
+                            <button type="button" id="quit-button" class="primary-button" style="flex: 1;"
+                                title="Quit to Level Select" data-action="quit">Quit Game</button>
+                        </div>
                         <button type="button" id="quit-to-main-menu-button" class="secondary-button"
                             title="Quit to Main Menu">Quit to Main Menu</button>
                     </div>
@@ -378,30 +411,32 @@
                         <div class="settings-row">
                             <div class="setting-item half-width">
                                 <label for="music-volume">Music:</label>
-                                <input type="range" id="music-volume" min="0" max="1" step="0.1" value="0.3"
-                                    aria-labelledby="music-volume">
-                                <span class="volume-value" aria-hidden="true">30%</span>
+                                <input type="range" id="music-volume" class="music-volume-slider" min="0" max="1"
+                                    step="0.1" value="0.3" aria-labelledby="music-volume">
+                                <span class="volume-value music-volume-value" aria-hidden="true">30%</span>
                             </div>
                             <div class="setting-item half-width">
                                 <label for="sfx-volume">SFX:</label>
-                                <input type="range" id="sfx-volume" min="0" max="1" step="0.1" value="0.6"
-                                    aria-labelledby="sfx-volume">
-                                <span class="volume-value" aria-hidden="true">60%</span>
+                                <input type="range" id="sfx-volume" class="sfx-volume-slider" min="0" max="1" step="0.1"
+                                    value="0.6" aria-labelledby="sfx-volume">
+                                <span class="volume-value sfx-volume-value" aria-hidden="true">60%</span>
                             </div>
                         </div>
                         <div class="setting-item">
                             <label class="setting-toggle">
-                                <input type="checkbox" id="toggle-mute-setting"> Mute
+                                <input type="checkbox" id="toggle-mute-setting" class="mute-toggle-checkbox"> Mute
                             </label>
                         </div>
                         <div class="setting-item">
                             <label class="setting-toggle">
-                                <input type="checkbox" id="toggle-fullscreen-setting"> Fullscreen
+                                <input type="checkbox" id="toggle-fullscreen-setting"
+                                    class="fullscreen-toggle-checkbox"> Fullscreen
                             </label>
                         </div>
                         <div class="setting-item">
                             <label class="setting-toggle">
-                                <input type="checkbox" id="toggle-hp-bars-setting"> Show Unit HP Bars
+                                <input type="checkbox" id="toggle-hp-bars-setting" class="hp-bars-toggle-checkbox"> Show
+                                Unit HP Bars
                             </label>
                         </div>
 
@@ -585,7 +620,8 @@
                         <div class="shop-item selectable locked" data-item-id="tactical_command" data-cost="200"
                             data-type="passive_purchase" role="button" tabindex="0"
                             aria-labelledby="shop-passive-header">
-                            <h4><span class="shop-icon-container"><span class="icon icon-shop icon-tacticalcommand"
+                            <h4><span class="shop-icon-container"><span
+                                        class="icon icon-shop icon-skill-tacticalcommand"
                                         aria-hidden="true"></span></span> Tactical Command</h4>
                             <p class="shop-cost-line">Cost: <span class="shop-item-cost">200</span><span
                                     class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
@@ -594,7 +630,7 @@
                         <div class="shop-item selectable locked" data-item-id="loot_hoarder" data-cost="250"
                             data-type="passive_purchase" role="button" tabindex="0"
                             aria-labelledby="shop-passive-header">
-                            <h4><span class="shop-icon-container"><span class="icon icon-shop icon-gold"
+                            <h4><span class="shop-icon-container"><span class="icon icon-shop icon-skill-loothoarder"
                                         aria-hidden="true"></span></span> Loot Hoarder</h4>
                             <p class="shop-cost-line">Cost: <span class="shop-item-cost">250</span><span
                                     class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
@@ -603,7 +639,7 @@
                         <div class="shop-item selectable locked" data-item-id="evasion" data-cost="300"
                             data-type="passive_purchase" data-required-level="25" role="button" tabindex="0"
                             aria-labelledby="shop-passive-header">
-                            <h4><span class="shop-icon-container"><span class="icon icon-shop icon-unit-rogue"
+                            <h4><span class="shop-icon-container"><span class="icon icon-shop icon-skill-evasion"
                                         aria-hidden="true"></span></span> Evasion</h4>
                             <p class="shop-cost-line">Cost: <span class="shop-item-cost">300</span><span
                                     class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
@@ -612,7 +648,7 @@
                         <div class="shop-item selectable locked" data-item-id="thorns" data-cost="350"
                             data-type="passive_purchase" data-required-level="35" role="button" tabindex="0"
                             aria-labelledby="shop-passive-header">
-                            <h4><span class="shop-icon-container"><span class="icon icon-shop icon-shield"
+                            <h4><span class="shop-icon-container"><span class="icon icon-shop icon-skill-thorns"
                                         aria-hidden="true"></span></span> Thorns</h4>
                             <p class="shop-cost-line">Cost: <span class="shop-item-cost">350</span><span
                                     class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>
@@ -621,7 +657,7 @@
                         <div class="shop-item selectable locked" data-item-id="vampiric_aura" data-cost="450"
                             data-type="passive_purchase" data-required-level="50" role="button" tabindex="0"
                             aria-labelledby="shop-passive-header">
-                            <h4><span class="shop-icon-container"><span class="icon icon-shop icon-potion"
+                            <h4><span class="shop-icon-container"><span class="icon icon-shop icon-skill-vampiricaura"
                                         aria-hidden="true"></span></span> Vampiric Aura</h4>
                             <p class="shop-cost-line">Cost: <span class="shop-item-cost">450</span><span
                                     class="icon icon-inline icon-gold" title="Gold" aria-label="Gold"></span></p>

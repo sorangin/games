@@ -1885,11 +1885,29 @@ function handlePanEndTouch(event) { if (!isPanning) return; isPanning = false; g
 function clampPan() {
     if (!gameBoard || !gridContent || currentZoom <= 0) return;
     const boardRect = gameBoard.getBoundingClientRect();
-    const gridRenderedWidth = gridContent.offsetWidth * currentZoom; const gridRenderedHeight = gridContent.offsetHeight * currentZoom;
+    const gridWidth = gridContent.offsetWidth; const gridHeight = gridContent.offsetHeight;
+    const gridRenderedWidth = gridWidth * currentZoom; const gridRenderedHeight = gridHeight * currentZoom;
     let minOffsetX, maxOffsetX, minOffsetY, maxOffsetY; const padding = 5;
-    if (gridRenderedWidth < boardRect.width) { minOffsetX = maxOffsetX = (boardRect.width - gridRenderedWidth) / 2; } else { minOffsetX = boardRect.width - gridRenderedWidth - padding; maxOffsetX = padding; }
-    if (gridRenderedHeight < boardRect.height) { minOffsetY = maxOffsetY = (boardRect.height - gridRenderedHeight) / 2; } else { minOffsetY = boardRect.height - gridRenderedHeight - padding; maxOffsetY = padding; }
-    gridContentOffsetX = Math.max(minOffsetX, Math.min(maxOffsetX, gridContentOffsetX)); gridContentOffsetY = Math.max(minOffsetY, Math.min(maxOffsetY, gridContentOffsetY));
+
+    // Tolerance to prevent wiggling when "fit to screen"
+    const tolerance = 2;
+
+    if (gridRenderedWidth <= boardRect.width + tolerance) {
+        minOffsetX = maxOffsetX = (boardRect.width - gridRenderedWidth) / 2;
+    } else {
+        minOffsetX = boardRect.width - gridRenderedWidth - padding;
+        maxOffsetX = padding;
+    }
+
+    if (gridRenderedHeight <= boardRect.height + tolerance) {
+        minOffsetY = maxOffsetY = (boardRect.height - gridRenderedHeight) / 2;
+    } else {
+        minOffsetY = boardRect.height - gridRenderedHeight - padding;
+        maxOffsetY = padding;
+    }
+
+    gridContentOffsetX = Math.max(minOffsetX, Math.min(maxOffsetX, gridContentOffsetX));
+    gridContentOffsetY = Math.max(minOffsetY, Math.min(maxOffsetY, gridContentOffsetY));
 }
 
 function isDefaultView() {
@@ -1956,7 +1974,7 @@ function applyMapZoomAndPan(immediate = false) {
 }
 
 function calculateMapScale(containerWidth, containerHeight, intrinsicWidth, intrinsicHeight) { const safeMapWidth = Math.max(1, intrinsicWidth || 1024); const safeMapHeight = Math.max(1, intrinsicHeight || 1024); const scaleX = containerWidth / safeMapWidth; const scaleY = containerHeight / safeMapHeight; return Math.max(scaleX, scaleY); }
-function clampMapOffsets(rawOffsetX, rawOffsetY) { if (!levelSelectMapContainer || !levelSelectMap) return { x: 0, y: 0 }; const containerRect = levelSelectMapContainer.getBoundingClientRect(); if (containerRect.width <= 0 || containerRect.height <= 0) return { x: mapOffsetX || 0, y: mapOffsetY || 0 }; const safeMapWidth = Math.max(1, mapIntrinsicWidth || 1024); const safeMapHeight = Math.max(1, mapIntrinsicHeight || 1024); const baseScale = calculateMapScale(containerRect.width, containerRect.height, safeMapWidth, safeMapHeight); const currentMapZoom = (typeof mapZoom === 'number' && !isNaN(mapZoom) && mapZoom >= MIN_MAP_ZOOM) ? Math.min(MAX_MAP_ZOOM, mapZoom) : MIN_MAP_ZOOM; const finalScale = baseScale * currentMapZoom; if (finalScale <= 0 || isNaN(finalScale)) return { x: mapOffsetX || 0, y: mapOffsetY || 0 }; const mapRenderWidth = safeMapWidth * finalScale; const mapRenderHeight = safeMapHeight * finalScale; let minOffsetX = 0, maxOffsetX = 0, minOffsetY = 0, maxOffsetY = 0; const padding = 0; if (mapRenderWidth < containerRect.width) { minOffsetX = maxOffsetX = (containerRect.width - mapRenderWidth) / 2; } else { maxOffsetX = padding; minOffsetX = containerRect.width - mapRenderWidth - padding; } if (mapRenderHeight < containerRect.height) { minOffsetY = maxOffsetY = (containerRect.height - mapRenderHeight) / 2; } else { maxOffsetY = padding; minOffsetY = containerRect.height - mapRenderHeight - padding; } const clampedX = Math.max(minOffsetX, Math.min(maxOffsetX, rawOffsetX)); const clampedY = Math.max(minOffsetY, Math.min(maxOffsetY, rawOffsetY)); return { x: clampedX, y: clampedY }; }
+function clampMapOffsets(rawOffsetX, rawOffsetY) { if (!levelSelectMapContainer || !levelSelectMap) return { x: 0, y: 0 }; const containerRect = levelSelectMapContainer.getBoundingClientRect(); if (containerRect.width <= 0 || containerRect.height <= 0) return { x: mapOffsetX || 0, y: mapOffsetY || 0 }; const safeMapWidth = Math.max(1, mapIntrinsicWidth || 1024); const safeMapHeight = Math.max(1, mapIntrinsicHeight || 1024); const baseScale = calculateMapScale(containerRect.width, containerRect.height, safeMapWidth, safeMapHeight); const currentMapZoom = (typeof mapZoom === 'number' && !isNaN(mapZoom) && mapZoom >= MIN_MAP_ZOOM) ? Math.min(MAX_MAP_ZOOM, mapZoom) : MIN_MAP_ZOOM; const finalScale = baseScale * currentMapZoom; if (finalScale <= 0 || isNaN(finalScale)) return { x: mapOffsetX || 0, y: mapOffsetY || 0 }; const mapRenderWidth = safeMapWidth * finalScale; const mapRenderHeight = safeMapHeight * finalScale; let minOffsetX = 0, maxOffsetX = 0, minOffsetY = 0, maxOffsetY = 0; const padding = 0; if (mapRenderWidth <= containerRect.width + 1) { minOffsetX = maxOffsetX = (containerRect.width - mapRenderWidth) / 2; } else { maxOffsetX = padding; minOffsetX = containerRect.width - mapRenderWidth - padding; } if (mapRenderHeight <= containerRect.height + 1) { minOffsetY = maxOffsetY = (containerRect.height - mapRenderHeight) / 2; } else { maxOffsetY = padding; minOffsetY = containerRect.height - mapRenderHeight - padding; } if (currentMapZoom <= MIN_MAP_ZOOM + 0.01) { return { x: (containerRect.width - mapRenderWidth) / 2, y: (containerRect.height - mapRenderHeight) / 2 }; } const clampedX = Math.max(minOffsetX, Math.min(maxOffsetX, rawOffsetX)); const clampedY = Math.max(minOffsetY, Math.min(maxOffsetY, rawOffsetY)); return { x: clampedX, y: clampedY }; }
 
 function handleMapPanStart(event) { const clickedDot = event.target.closest('.level-dot'); const clickedButton = event.target.closest('button, .primary-button, .secondary-button, .pagination-button'); const anotherOverlayActive = isGameOverScreenVisible() || isMenuOpen() || isLeaderboardOpen() || isShopOpen() || isLevelCompleteOpen() || isChooseTroopsScreenOpen() || isMainMenuOpen() || isSettingsOpen() || isAchievementsOpen(); if (event.button !== 0 || clickedDot || clickedButton || anotherOverlayActive) { isMapPanning = false; if (levelSelectMapContainer) levelSelectMapContainer.style.cursor = 'grab'; return; } event.preventDefault(); isMapPanning = true; mapPanStartX = event.clientX; mapPanStartY = event.clientY; mapStartPanX = mapOffsetX; mapStartPanY = mapOffsetY; if (levelSelectMapContainer) levelSelectMapContainer.style.cursor = 'grabbing'; document.addEventListener('mousemove', handleMapPanMove, { passive: false, capture: true }); document.addEventListener('mouseup', handleMapPanEnd, { once: true, capture: true }); }
 function handleMapPanMove(event) { if (!isMapPanning || !levelSelectMap || !levelSelectMapContainer) return; event.preventDefault(); const deltaX = event.clientX - mapPanStartX; const deltaY = event.clientY - mapPanStartY; const rawOffsetX = mapStartPanX + deltaX; const rawOffsetY = mapStartPanY + deltaY; const clampedOffsets = clampMapOffsets(rawOffsetX, rawOffsetY); mapOffsetX = clampedOffsets.x; mapOffsetY = clampedOffsets.y; applyMapZoomAndPan(true); }
@@ -2700,9 +2718,51 @@ function showGameOverScreen(playerWon, message, isForfeit = false) {
     if (playerWon) playVictoryMusic();
     else playDefeatMusic();
     startTooltipUpdater(); if (!gameOverScreen || !gameOverTitle || !gameOverMessage || !restartButton || !gameOverToTitleButton) return; gameOverTitle.textContent = playerWon ? "Victory!" : (isForfeit ? "Level Forfeited" : "Defeat!"); gameOverMessage.innerHTML = message; restartButton.innerHTML = playerWon ? "Play Again?" : "<span class=\"hotkey-highlight\">R</span>estart Level"; restartButton.style.display = (isForfeit || playerWon) ? 'none' : 'inline-block'; gameOverToTitleButton.innerHTML = "Continu<span class=\"hotkey-highlight\">e</span>"; gameOverScreen.classList.remove('hidden'); gameOverScreen.classList.add('visible');
-} function hideGameOverScreen() { gameOverScreen?.classList.remove('visible'); gameOverScreen?.classList.add('hidden'); stopMusic(); selectAndLoadMusic(); startTooltipUpdater(); } function isGameOverScreenVisible() { return gameOverScreen?.classList.contains('visible'); }
-function showMenu() { if (!isAnyOverlayVisible() && isGameActive()) { menuOverlay?.classList.remove('hidden'); menuOverlay?.classList.add('visible'); updateGoldDisplay(); updateQuitButton(); stopTooltipUpdater(); startTooltipUpdater(); } } function hideMenu() { menuOverlay?.classList.remove('visible'); menuOverlay?.classList.add('hidden'); stopTooltipUpdater(); if (isGameActive() && !isAnyOverlayVisible()) startTooltipUpdater(); } function isMenuOpen() { return menuOverlay?.classList.contains('visible'); }
-function showSettings(originMenu = false) { hideAllOverlays(); settingsOverlay?.classList.remove('hidden'); settingsOverlay?.classList.add('visible'); loadSettings(); if (musicVolumeSlider) musicVolumeSlider.value = musicVolume; if (musicVolumeValueSpan) musicVolumeValueSpan.textContent = `${Math.round(musicVolume * 100)}%`; if (sfxVolumeSlider) sfxVolumeSlider.value = sfxVolume; if (sfxVolumeValueSpan) sfxVolumeValueSpan.textContent = `${Math.round(sfxVolume * 100)}%`; if (muteToggleSetting) muteToggleSetting.checked = isMuted; if (fullscreenToggleSetting) fullscreenToggleSetting.checked = isFullscreen(); if (toggleHpBarsSetting) toggleHpBarsSetting.checked = gameSettings.showHpBars; settingsOverlay.dataset.originMenu = originMenu; startTooltipUpdater(); } function hideSettings() { const originMenu = settingsOverlay?.dataset.originMenu === 'true'; settingsOverlay?.classList.remove('visible'); settingsOverlay?.classList.add('hidden'); settingsOverlay.dataset.originMenu = 'false'; if (originMenu) { showMenu(); } else { showMainMenu(); } } function isSettingsOpen() { return settingsOverlay?.classList.contains('visible'); }
+} function hideGameOverScreen() { gameOverScreen?.classList.remove('visible'); gameOverScreen?.classList.add('hidden'); selectAndLoadMusic(); startTooltipUpdater(); } function isGameOverScreenVisible() { return gameOverScreen?.classList.contains('visible'); }
+function showMenu() {
+    if (!isAnyOverlayVisible() && isGameActive()) {
+        hideUnitInfo();
+        menuOverlay?.classList.remove('hidden');
+        menuOverlay?.classList.add('visible');
+        updateGoldDisplay();
+        updateQuitButton();
+        stopTooltipUpdater();
+        startTooltipUpdater();
+
+        // Initialize merged settings UI
+        loadSettings();
+        syncAllSettingsUI();
+    }
+}
+
+function syncAllSettingsUI() {
+    document.querySelectorAll('.music-volume-slider').forEach(s => s.value = musicVolume);
+    document.querySelectorAll('.music-volume-value').forEach(v => v.textContent = `${Math.round(musicVolume * 100)}%`);
+    document.querySelectorAll('.sfx-volume-slider').forEach(s => s.value = sfxVolume);
+    document.querySelectorAll('.sfx-volume-value').forEach(v => v.textContent = `${Math.round(sfxVolume * 100)}%`);
+    document.querySelectorAll('.mute-toggle-checkbox').forEach(c => c.checked = isMuted);
+    document.querySelectorAll('.fullscreen-toggle-checkbox').forEach(c => c.checked = isFullscreen());
+    document.querySelectorAll('.hp-bars-toggle-checkbox').forEach(c => c.checked = gameSettings.showHpBars);
+    if (playerNameSettingInput) playerNameSettingInput.value = gameSettings.playerName;
+}
+
+function hideMenu() {
+    menuOverlay?.classList.remove('visible');
+    menuOverlay?.classList.add('hidden');
+    stopTooltipUpdater();
+    if (isGameActive() && !isAnyOverlayVisible()) startTooltipUpdater();
+}
+function isMenuOpen() { return menuOverlay?.classList.contains('visible'); }
+function showSettings(originMenu = false) {
+    hideAllOverlays();
+    settingsOverlay?.classList.remove('hidden');
+    settingsOverlay?.classList.add('visible');
+    loadSettings();
+    syncAllSettingsUI();
+    settingsOverlay.dataset.originMenu = originMenu;
+    startTooltipUpdater();
+}
+function hideSettings() { const originMenu = settingsOverlay?.dataset.originMenu === 'true'; settingsOverlay?.classList.remove('visible'); settingsOverlay?.classList.add('hidden'); settingsOverlay.dataset.originMenu = 'false'; if (originMenu) { showMenu(); } else { showMainMenu(); } } function isSettingsOpen() { return settingsOverlay?.classList.contains('visible'); }
 function showAchievements() { hideAllOverlays(); achievementsOverlay?.classList.remove('hidden'); achievementsOverlay?.classList.add('visible'); updateAchievementsScreen(); startTooltipUpdater(); } function hideAchievements() { achievementsOverlay?.classList.remove('visible'); achievementsOverlay?.classList.add('hidden'); showMainMenu(); } function isAchievementsOpen() { return achievementsOverlay?.classList.contains('visible'); }
 function showNamePrompt() { hideAllOverlays(); namePromptOverlay?.classList.remove('hidden'); namePromptOverlay?.classList.add('visible'); initialPlayerNameInput?.focus(); }
 function hideNamePrompt() { namePromptOverlay?.classList.add('hidden'); namePromptOverlay?.classList.remove('visible'); }
@@ -3311,7 +3371,7 @@ function updateShopDisplay() {
                 isLocked = highestLevelReached < requiredLevel;
                 isMaxed = currentRosterSize >= MAX_ACTIVE_ROSTER_SIZE_MAX;
                 if (titleElement) {
-                    titleElement.innerHTML = `<span class="shop-icon-container"><span class="icon icon-shop icon-tacticalcommand" aria-hidden="true"></span></span> Tactical Command <span style="color: var(--color-gold-light); font-weight: bold;">${currentRosterSize}/${MAX_ACTIVE_ROSTER_SIZE_MAX}</span>`;
+                    titleElement.innerHTML = `<span class="shop-icon-container"><span class="icon icon-shop icon-skill-tacticalcommand" aria-hidden="true"></span></span> Tactical Command <span style="color: var(--color-gold-light); font-weight: bold;">${currentRosterSize}/${MAX_ACTIVE_ROSTER_SIZE_MAX}</span>`;
                 }
             } else if (pId === 'passive_gold_magnet') {
                 // Gold Magnet special case (can be hidden)
@@ -5596,13 +5656,52 @@ document.addEventListener('DOMContentLoaded', () => {
     abilityQuickStrikeButton?.addEventListener('click', () => { if (selectedUnit && !abilityQuickStrikeButton.disabled) activateRogueQuickStrike(selectedUnit); });
     bgMusic.addEventListener('ended', selectAndLoadMusic);
 
-    musicVolumeSlider?.addEventListener('input', (e) => { const volume = parseFloat(e.target.value); setVolume('music', volume); if (musicVolumeValueSpan) musicVolumeValueSpan.textContent = `${Math.round(volume * 100)}%`; });
-    musicVolumeSlider?.addEventListener('change', () => updateSetting('musicVolume', musicVolume));
-    sfxVolumeSlider?.addEventListener('input', (e) => { const volume = parseFloat(e.target.value); setVolume('sfx', volume); if (sfxVolumeValueSpan) sfxVolumeValueSpan.textContent = `${Math.round(volume * 100)}%`; });
-    sfxVolumeSlider?.addEventListener('change', () => { playSfx('select'); updateSetting('sfxVolume', sfxVolume); });
-    muteToggleSetting?.addEventListener('change', (e) => handleMuteToggle(true));
-    fullscreenToggleSetting?.addEventListener('change', (e) => toggleFullscreen(false));
-    toggleHpBarsSetting?.addEventListener('change', (e) => updateSetting('showHpBars', e.target.checked));
+    // Unified Settings Listeners (Merged Menu + Standalone Settings)
+    document.querySelectorAll('.music-volume-slider').forEach(slider => {
+        slider.addEventListener('input', (e) => {
+            const volume = parseFloat(e.target.value);
+            setVolume('music', volume);
+            document.querySelectorAll('.music-volume-slider').forEach(s => s.value = volume);
+            document.querySelectorAll('.music-volume-value').forEach(v => v.textContent = `${Math.round(volume * 100)}%`);
+        });
+        slider.addEventListener('change', () => updateSetting('musicVolume', musicVolume));
+    });
+
+    document.querySelectorAll('.sfx-volume-slider').forEach(slider => {
+        slider.addEventListener('input', (e) => {
+            const volume = parseFloat(e.target.value);
+            setVolume('sfx', volume);
+            document.querySelectorAll('.sfx-volume-slider').forEach(s => s.value = volume);
+            document.querySelectorAll('.sfx-volume-value').forEach(v => v.textContent = `${Math.round(volume * 100)}%`);
+        });
+        slider.addEventListener('change', () => {
+            playSfx('select');
+            updateSetting('sfxVolume', sfxVolume);
+        });
+    });
+
+    document.querySelectorAll('.mute-toggle-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', (e) => {
+            handleMuteToggle(true);
+            document.querySelectorAll('.mute-toggle-checkbox').forEach(c => c.checked = isMuted);
+        });
+    });
+
+    document.querySelectorAll('.fullscreen-toggle-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', (e) => {
+            toggleFullscreen(false);
+            setTimeout(() => {
+                document.querySelectorAll('.fullscreen-toggle-checkbox').forEach(c => c.checked = isFullscreen());
+            }, 100);
+        });
+    });
+
+    document.querySelectorAll('.hp-bars-toggle-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', (e) => {
+            updateSetting('showHpBars', e.target.checked);
+            document.querySelectorAll('.hp-bars-toggle-checkbox').forEach(c => c.checked = e.target.checked);
+        });
+    });
     playerNameSettingInput?.addEventListener('change', async (e) => {
         const newName = e.target.value;
         updateSetting('playerName', newName);

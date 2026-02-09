@@ -271,8 +271,8 @@ const SPRITESHEET_CONFIG = {
     },
     skills: {
         imageUrl: './sprites/skills.png',
-        columns: 5, rows: 2,
-        sheetWidth: 200, sheetHeight: 80, iconWidth: 40, iconHeight: 40
+        columns: 5, rows: 3,
+        sheetWidth: 200, sheetHeight: 120, iconWidth: 40, iconHeight: 40
     },
     projectiles: {
         imageUrl: './sprites/projectiles.png',
@@ -315,7 +315,7 @@ const UNIT_DATA = {
     goblin: { name: "Goblin", baseHp: 2, baseAtk: 1, mov: 4, range: 1, team: 'enemy', id_prefix: 'g', useSpritesheet: 'goblin' },
     goblin_archer: { name: "Goblin Archer", baseHp: 1, baseAtk: 1, mov: 3, range: 4, team: 'enemy', id_prefix: 'ga', useSpritesheet: 'goblin', shootsProjectileType: 'arrow' },
     goblin_netter: { name: "Goblin Netter", baseHp: 1, baseAtk: 0, mov: 3, range: 3, team: 'enemy', id_prefix: 'gn', useSpritesheet: 'goblin', canNet: true, netCooldown: NET_COOLDOWN, shootsProjectileType: 'net', baseMeleeAtk: 1 },
-    goblin_club: { name: "Goblin Clubber", baseHp: 3, baseAtk: 2, mov: 3, range: 1, team: 'enemy', id_prefix: 'gc', useSpritesheet: 'goblin', knockback: true },
+    goblin_club: { name: "Goblin Clubber", baseHp: 3, baseAtk: 2, mov: 3, range: 1, team: 'enemy', id_prefix: 'gc', useSpritesheet: 'goblin' },
     goblin_shaman: { name: "Goblin Shaman", baseHp: 2, baseAtk: 0, mov: 3, range: 1, team: 'enemy', id_prefix: 'gsh', useSpritesheet: 'goblin', healAmount: SHAMAN_HEAL_AMOUNT, canSummonTotem: true, totemCooldown: SHAMAN_TOTEM_COOLDOWN, totemType: 'shaman_totem', meleeOnlyAttack: true, baseMeleeAtk: 1 },
     goblin_sapper: { name: "Goblin Sapper", baseHp: 1, baseAtk: 3, mov: 2, range: 1, team: 'enemy', id_prefix: 'gsa', useSpritesheet: 'goblin', suicideExplode: true, explodeOnDeath: true, explosionRadius: SAPPER_EXPLOSION_RADIUS },
     goblin_pyromancer: { name: "Goblin Pyromancer", baseHp: 1, baseAtk: 1, mov: 3, range: 4, team: 'enemy', id_prefix: 'gp', useSpritesheet: 'goblin', shootsProjectileType: 'fireball', canCastFlameWave: true, flameWaveCooldown: PYRO_FLAME_WAVE_COOLDOWN },
@@ -397,11 +397,11 @@ const ITEM_DATA = {
 
 const PASSIVE_DATA = {
     gold_magnet: { name: "Gold Magnet", description: "Automatically collect gold from nearby squares.", iconClass: "icon-goldmagnet" },
-    tactical_command: { name: "Tactical Command", description: "Increases max roster size by 1.", iconClass: "icon-tacticalcommand" },
-    loot_hoarder: { name: "Loot Hoarder", description: "+15% Gold drop chance.", iconClass: "icon-gold" },
-    vampiric_aura: { name: "Vampiric Aura", description: "Units heal 1 HP whenever they kill an enemy.", iconClass: "icon-potion", requiredLevel: 50 },
-    evasion: { name: "Evasion", description: "5% chance to dodge attacks.", iconClass: "icon-unit-rogue", requiredLevel: 25 },
-    thorns: { name: "Thorns", description: "Melee attackers take 1 damage when hitting your units.", iconClass: "icon-shield", requiredLevel: 35 }
+    tactical_command: { name: "Tactical Command", description: "Increases max roster size by 1.", iconClass: "icon-skill-tacticalcommand" },
+    loot_hoarder: { name: "Loot Hoarder", description: "+15% Gold drop chance.", iconClass: "icon-skill-loothoarder" },
+    vampiric_aura: { name: "Vampiric Aura", description: "Units heal 1 HP whenever they kill an enemy.", iconClass: "icon-skill-vampiricaura", requiredLevel: 50 },
+    evasion: { name: "Evasion", description: "5% chance to dodge attacks.", iconClass: "icon-skill-evasion", requiredLevel: 25 },
+    thorns: { name: "Thorns", description: "Melee attackers take 1 damage when hitting your units.", iconClass: "icon-skill-thorns", requiredLevel: 35 }
 };
 const ARMOR_DATA = {
     none: { id: 'none', name: 'No Armor', description: 'Max HP: 1<br>+1 MOV', hpBonus: -99, atkBonus: 0, movBonus: 1, resistances: {}, activation: null, color: '#ffdab9', iconClass: 'icon-armor-none', iconPath: './sprites/armor_none.png' },
@@ -724,7 +724,7 @@ function playDefeatMusic() {
 
 function selectAndLoadMusic() {
     if (typeof Audio === 'undefined') return;
-    stopMusic(); // Ensure victory/defeat players are dead before selecting new music
+    // stopMusic(); // REMOVED: Prevent music from restarting during menu navigation
 
     // 1. Check for any "Non-Battle" screens where Menu Music should play
     const shopVisible = document.getElementById('shop-screen')?.classList.contains('visible');
