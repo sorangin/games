@@ -77,6 +77,7 @@ let worldHpBars = new Map();
 let shouldShowTroopsAfterPurchase = false;
 let currentShopTab = 'main';
 let currentLeaderboardFilter = 'all';
+let mobileTooltipTimeout = null;
 
 function isMobileDevice() {
     // return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
@@ -1868,7 +1869,7 @@ function handlePanStart(event) {
     document.addEventListener('mouseup', handlePanEnd, { once: true, capture: true });
 }
 
-function handlePanMove(event) { if (!isPanning || !gameBoard) return; event.preventDefault(); gridContentOffsetX = gridStartPanX + (event.clientX - panStartX); gridContentOffsetY = gridStartPanY + (event.clientY - panStartY); applyZoomAndPan(); }
+function handlePanMove(event) { if (!isPanning || !gameBoard) return; event.preventDefault(); gridContentOffsetX = gridStartPanX + (event.clientX - panStartX); gridContentOffsetY = gridStartPanY + (event.clientY - panStartY); hideTooltip(); applyZoomAndPan(); }
 function handlePanEnd(event) {
     if (!isPanning) return;
     event.preventDefault();
@@ -1879,7 +1880,7 @@ function handlePanEnd(event) {
     // Don't deselect unit when panning - user should keep their selection
 }
 function handlePanStartTouch(event) { if (event.touches.length !== 1 || event.target.closest('.unit,.item,.obstacle,.ui-button,button,a,.spell-icon,#default-view-button') || isAnyOverlayVisible()) { isPanning = false; return; } const touch = event.touches[0]; isPanning = true; panStartX = touch.clientX; panStartY = touch.clientY; gridStartPanX = gridContentOffsetX; gridStartPanY = gridContentOffsetY; document.addEventListener('touchmove', handlePanMoveTouch, { passive: false, capture: true }); document.addEventListener('touchend', handlePanEndTouch, { once: true, capture: true }); document.addEventListener('touchcancel', handlePanEndTouch, { once: true, capture: true }); }
-function handlePanMoveTouch(event) { if (!isPanning || event.touches.length !== 1) { handlePanEndTouch(event); return; } event.preventDefault(); gameBoard.classList.add('panning'); const touch = event.touches[0]; gridContentOffsetX = gridStartPanX + (touch.clientX - panStartX); gridContentOffsetY = gridStartPanY + (touch.clientY - panStartY); applyZoomAndPan(); }
+function handlePanMoveTouch(event) { if (!isPanning || event.touches.length !== 1) { handlePanEndTouch(event); return; } event.preventDefault(); gameBoard.classList.add('panning'); const touch = event.touches[0]; gridContentOffsetX = gridStartPanX + (touch.clientX - panStartX); gridContentOffsetY = gridStartPanY + (touch.clientY - panStartY); hideTooltip(); applyZoomAndPan(); }
 function handlePanEndTouch(event) { if (!isPanning) return; isPanning = false; gameBoard.classList.remove('panning'); document.removeEventListener('touchmove', handlePanMoveTouch, { capture: true }); document.removeEventListener('touchend', handlePanEndTouch, { capture: true }); document.removeEventListener('touchcancel', handlePanEndTouch, { capture: true }); }
 
 function clampPan() {
@@ -1974,13 +1975,13 @@ function applyMapZoomAndPan(immediate = false) {
 }
 
 function calculateMapScale(containerWidth, containerHeight, intrinsicWidth, intrinsicHeight) { const safeMapWidth = Math.max(1, intrinsicWidth || 1024); const safeMapHeight = Math.max(1, intrinsicHeight || 1024); const scaleX = containerWidth / safeMapWidth; const scaleY = containerHeight / safeMapHeight; return Math.max(scaleX, scaleY); }
-function clampMapOffsets(rawOffsetX, rawOffsetY) { if (!levelSelectMapContainer || !levelSelectMap) return { x: 0, y: 0 }; const containerRect = levelSelectMapContainer.getBoundingClientRect(); if (containerRect.width <= 0 || containerRect.height <= 0) return { x: mapOffsetX || 0, y: mapOffsetY || 0 }; const safeMapWidth = Math.max(1, mapIntrinsicWidth || 1024); const safeMapHeight = Math.max(1, mapIntrinsicHeight || 1024); const baseScale = calculateMapScale(containerRect.width, containerRect.height, safeMapWidth, safeMapHeight); const currentMapZoom = (typeof mapZoom === 'number' && !isNaN(mapZoom) && mapZoom >= MIN_MAP_ZOOM) ? Math.min(MAX_MAP_ZOOM, mapZoom) : MIN_MAP_ZOOM; const finalScale = baseScale * currentMapZoom; if (finalScale <= 0 || isNaN(finalScale)) return { x: mapOffsetX || 0, y: mapOffsetY || 0 }; const mapRenderWidth = safeMapWidth * finalScale; const mapRenderHeight = safeMapHeight * finalScale; let minOffsetX = 0, maxOffsetX = 0, minOffsetY = 0, maxOffsetY = 0; const padding = 0; if (mapRenderWidth <= containerRect.width + 1) { minOffsetX = maxOffsetX = (containerRect.width - mapRenderWidth) / 2; } else { maxOffsetX = padding; minOffsetX = containerRect.width - mapRenderWidth - padding; } if (mapRenderHeight <= containerRect.height + 1) { minOffsetY = maxOffsetY = (containerRect.height - mapRenderHeight) / 2; } else { maxOffsetY = padding; minOffsetY = containerRect.height - mapRenderHeight - padding; } if (currentMapZoom <= MIN_MAP_ZOOM + 0.01) { return { x: (containerRect.width - mapRenderWidth) / 2, y: (containerRect.height - mapRenderHeight) / 2 }; } const clampedX = Math.max(minOffsetX, Math.min(maxOffsetX, rawOffsetX)); const clampedY = Math.max(minOffsetY, Math.min(maxOffsetY, rawOffsetY)); return { x: clampedX, y: clampedY }; }
+function clampMapOffsets(rawOffsetX, rawOffsetY) { if (!levelSelectMapContainer || !levelSelectMap) return { x: 0, y: 0 }; const containerRect = levelSelectMapContainer.getBoundingClientRect(); if (containerRect.width <= 0 || containerRect.height <= 0) return { x: mapOffsetX || 0, y: mapOffsetY || 0 }; const safeMapWidth = Math.max(1, mapIntrinsicWidth || 1024); const safeMapHeight = Math.max(1, mapIntrinsicHeight || 1024); const baseScale = calculateMapScale(containerRect.width, containerRect.height, safeMapWidth, safeMapHeight); const currentMapZoom = (typeof mapZoom === 'number' && !isNaN(mapZoom) && mapZoom >= MIN_MAP_ZOOM) ? Math.min(MAX_MAP_ZOOM, mapZoom) : MIN_MAP_ZOOM; const finalScale = baseScale * currentMapZoom; if (finalScale <= 0 || isNaN(finalScale)) return { x: mapOffsetX || 0, y: mapOffsetY || 0 }; const mapRenderWidth = safeMapWidth * finalScale; const mapRenderHeight = safeMapHeight * finalScale; let minOffsetX = 0, maxOffsetX = 0, minOffsetY = 0, maxOffsetY = 0; const padding = 0; if (mapRenderWidth <= containerRect.width + 1) { minOffsetX = maxOffsetX = (containerRect.width - mapRenderWidth) / 2; } else { maxOffsetX = padding; minOffsetX = containerRect.width - mapRenderWidth - padding; } if (mapRenderHeight <= containerRect.height + 1) { minOffsetY = maxOffsetY = (containerRect.height - mapRenderHeight) / 2; } else { maxOffsetY = padding; minOffsetY = containerRect.height - mapRenderHeight - padding; } const clampedX = Math.max(minOffsetX, Math.min(maxOffsetX, rawOffsetX)); const clampedY = Math.max(minOffsetY, Math.min(maxOffsetY, rawOffsetY)); return { x: clampedX, y: clampedY }; }
 
 function handleMapPanStart(event) { const clickedDot = event.target.closest('.level-dot'); const clickedButton = event.target.closest('button, .primary-button, .secondary-button, .pagination-button'); const anotherOverlayActive = isGameOverScreenVisible() || isMenuOpen() || isLeaderboardOpen() || isShopOpen() || isLevelCompleteOpen() || isChooseTroopsScreenOpen() || isMainMenuOpen() || isSettingsOpen() || isAchievementsOpen(); if (event.button !== 0 || clickedDot || clickedButton || anotherOverlayActive) { isMapPanning = false; if (levelSelectMapContainer) levelSelectMapContainer.style.cursor = 'grab'; return; } event.preventDefault(); isMapPanning = true; mapPanStartX = event.clientX; mapPanStartY = event.clientY; mapStartPanX = mapOffsetX; mapStartPanY = mapOffsetY; if (levelSelectMapContainer) levelSelectMapContainer.style.cursor = 'grabbing'; document.addEventListener('mousemove', handleMapPanMove, { passive: false, capture: true }); document.addEventListener('mouseup', handleMapPanEnd, { once: true, capture: true }); }
-function handleMapPanMove(event) { if (!isMapPanning || !levelSelectMap || !levelSelectMapContainer) return; event.preventDefault(); const deltaX = event.clientX - mapPanStartX; const deltaY = event.clientY - mapPanStartY; const rawOffsetX = mapStartPanX + deltaX; const rawOffsetY = mapStartPanY + deltaY; const clampedOffsets = clampMapOffsets(rawOffsetX, rawOffsetY); mapOffsetX = clampedOffsets.x; mapOffsetY = clampedOffsets.y; applyMapZoomAndPan(true); }
+function handleMapPanMove(event) { if (!isMapPanning || !levelSelectMap || !levelSelectMapContainer) return; event.preventDefault(); const deltaX = event.clientX - mapPanStartX; const deltaY = event.clientY - mapPanStartY; const rawOffsetX = mapStartPanX + deltaX; const rawOffsetY = mapStartPanY + deltaY; const clampedOffsets = clampMapOffsets(rawOffsetX, rawOffsetY); mapOffsetX = clampedOffsets.x; mapOffsetY = clampedOffsets.y; hideTooltip(); applyMapZoomAndPan(true); }
 function handleMapPanEnd(event) { if (!isMapPanning) return; event.preventDefault(); isMapPanning = false; if (levelSelectMapContainer) levelSelectMapContainer.style.cursor = 'grab'; document.removeEventListener('mousemove', handleMapPanMove, { capture: true }); document.removeEventListener('mouseup', handleMapPanEnd, { capture: true }); document.removeEventListener('touchmove', handleMapPanMoveTouch, { capture: true }); document.removeEventListener('touchend', handleMapPanEndTouch, { capture: true }); document.removeEventListener('touchcancel', handleMapPanEndTouch, { capture: true }); }
 function handleMapPanStartTouch(event) { const anotherOverlayActive = isGameOverScreenVisible() || isMenuOpen() || isLeaderboardOpen() || isShopOpen() || isLevelCompleteOpen() || isChooseTroopsScreenOpen() || isMainMenuOpen() || isSettingsOpen() || isAchievementsOpen(); if (isMapPanning || anotherOverlayActive) return; const touchTarget = event.target; const clickedDot = touchTarget.closest('.level-dot'); const clickedButton = touchTarget.closest('button, .primary-button, .secondary-button, .pagination-button'); if (clickedDot || clickedButton) return; if (event.touches.length === 1) { const touch = event.touches[0]; isMapPanning = true; mapPanStartX = touch.clientX; mapPanStartY = touch.clientY; mapStartPanX = mapOffsetX; mapStartPanY = mapOffsetY; document.addEventListener('touchmove', handleMapPanMoveTouch, { passive: false, capture: true }); document.addEventListener('touchend', handleMapPanEndTouch, { once: true, capture: true }); document.addEventListener('touchcancel', handleMapPanEndTouch, { once: true, capture: true }); } }
-function handleMapPanMoveTouch(event) { if (!isMapPanning || event.touches.length !== 1) { handleMapPanEndTouch(event); return; } event.preventDefault(); if (levelSelectMapContainer) levelSelectMapContainer.classList.add('panning'); const touch = event.touches[0]; const deltaX = touch.clientX - mapPanStartX; const deltaY = touch.clientY - mapPanStartY; const rawOffsetX = mapStartPanX + deltaX; const rawOffsetY = mapStartPanY + deltaY; const clampedOffsets = clampMapOffsets(rawOffsetX, rawOffsetY); mapOffsetX = clampedOffsets.x; mapOffsetY = clampedOffsets.y; applyMapZoomAndPan(true); }
+function handleMapPanMoveTouch(event) { if (!isMapPanning || event.touches.length !== 1) { handleMapPanEndTouch(event); return; } event.preventDefault(); if (levelSelectMapContainer) levelSelectMapContainer.classList.add('panning'); const touch = event.touches[0]; const deltaX = touch.clientX - mapPanStartX; const deltaY = touch.clientY - mapPanStartY; const rawOffsetX = mapStartPanX + deltaX; const rawOffsetY = mapStartPanY + deltaY; const clampedOffsets = clampMapOffsets(rawOffsetX, rawOffsetY); mapOffsetX = clampedOffsets.x; mapOffsetY = clampedOffsets.y; hideTooltip(); applyMapZoomAndPan(true); }
 function handleMapPanEndTouch(event) { if (!isMapPanning) return; isMapPanning = false; if (levelSelectMapContainer) levelSelectMapContainer.classList.remove('panning'); document.removeEventListener('touchmove', handleMapPanMoveTouch, { capture: true }); document.removeEventListener('touchend', handleMapPanEndTouch, { capture: true }); document.removeEventListener('touchcancel', handleMapPanEndTouch, { capture: true }); }
 
 function handleMapWheel(event) {
@@ -2155,8 +2156,6 @@ async function handleUnitClick(event, clickedUnit) {
     if (isPanning || !isGameActive() || !isUnitAliveAndValid(clickedUnit) || isAnyOverlayVisible()) { if (!isUnitAliveAndValid(clickedUnit)) { if (selectedUnit) deselectUnit(); updateUnitInfo(null); } return; }
     // Prevent actions if processing and it's player turn (e.g. while moving), but allow selection during enemy turn processing
     if (isProcessing && currentTurn === 'player') return;
-
-    if (isMobileDevice()) { if (tooltipTimeout) clearTimeout(tooltipTimeout); showTooltip(clickedUnit, 'unit'); tooltipTimeout = setTimeout(hideTooltip, MOBILE_TOOLTIP_DURATION_MS); }
     // Don't update side panel here - let the selection/inspection logic below handle it
 
     if (currentSpell) {
@@ -2284,7 +2283,6 @@ async function handleItemClick(event, clickedItem) {
     }
 
     if (isPanning || isProcessing || !isGameActive() || !clickedItem || clickedItem.collected || isAnyOverlayVisible()) return;
-    if (isMobileDevice()) { if (tooltipTimeout) clearTimeout(tooltipTimeout); showTooltip(clickedItem, 'item'); tooltipTimeout = setTimeout(hideTooltip, MOBILE_TOOLTIP_DURATION_MS); }
 
     if (currentTurn === 'player' && selectedUnit) {
         const x = clickedItem.x; const y = clickedItem.y;
@@ -2315,7 +2313,6 @@ async function handleObstacleClick(event, clickedObstacle) {
 
     if (isPanning || isProcessing || !isGameActive() || !clickedObstacle || !isObstacleIntact(clickedObstacle) || isAnyOverlayVisible()) return;
     const targetX = clickedObstacle.x; const targetY = clickedObstacle.y;
-    if (isMobileDevice()) { if (tooltipTimeout) clearTimeout(tooltipTimeout); showTooltip(clickedObstacle, 'obstacle'); tooltipTimeout = setTimeout(hideTooltip, MOBILE_TOOLTIP_DURATION_MS); }
 
     // Allow spell casting if level is NOT cleared, OR if unlimited spells cheat is active
     if ((!levelClearedAwaitingInput || unlimitedSpellsCheat) && currentSpell) {
@@ -3919,6 +3916,10 @@ function handleMuteToggle(updateSettingFlag = true) {
     if (updateSettingFlag) updateSetting('mute', isMuted);
     if (!isMuted) {
         initializeAudio();
+        // Force immediate play
+        if (bgMusic.paused) {
+            bgMusic.play().catch(e => console.warn("Mute resume error:", e));
+        }
         startMusicIfNotPlaying();
     } else {
         stopMusic();
@@ -4129,7 +4130,16 @@ function updateTooltip() {
 function startTooltipUpdater() { if (isMobileDevice()) return; stopTooltipUpdater(); tooltipUpdateInterval = setInterval(updateTooltip, 50); }
 function stopTooltipUpdater() { if (tooltipUpdateInterval) { clearInterval(tooltipUpdateInterval); tooltipUpdateInterval = null; } hideTooltip(); }
 function showTooltip(data, type) {
-    if (!tooltipElement || data === null || typeof data === 'undefined') { hideTooltip(); return; } let content = ''; try {
+    if (!tooltipElement || data === null || typeof data === 'undefined') { hideTooltip(); return; }
+
+    // Auto-hide for mobile
+    if (isMobileDevice()) {
+        if (mobileTooltipTimeout) clearTimeout(mobileTooltipTimeout);
+        mobileTooltipTimeout = setTimeout(() => hideTooltip(), 1500);
+    }
+
+    let content = '';
+    try {
         switch (type) {
             case 'unit':
                 const unit = data;
@@ -5721,7 +5731,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-    document.getElementById('restart-level-setting-button')?.addEventListener('click', () => { if (isGameActive()) { hideMenu(); initGame(currentLevel); playSfx('select'); } else playSfx('error'); });
+    document.getElementById('restart-level-setting-button')?.addEventListener('click', () => {
+        if (isGameActive()) {
+            hideMenu();
+            initGame(currentLevel);
+            playSfx('select');
+            // Restart music
+            stopMusic();
+            selectAndLoadMusic();
+        } else playSfx('error');
+    });
 
     let firstEverTouch = true;
     document.body.addEventListener('touchstart', async (e) => {
@@ -5730,7 +5749,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const fsElement = document.documentElement;
             await attemptEnterFullscreen(fsElement);
         }
+        // Dismiss tooltips on any tap
+        if (isMobileDevice()) {
+            const { type, targetElement, targetData } = getTooltipTarget(e.target);
+            if (targetElement && targetData) {
+                showTooltip(targetData, type);
+            } else {
+                hideTooltip();
+            }
+        }
     }, { capture: true, once: false });
+
+    // Also dismiss on scroll
+    window.addEventListener('scroll', () => { if (isMobileDevice()) hideTooltip(); }, { passive: true });
 
     initDebugSpawner();
     initForestArmorUI();

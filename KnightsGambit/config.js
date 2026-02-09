@@ -753,7 +753,8 @@ function selectAndLoadMusic() {
         const currentTrack = bgMusic.src ? bgMusic.src.substring(bgMusic.src.lastIndexOf('/') + 1) : null;
         const isPlayingBattleMusic = MUSIC_TRACKS.some(track => track.endsWith(currentTrack));
 
-        if (!isPlayingBattleMusic) {
+        // Fix: If music is paused (e.g. after stopMusic() in Restart Level), re-trigger it
+        if (!isPlayingBattleMusic || bgMusic.paused) {
             const nextTrackIndex = Math.floor(Math.random() * MUSIC_TRACKS.length);
             playMusic(MUSIC_TRACKS[nextTrackIndex]);
         }
