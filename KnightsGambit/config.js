@@ -409,13 +409,13 @@ const ITEM_DATA = {
     shiny_gem: { name: 'Shiny Gem', description: 'Valuable gem', pickupAction: 'addGold', valueMin: SHINY_GEM_MIN_GOLD, valueMax: SHINY_GEM_MAX_GOLD, zIndex: 300, spriteClass: 'icon-gem' },
     gold_magnet: { name: 'Gold Magnet', description: 'Pulls nearby gold!', pickupAction: 'upgradeGoldMagnet', value: 1, zIndex: 300, spriteClass: 'icon-goldmagnet' },
     spellbook: { name: 'Spellbook', description: 'Restores 1 spell charge.', pickupAction: 'restoreSpell', value: 1, zIndex: 300, spriteClass: 'icon-spellbook' },
-    war_bow: { name: 'War Bow', description: '+1 RNG', pickupAction: 'unlockWarBow', value: 1, zIndex: 300, spriteClass: 'icon-warbow', color: 'var(--color-green-bright)' },
+    war_bow: { name: 'War Bow', description: '<span style="color:var(--color-gold-light)">+1 RNG</span>', pickupAction: 'unlockWarBow', value: 1, zIndex: 300, spriteClass: 'icon-warbow', color: 'var(--color-green-bright)' },
     flame_cloak: { name: 'Flame Cloak', pickupAction: 'unlockFlameCloak', value: 1, zIndex: 300, spriteClass: 'icon-flame-cloak', color: 'var(--color-orange-highlight)' },
     flame_ring: { name: 'Flame Ring', description: '<span style="color:var(--color-gold-light)">+1 Fireball radius</span>', pickupAction: 'unlockFlameRing', value: 1, zIndex: 300, spriteClass: 'icon-flame-ring', color: 'var(--color-orange-highlight)' },
     armor: { name: 'Armor', pickupAction: 'collectArmor', value: 1, zIndex: 300 },
     helmet: { name: 'Helmet', pickupAction: 'collectArmor', value: 1, zIndex: 300 },
     tome_of_chain_lightning: { name: 'Tome of Chain Lightning', description: 'Reduces Chain Lightning cooldown by 1 turn.', pickupAction: 'reduceChainLightningCooldown', value: 1, zIndex: 300, spriteClass: 'icon-tome-of-chain-lightning' },
-    glacier_bow: { name: 'Legendary Glacier Longbow', description: '<span style="color:var(--color-gold-light)">+2 ATK, +1 RNG</span><br><span style="color:var(--color-gold-light)">Slows enemy on hit (-1 MOV for 2 turns)</span>', pickupAction: 'unlockGlacierBow', value: 1, zIndex: 300, spriteClass: 'icon-glacier-bow', color: 'var(--color-legendary)', isLegendary: true },
+    glacier_bow: { name: 'Legendary Glacier Longbow', description: '<span style="color:var(--color-gold-light)">+2 ATK</span><br><span style="color:var(--color-gold-light)">+1 RNG</span><br>Slows enemies (-1 MOV for 2 turns)', pickupAction: 'unlockGlacierBow', value: 1, zIndex: 300, spriteClass: 'icon-glacier-bow', color: 'var(--color-legendary)', isLegendary: true },
 };
 
 const PASSIVE_DATA = {

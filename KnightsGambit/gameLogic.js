@@ -11109,9 +11109,15 @@ async function performAIAction(unit) {
 
 
 
-    let targetPlayer = livingPlayers.reduce((closest, player) => {
+    let targetPlayer = livingPlayers.reduce((best, player) => {
         const dist = getDistance(unit, player);
-        return dist < closest.dist ? { player, dist } : closest;
+        if (dist < best.dist) {
+            return { player, dist };
+        } else if (dist === best.dist) {
+            // Strategic tie-break: target the one with lower HP
+            return player.hp < best.player.hp ? { player, dist } : best;
+        }
+        return best;
     }, { player: null, dist: Infinity }).player;
 
     if (!targetPlayer) { finishAction(unit); return; }

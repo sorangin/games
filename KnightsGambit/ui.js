@@ -9051,8 +9051,9 @@ function showTooltip(data, type) {
                     }
                 } else {
                     // Fallback for other items
-                    const name = item.type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-                    content = `<span style="color:var(--color-gold-light); font-weight:bold;">${name}</span>`;
+                    const name = itemConfig.name || item.type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                    const nameColor = itemConfig.color || 'var(--color-gold-light)';
+                    content = `<span style="color:${nameColor}; font-weight:bold;">${name}</span>`;
                     if (itemConfig.description) {
                         content += `<br><span style="color:#ffffff;">${itemConfig.description}</span>`;
                     }

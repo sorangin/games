@@ -3374,6 +3374,14 @@ button:disabled,
     /* Prevent wrapping */
 }
 
+.leaderboard-header .header-hero {
+    grid-column: span 2;
+    text-align: left;
+    /* Align Left to match Sprite column start */
+    padding-left: 15px;
+    /* Push label right to separate from Rank */
+}
+
 .leaderboard-header span:first-child,
 .leaderboard-header span:nth-child(2) {
     text-align: left;
@@ -3396,26 +3404,61 @@ button:disabled,
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 20px;
+    gap: 15px;
+    /* Shrunk gap */
     width: 100%;
     margin-top: 1.5rem;
+    padding: 10px 0;
 }
 
 .name-input-panel label {
     display: none;
-    /* Keep name prompt clean, placeholder is enough */
 }
 
 .name-input-panel input[type="text"] {
     width: 80%;
+    max-width: 350px;
     text-align: center;
     font-size: 1.8rem;
     padding: 12px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--border-gold-weak);
+    /* Thinner, softer border */
+    border-radius: 6px;
+    color: var(--color-gold-light);
+    font-family: inherit;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.name-input-panel input[type="text"]:focus {
+    border-color: var(--color-gold-light);
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5), 0 0 15px var(--bg-gold-weak);
 }
 
 .name-input-panel button {
-    width: 60%;
-    margin-top: 10px;
+    width: auto;
+    margin-top: 5px;
+    padding: 2px !important;
+    /* Extremely minimal padding */
+}
+
+/* Shrink the icon specifically for this prompt */
+.name-input-panel button .large-icon {
+    font-size: 2rem !important;
+    width: 64px !important;
+    height: 64px !important;
+}
+
+/* Softer shadow for the Hero prompt button */
+.name-input-panel .dropshadow {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.name-input-panel button:hover {
+    transform: scale(1.1);
+    /* Subtle scale */
 }
 
 .leaderboard-input label {
@@ -4393,7 +4436,7 @@ p.shop-item-resistance {
     bottom: calc(20px + var(--control-bar-height, 0px));
     left: calc(-100% - 20px);
     /* Adjust based on actual panel width if necessary, or use fixed coords */
-    /* Safer approach for desktop: absolute position relative to its new parent but shifted far left */
+    /* Safer approach for desktop: absolute position relative to body/container if possible. */
     /* However, 'left' might be tricky if ui-panel's left edge isn't constant. */
     /* Better: Use absolute position relative to body/container if possible. */
     /* For now, let's assume it's in the side panel and use specific desktop overrides. */
@@ -6149,295 +6192,7 @@ p.shop-item-resistance {
     filter: grayscale(100%) opacity(0.5);
 }
 
-#shop-items-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 15px;
-    overflow-y: auto;
-    padding-right: 10px;
-    flex-grow: 1;
-    align-content: start;
-}
 
-.shop-item {
-    width: 100%;
-    height: auto;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
-
-.shop-item.hidden-tab {
-    display: none !important;
-}
-
-.shop-section-header.hidden-tab {
-    display: none !important;
-}
-
-/* Range Outlines - Selection */
-/* Redundant definitions removed */
-
-/* Range Outlines - Hover */
-.hover-border-yellow-top {
-    border-top: 2px solid rgba(255, 215, 0, 0.6) !important;
-}
-
-.hover-border-yellow-bottom {
-    border-bottom: 2px solid rgba(255, 215, 0, 0.6) !important;
-}
-
-.hover-border-yellow-left {
-    border-left: 2px solid rgba(255, 215, 0, 0.6) !important;
-}
-
-/* Duplicate icon rules removed */
-
-/* Condensed Menu Styles */
-#menu-overlay .overlay-content {
-    max-width: 600px;
-    min-width: 400px;
-    padding: 30px;
-    max-height: 90vh;
-}
-
-#menu-overlay .overlay-scroll-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-}
-
-#menu-title {
-    margin: 0 0 10px 0;
-    font-size: 2.2rem;
-    text-align: center;
-}
-
-#menu-gold-display {
-    margin: 0 0 20px 0;
-    padding: 12px 24px;
-    font-size: 1.4rem;
-    border-radius: 8px;
-}
-
-#menu-buttons-container {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    width: 100%;
-    align-items: stretch;
-}
-
-.menu-icon-row {
-    display: flex;
-    gap: 16px;
-    justify-content: center;
-    width: 100%;
-}
-
-#menu-overlay .icon-button {
-    min-width: 80px;
-    width: 80px;
-    height: 80px;
-    padding: 0;
-    font-size: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-grow: 0;
-    flex-shrink: 0;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-}
-
-#menu-overlay .icon-button:hover {
-    transform: scale(1.05);
-}
-
-#menu-overlay .icon-button:active {
-    transform: scale(0.95);
-}
-
-#menu-overlay .primary-button:not(.icon-button),
-#menu-overlay .secondary-button {
-    margin: 0;
-    padding: 16px 24px;
-}
-
-.level-complete-buttons {
-    display: flex;
-    gap: 12px;
-    width: 100%;
-    margin-top: 5px;
-}
-
-.level-complete-buttons button {
-    flex: 1;
-    color: var(--color-text-muted);
-    font-family: inherit;
-    font-size: 1.1rem;
-    font-weight: 600;
-    cursor: pointer;
-    padding: 10px 20px;
-    transition: all 0.2s;
-    position: relative;
-}
-
-.shop-tab-button:hover {
-    color: var(--color-text-main);
-    background: rgba(255, 255, 255, 0.1);
-}
-
-.shop-tab-button.active {
-    color: var(--color-gold-light);
-    font-weight: bold;
-    background: rgba(60, 50, 40, 0.8);
-    border-color: var(--color-gold-base);
-    text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
-}
-
-.shop-tab-button.active::after {
-    display: none;
-}
-
-.shop-tab-button.locked {
-    color: var(--color-disabled-text);
-    cursor: not-allowed;
-}
-
-.shop-tab-button.locked .icon {
-    filter: grayscale(100%) opacity(0.5);
-}
-
-#shop-items-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 15px;
-    overflow-y: auto;
-    padding-right: 10px;
-    flex-grow: 1;
-    align-content: start;
-}
-
-.shop-item {
-    width: 100%;
-    height: auto;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
-
-.shop-item.hidden-tab {
-    display: none !important;
-}
-
-.shop-section-header.hidden-tab {
-    display: none !important;
-}
-
-/* Range Outlines - Selection */
-/* Redundant definitions removed */
-
-/* Range Outlines - Hover */
-.hover-border-yellow-top {
-    border-top: 2px solid rgba(255, 215, 0, 0.6) !important;
-}
-
-.hover-border-yellow-bottom {
-    border-bottom: 2px solid rgba(255, 215, 0, 0.6) !important;
-}
-
-.hover-border-yellow-left {
-    border-left: 2px solid rgba(255, 215, 0, 0.6) !important;
-}
-
-/* Duplicate icon rules removed */
-
-/* Condensed Menu Styles */
-#menu-overlay .overlay-content {
-    max-width: 600px;
-    min-width: 400px;
-    padding: 30px;
-    max-height: 90vh;
-}
-
-#menu-overlay .overlay-scroll-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-}
-
-#menu-title {
-    margin: 0 0 10px 0;
-    font-size: 2.2rem;
-    text-align: center;
-}
-
-#menu-gold-display {
-    margin: 0 0 20px 0;
-    padding: 12px 24px;
-    font-size: 1.4rem;
-    border-radius: 8px;
-}
-
-#menu-buttons-container {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    width: 100%;
-    align-items: stretch;
-}
-
-.menu-icon-row {
-    display: flex;
-    gap: 16px;
-    justify-content: center;
-    width: 100%;
-}
-
-#menu-overlay .icon-button {
-    min-width: 80px;
-    width: 80px;
-    height: 80px;
-    padding: 0;
-    font-size: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-grow: 0;
-    flex-shrink: 0;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-}
-
-#menu-overlay .icon-button:hover {
-    transform: scale(1.05);
-}
-
-#menu-overlay .icon-button:active {
-    transform: scale(0.95);
-}
-
-#menu-overlay .primary-button:not(.icon-button),
-#menu-overlay .secondary-button {
-    margin: 0;
-    padding: 16px 24px;
-}
-
-.level-complete-buttons {
-    display: flex;
-    gap: 12px;
-    width: 100%;
-    margin-top: 5px;
-}
-
-.level-complete-buttons button {
-    flex: 1;
-    padding: 14px 20px;
-    font-size: 1.1rem;
-}
 
 /* Frost Nova Preview */
 .frost-nova-preview {
@@ -7650,13 +7405,91 @@ p.shop-item-resistance {
 /* Mobile Full-Screen Overlays */
 @media (max-width: 768px) {
 
-    #leaderboard-overlay .overlay-content,
+    #leaderboard-overlay .overlay-content {
+        background-color: rgba(20, 15, 10, 0.95) !important;
+        /* Dark solid-ish background for info clarity */
+        background-image: none !important;
+        /* Remove wood panels on mobile */
+        width: 100% !important;
+        height: 100% !important;
+        max-height: 100% !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        top: 0 !important;
+        left: 0 !important;
+        transform: none !important;
+        position: fixed !important;
+        display: flex;
+        flex-direction: column;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        /* Zero horizontal space */
+    }
+
+    #leaderboard-overlay .overlay-scroll-container,
+    #leaderboard-overlay .leaderboard-table-wrapper,
+    #leaderboard-overlay .inset-panel {
+        padding: 4px !important;
+        /* Slight padding for edges as requested */
+        width: 100% !important;
+        box-sizing: border-box !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+    }
+
+    /* Synchronize Header and List alignment */
+    #leaderboard-overlay .leaderboard-header,
+    #leaderboard-list {
+        padding: 4px 6px !important;
+        /* Balanced side padding */
+        margin: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    #leaderboard-overlay .leaderboard-header {
+        grid-template-columns: 0.75fr 0.7fr 2fr 0.8fr 2fr 2fr !important;
+        /* Widened Rank col (0.5 -> 0.75) */
+        gap: 5px !important;
+        font-size: 1.1rem !important;
+        /* Slightly smaller for mobile fit */
+        text-align: left !important;
+        /* Align with list content */
+        border-width: 1px !important;
+    }
+
+    #leaderboard-list li {
+        grid-template-columns: 0.75fr 0.7fr 2fr 0.8fr 2fr 2fr !important;
+        /* Synced with header */
+        padding: 10px 6px !important;
+        /* Synced with header */
+        gap: 5px !important;
+        /* Synced with header */
+        width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    #leaderboard-overlay .decorative-frame {
+        display: none !important;
+        /* Hide frames on mobile to maximize space */
+    }
+
+    #leaderboard-overlay .overlay-title {
+        font-size: 1.8rem !important;
+        margin: 10px 0 !important;
+        padding: 5px !important;
+    }
+
     #achievements-overlay .overlay-content,
     #settings-overlay .overlay-content,
     #menu-overlay .overlay-content,
     #naked-challenge-overlay .overlay-content {
         background-color: transparent !important;
-        width: 92% !important;
+        width: 95% !important;
+        /* Expanded for better data visibility */
         height: auto !important;
         max-height: 92% !important;
         min-height: 200px !important;
