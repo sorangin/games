@@ -250,20 +250,23 @@
         flex: 1;
         display: flex;
         flex-direction: column;
-        justify-content: flex-start;
+        justify-content: center;
         align-items: center;
-        padding-top: 41vh;
+        margin-top: 30vh;
+        /* Pushed significantly lower for visual preference */
     }
 
     .main-menu-bottom-bar {
-        position: absolute;
-        bottom: 25px;
+        position: relative;
+        margin-top: auto;
+        padding-bottom: 25px;
         left: 0;
         width: 100%;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 0 40px;
+        padding-left: 40px;
+        padding-right: 40px;
         box-sizing: border-box;
         pointer-events: none;
     }
@@ -5224,8 +5227,9 @@ p.shop-item-resistance {
 }
 
 #main-menu .main-menu-bottom-bar {
-    padding: 0 15px;
-    bottom: 15px;
+    padding: 0 15px 15px 15px;
+    position: relative;
+    margin-top: auto;
     width: 100%;
     box-sizing: border-box;
 }
