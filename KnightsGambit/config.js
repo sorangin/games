@@ -17,6 +17,7 @@ let isMuted = false;
 let audioInitialized = false;
 let musicVolume = 0.3;
 let sfxVolume = 0.6;
+const sfxLastPlayed = {};
 
 const BASE_GRID_COLS = 8;
 const BASE_GRID_ROWS = 10;
@@ -65,14 +66,14 @@ const ROGUE_STEALTH_MOVE_PENALTY = 2;
 const ROGUE_QUICK_STRIKE_MOVE_PENALTY = 2;
 const ROGUE_STEALTH_DAMAGE_BONUS = 1;
 const GOBLIN_SHADOWSTALKER_INTRO_LEVEL = 61;
-const WIZARD_UNLOCK_LEVEL = 60;
+const WIZARD_UNLOCK_LEVEL = 90;
 
 const GOBLIN_ARCHER_INTRO_LEVEL = 5;
-const ARCHER_RESCUE_LEVEL = 10;
+const ARCHER_RESCUE_LEVEL = 13;
 const CLUBBER_INTRO_LEVEL = 9;
-const CHAMPION_RESCUE_LEVEL = 24;
+const CHAMPION_RESCUE_LEVEL = 40;
 const JUGGERNAUT_INTRO_LEVEL = 15;
-const ROGUE_RESCUE_LEVEL = 40;
+const ROGUE_RESCUE_LEVEL = 60;
 const GOBLIN_NETTER_INTRO_LEVEL = 31;
 const GOBLIN_MOTHER_INTRO_LEVEL = 70;
 const GOBLIN_MOTHER_SPAWN_COOLDOWN = 3;
@@ -365,7 +366,7 @@ const OBSTACLE_DATA = {
     rock: { hp: 999, blocksMove: true, blocksLOS: false, spriteClass: 'rock', destructible: false, enterable: false, canBeAttacked: false },
     wall_rock: { hp: 999, blocksMove: true, blocksLOS: true, spriteClass: 'wall_rock', destructible: false, enterable: false, canBeAttacked: false, useSpritesheet: 'doodads', iconPosition: { col: 0, row: 4 } },
     door: { id: 'door', name: 'Door', hp: 1, maxHp: 1, blocksMove: true, blocksLOS: true, spriteClass: 'door', destructible: true, enterable: false, canBeAttacked: true, useSpritesheet: 'doodads', iconPosition: { col: 2, row: 3 }, deadIconPosition: { col: 3, row: 3 } },
-    tower: { hp: 3, blocksMove: false, blocksLOS: false, spriteClass: 'tower', destructible: true, enterable: true, canBeAttacked: true, rangeBonus: 1, useSpritesheet: 'doodads', iconPosition: { col: 1, row: 4 }, deadIconPosition: { col: 2, row: 4 }, name: 'Tower' },
+    tower: { hp: 3, blocksMove: false, blocksLOS: false, spriteClass: 'tower', destructible: true, enterable: true, canBeAttacked: true, clickable: true, rangeBonus: 1, useSpritesheet: 'doodads', iconPosition: { col: 1, row: 4 }, deadIconPosition: { col: 2, row: 4 }, name: 'Tower' },
     snowman: { id: 'snowman', name: 'Happy Innocent Snowman', hp: 1, maxHp: 1, blocksMove: true, blocksLOS: false, spriteClass: 'snowman', destructible: true, enterable: false, canBeAttacked: true, hidesUnit: true, hiddenUnitType: 'goblin', hiddenUnitVariant: 'blue', clickable: true, description: "Seems suspicious..", useSpritesheet: 'enemy_obj', iconPosition: { col: 0, row: 1 }, deadIconPosition: { col: 1, row: 1 }, portraitIconPosition: { col: 2, row: 1 } },
     barrel: { id: 'barrel', name: 'Barrel', hp: 1, maxHp: 1, blocksMove: true, blocksLOS: false, spriteClass: 'barrel', destructible: true, enterable: false, canBeAttacked: true, dropsLoot: true, useSpritesheet: 'items', iconPosition: { col: 2, row: 0 }, deadIconPosition: { col: 3, row: 0 } },
     crate: { id: 'crate', name: 'Crate', hp: 1, maxHp: 1, blocksMove: true, blocksLOS: false, spriteClass: 'crate', destructible: true, enterable: false, canBeAttacked: true, dropsLoot: true, useSpritesheet: 'items', iconPosition: { col: 2, row: 1 }, deadIconPosition: { col: 3, row: 1 } },
@@ -678,7 +679,14 @@ function playSfx(soundKey) {
         console.groupEnd();
     }
     const sound = sfx[soundKey];
-    if (isMuted) return; // Removed !audioInitialized guard to allow best-effort playback
+    if (isMuted) return;
+
+    // Debounce to prevent double-plays from global listener + specific handlers
+    const now = Date.now();
+    if (sfxLastPlayed[soundKey] && (now - sfxLastPlayed[soundKey] < 50)) {
+        return;
+    }
+    sfxLastPlayed[soundKey] = now;
 
     // Check if we have a loaded Audio file
     if (sound && sound.readyState >= 2) {

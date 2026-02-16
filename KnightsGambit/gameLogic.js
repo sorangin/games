@@ -305,7 +305,7 @@ function getUnitsInArea(centerX, centerY, radius) {
                 const unit = getUnitAt(nx, ny);
 
 
-                if (unit) affectedUnits.push(unit);
+                if (unit && isUnitAliveAndValid(unit)) affectedUnits.push(unit);
 
 
             }
@@ -323,6 +323,21 @@ function getUnitsInArea(centerX, centerY, radius) {
 }
 
 
+
+function getObstaclesInArea(centerX, centerY, radius) {
+    const affectedObstacles = [];
+    for (let dx = -radius; dx <= radius; dx++) {
+        for (let dy = -radius; dy <= radius; dy++) {
+            const nx = centerX + dx;
+            const ny = centerY + dy;
+            if (isCellInBounds(nx, ny)) {
+                const obs = getObstacleAt(nx, ny);
+                if (obs && isObstacleIntact(obs)) affectedObstacles.push(obs);
+            }
+        }
+    }
+    return affectedObstacles;
+}
 
 
 
@@ -471,8 +486,8 @@ function hasLineOfSight(startUnit, endPos, ignoreStealthOnTarget = false) {
     if (startX === endX && startY === endY) return true;
 
 
-    // Archers (and goblin archers), Wizards, and Pyromancers can shoot over units
-    const canShootOverUnits = startUnit.type === 'archer' || startUnit.type === 'goblin_archer' || startUnit.type === 'goblin_pyro' || startUnit.type === 'wizard';
+    // Archers (and goblin archers), Wizards, Pyromancers, and Totems can shoot/see over units
+    const canShootOverUnits = startUnit.type === 'archer' || startUnit.type === 'goblin_archer' || startUnit.type === 'goblin_pyro' || startUnit.type === 'wizard' || startUnit.isTotem;
 
     // Symmetric LOS: check both directions — if either ray is clear, LOS is granted
     const forwardClear = _bresenhamLOS(startX, startY, endX, endY, canShootOverUnits, startUnit.id);
@@ -961,6 +976,7 @@ function initGame(startLevel = 1) {
 
 
         if (typeof updateUiForNewLevel === 'function') updateUiForNewLevel();
+        if (typeof updateSpellUI === 'function') updateSpellUI();
 
 
 
@@ -1226,31 +1242,7 @@ function spawnObstacles() {
 
     };
 
-    // Spawn Cages for Unit Rescues
-    const spawnCages = () => {
-        let cageType = null;
-        if (currentLevel === 10 && !unlockedUnits.archer) cageType = 'cage_archer';
-        else if (currentLevel === 24 && !unlockedUnits.champion) cageType = 'cage_champion';
-        else if (currentLevel === 40 && !unlockedUnits.rogue) cageType = 'cage_rogue';
-        else if (currentLevel === 60 && !unlockedUnits.wizard) cageType = 'cage_wizard';
 
-        if (cageType) {
-            const cageY = Math.random() < 0.5 ? 0 : 1;
-            let cageX = Math.floor(Math.random() * currentGridCols);
-            let attempts = 0;
-            while ((!isCellInBounds(cageX, cageY) || occupied.has(`${cageX},${cageY}`) || gridState[cageY]?.[cageX]) && attempts < 20) {
-                cageX = Math.floor(Math.random() * currentGridCols);
-                attempts++;
-            }
-
-            if (attempts < 20) {
-                tryPlaceObstacle(cageType, cageX, cageY);
-            } else {
-                console.warn("Could not place cage!");
-            }
-        }
-    };
-    spawnCages();
 
 
 
@@ -3355,8 +3347,51 @@ function spawnEnemies() {
 
     }
 
+    // NEW: Spawn Cages if applicable
+    spawnCages(occupied, enemySpawnMaxY);
 
 }
+
+function spawnCages(occupied, validSpawnMaxY) {
+    let cageType = null;
+    let unitInside = null;
+
+    if (currentLevel === ARCHER_RESCUE_LEVEL) { cageType = 'cage_archer'; unitInside = 'archer'; }
+    else if (currentLevel === CHAMPION_RESCUE_LEVEL) { cageType = 'cage_champion'; unitInside = 'champion'; }
+    else if (currentLevel === ROGUE_RESCUE_LEVEL) { cageType = 'cage_rogue'; unitInside = 'rogue'; }
+    else if (currentLevel === WIZARD_UNLOCK_LEVEL) { cageType = 'cage_wizard'; unitInside = 'wizard'; }
+
+    if (cageType) {
+        // Find a valid spot for the cage
+        // Try random positions within enemy spawn area
+        let attempts = 0;
+        let placed = false;
+        while (attempts < 50 && !placed) {
+            const x = Math.floor(Math.random() * currentGridCols);
+            const y = Math.floor(Math.random() * (validSpawnMaxY + 1));
+
+            const obs = getObstacleAt(x, y);
+            const unit = getUnitAt(x, y);
+
+            // Ensure not blocked by wall/rock (blocksMove) unless enterable (towers?) - Cages shouldn't be in towers
+            const isBlocked = (obs && obs.blocksMove) || unit;
+
+            if (!isBlocked && !occupied.has(`${x},${y}`)) {
+                const cage = createObstacle(cageType, x, y);
+                if (cage) {
+                    occupied.add(`${x},${y}`);
+                    // Ensure the cage knows what's inside if needed (though type usually dictates it)
+                    placed = true;
+                    console.log(`Spawned ${cageType} at ${x},${y}`);
+                }
+            }
+            attempts++;
+        }
+        if (!placed) console.warn(`Failed to place ${cageType} after 50 attempts.`);
+    }
+}
+
+
 
 
 
@@ -5088,10 +5123,9 @@ async function enterTower(unit, tower) {
 
 
     // Range bonus only for Ranged units (Range > 1) and NOT Melee-Only units
-
-
-    const isRangedUnit = unit.baseRange > 1 && !unit.meleeOnlyAttack;
-
+    // Melee enemies NEVER get a range bonus (Part 3 refinement)
+    const isMeleeEnemy = unit.team === 'enemy' && (unit.baseRange <= 1 || unit.meleeOnlyAttack);
+    const isRangedUnit = unit.baseRange > 1 && !unit.meleeOnlyAttack && !isMeleeEnemy;
 
     unit.currentRange = unit.baseRange + (isRangedUnit ? tower.rangeBonus : 0);
 
@@ -5134,7 +5168,7 @@ async function enterTower(unit, tower) {
 
 
 
-function leaveTower(unit) {
+function leaveTower(unit, skipMove = false) {
 
 
     if (!unit || !unit.inTower) return;
@@ -5143,10 +5177,18 @@ function leaveTower(unit) {
     const tower = obstacles.find(o => o.id === unit.inTower);
 
 
+    if (tower) { tower.occupantUnitId = null; }
+
+
+    if (skipMove) {
+        unit.inTower = null;
+        unit.currentRange = unit.baseRange;
+        return;
+    }
+
+
     let targetX = unit.x; let targetY = unit.y + 1;
-
-
-    if (tower) { targetX = tower.x; targetY = tower.y + 1; tower.occupantUnitId = null; }
+    if (tower) { targetX = tower.x; targetY = tower.y + 1; }
 
 
 
@@ -5170,10 +5212,16 @@ function leaveTower(unit) {
 
 
 
-    unit.x = targetX; unit.y = targetY; unit.inTower = null; unit.currentRange = unit.baseRange;
+    unit.x = targetX; unit.y = targetY; unit.inTower = null;
+
+    if (typeof recalculateUnitStats === 'function') recalculateUnitStats(unit);
 
 
     playSfx('towerExit');
+
+    if (typeof updateUnitInfo === 'function' && selectedUnit && selectedUnit.id === unit.id) {
+        updateUnitInfo(unit);
+    }
 
 
     if (typeof updateUnitInfoDisplay === 'function') updateUnitInfoDisplay(unit);
@@ -5410,12 +5458,10 @@ async function moveUnit(unit, targetX, targetY) {
 
 
 
-        if (towerUnitIsIn && targetX === towerUnitIsIn.x && targetY === towerUnitIsIn.y + 1) {
-
-
-            leaveTower(unit); animationStartX = towerUnitIsIn.x; animationStartY = towerUnitIsIn.y;
-
-
+        if (towerUnitIsIn && (targetX !== towerUnitIsIn.x || targetY !== towerUnitIsIn.y)) {
+            leaveTower(unit, true); // Clear tower state without teleporting to exit cell
+            unit.x = targetX; unit.y = targetY;
+            animationStartX = towerUnitIsIn.x; animationStartY = towerUnitIsIn.y;
         } else if (obstacleAtTarget?.enterable && obstacleAtTarget.type === 'tower') {
 
 
@@ -8052,6 +8098,20 @@ async function explodeUnit(unit, isDeathExplosion = false) {
 
     });
 
+    // Also damage destructible obstacles in the area (Part 3 refinement)
+    if (typeof getObstaclesInArea === 'function') {
+        const affectedObstacles = getObstaclesInArea(centerX, centerY, radius);
+        affectedObstacles.forEach(obs => {
+            if (obs.destructible && obs.canBeAttacked && obs.id !== unit.id) {
+                obs.hp -= damage;
+
+
+                if (typeof showDamagePopup === 'function') showDamagePopup(obs.x, obs.y, damage);
+                if (obs.hp <= 0) removeObstacle(obs);
+            }
+        });
+    }
+
 
     if (!isDeathExplosion) { unit.explodeOnDeath = false; deathPromises.push(removeUnit(unit)); }
 
@@ -8417,53 +8477,30 @@ function removeObstacle(obstacle) {
 
 
 
-            // Damage obstacles (barrels and crates) in explosion radius
-
-
+            // Damage obstacles (barrels, crates, and TOWERS) in explosion radius (Part 5 Fix)
             const affectedObstacles = [];
-
-
-            for (let dx = -explosionRadius; dx <= explosionRadius; dx++) {
-
-
-                for (let dy = -explosionRadius; dy <= explosionRadius; dy++) {
-
-
-                    const targetX = obsX + dx;
-
-
-                    const targetY = obsY + dy;
-
-
-                    if (isCellInBounds(targetX, targetY)) {
-
-
-                        const targetObstacle = getObstacleAt(targetX, targetY);
-
-
-                        if (targetObstacle && targetObstacle.id !== obsId &&
-
-
-                            (targetObstacle.type === 'barrel' || targetObstacle.type === 'crate' ||
-
-
-                                targetObstacle.type === 'exploding_barrel')) {
-
-
-                            affectedObstacles.push(targetObstacle);
-
-
-                        }
-
-
+            if (typeof getObstaclesInArea === 'function') {
+                const areaObstacles = getObstaclesInArea(obsX, obsY, explosionRadius);
+                areaObstacles.forEach(targetObs => {
+                    if (targetObs.id !== obsId && targetObs.destructible && targetObs.canBeAttacked) {
+                        affectedObstacles.push(targetObs);
                     }
-
-
+                });
+            } else {
+                // Fallback for direct lookup if helper not found (legacy)
+                for (let dx = -explosionRadius; dx <= explosionRadius; dx++) {
+                    for (let dy = -explosionRadius; dy <= explosionRadius; dy++) {
+                        const targetX = obsX + dx;
+                        const targetY = obsY + dy;
+                        if (isCellInBounds(targetX, targetY)) {
+                            const targetObstacle = getObstacleAt(targetX, targetY);
+                            if (targetObstacle && targetObstacle.id !== obsId && targetObstacle.destructible) {
+                                affectedObstacles.push(targetObstacle);
+                            }
+                        }
+                    }
                 }
-
-
             }
-
 
 
 
@@ -9801,6 +9838,7 @@ function processTurnStart(team) {
 
             if (unit.frostNovaCooldown > 0) unit.frostNovaCooldown--;
             if (unit.flameWaveCooldown > 0) unit.flameWaveCooldown--;
+            if (unit.totemCooldown > 0) unit.totemCooldown--;
 
 
             // Polymorph Duration Logic (Check at start of unit's turn)
@@ -11128,7 +11166,66 @@ async function performAIAction(unit) {
         if (tower && isObstacleIntact(tower)) finalTargetObject = tower;
     }
 
+
+    // AI IMPROVEMENT: Ranged units (and priority melee) seek empty towers if no target is in immediate range
+    const isRanged = unit.range > 1 || unit.type === 'goblin_pyromancer' || unit.type === 'goblin_archer' || unit.type === 'goblin_shaman' || unit.type === 'archer' || unit.type === 'wizard';
+
+    // Melee units only seek towers if no allied ranged units exist (Part 3 refinement)
+    let canSeekTower = isRanged;
+    if (!isRanged && unit.team === 'enemy') {
+        const anyAlliedRanged = units.some(u => u.team === 'enemy' && u.id !== unit.id && isUnitAliveAndValid(u) && (u.baseRange > 1 || u.type.includes('archer') || u.type.includes('wizard') || u.type.includes('pyromancer')));
+        if (!anyAlliedRanged) canSeekTower = true;
+    }
+
+    if (canSeekTower && !unit.inTower && unit.team === 'enemy') {
+        const distToTarget = getDistance(unit, targetPlayer);
+        if (distToTarget > unit.currentRange) {
+            let nearestTower = null;
+            let minTowerDist = Infinity;
+            obstacles.forEach(obs => {
+                if (obs.type === 'tower' && obs.enterable && !obs.occupantUnitId && isObstacleIntact(obs)) {
+                    const d = getDistance(unit, obs);
+                    if (d < minTowerDist) {
+                        minTowerDist = d;
+                        nearestTower = obs;
+                    }
+                }
+            });
+
+            if (nearestTower) {
+                // Override target to be the tower for movement purposes
+                targetPlayer = nearestTower;
+                finalTargetObject = nearestTower;
+            }
+        }
+    }
+
+    // SNIPER AI: Ranged units in towers stay put at all times to wait for player
+    let shouldStayInTower = false;
+    if (unit.inTower && isRanged && unit.team === 'enemy') {
+        shouldStayInTower = true;
+    }
+
     const minDist = getDistance(unit, finalTargetObject);
+
+    // AI IMPROVEMENT: Obstacle Clearing (Part 5 refinement)
+    // If no direct path to target player, try a ghost path ignoring destructibles
+    let path = findPathToTarget(unit, targetPlayer.x, targetPlayer.y);
+    if ((!path || path.length === 0) && livingPlayers.length > 0) {
+        const ghostPath = findPathToTarget(unit, targetPlayer.x, targetPlayer.y, true);
+        if (ghostPath && ghostPath.length > 0) {
+            // Find the first blocking obstacle on the ghost path and target it
+            for (const cell of ghostPath) {
+                const obs = getObstacleAt(cell.x, cell.y);
+                if (obs && obs.blocksMove && obs.destructible && obs.canBeAttacked) {
+                    // Switch target to this obstacle!
+                    finalTargetObject = obs;
+                    path = findPathToTarget(unit, obs.x, obs.y, true); // Use ghost pathing to reach the obstacle
+                    break;
+                }
+            }
+        }
+    }
 
     if (unit.flees) {
 
@@ -11234,7 +11331,7 @@ async function performAIAction(unit) {
             else {
 
 
-                const path = findPathToTarget(unit, targetPlayer.x, targetPlayer.y);
+                // Path is already calculated above with obstacle clearing logic
 
 
                 if (path && path.length > 0) {
@@ -11284,52 +11381,14 @@ async function performAIAction(unit) {
         else if (!actionTaken && (unit.type === 'goblin_shaman' || unit.canSummonTotem)) {
 
 
-            const alliesToHeal = units.filter(u => u.team === 'enemy' && !u.isTotem && u.hp < u.maxHp && getDistance(unit, u) <= unit.range && hasLineOfSight(unit, u) && isUnitAliveAndValid(u)).sort((a, b) => a.hp - b.hp);
-
-
-            // Fix for Shaman Totem limit: Check if THIS shaman has a totem
-
-
+            // Shaman can ONLY summon totems — the totem itself heals allies
             const myTotemExists = units.some(u => u.isTotem && u.summonerId === unit.id && isUnitAliveAndValid(u));
 
 
             const canSummon = unit.canSummonTotem && unit.totemCooldown <= 0 && !myTotemExists;
 
 
-            if (alliesToHeal.length > 0) {
-
-
-                const targetAlly = alliesToHeal[0];
-
-
-                const healAmount = unit.healAmount || SHAMAN_HEAL_AMOUNT;
-
-
-                const actualHeal = Math.min(healAmount, targetAlly.maxHp - targetAlly.hp);
-
-
-                if (actualHeal > 0) {
-
-
-                    targetAlly.hp += actualHeal; playSfx('shamanHeal');
-
-
-                    if (typeof showHealPopup === 'function') showHealPopup(targetAlly.x, targetAlly.y, actualHeal);
-
-
-                    if (typeof updateWorldHpBar === 'function') updateWorldHpBar(targetAlly);
-
-
-                    if (typeof updateUnitInfoDisplay === 'function') updateUnitInfoDisplay(targetAlly);
-
-
-                    actionTaken = true; finishAction(unit); return;
-
-
-                }
-
-
-            } else if (canSummon) {
+            if (canSummon) {
 
 
                 const nearestPlayerDist = livingPlayers.reduce((minDist, p) => Math.min(minDist, getDistance(unit, p)), Infinity);
@@ -11350,7 +11409,7 @@ async function performAIAction(unit) {
                         if (newTotem) {
 
 
-                            newTotem.summonerId = unit.id; // Link totem to summoner
+                            newTotem.summonerId = unit.id;
 
 
                             if (typeof renderUnit === 'function') renderUnit(newTotem);
@@ -11636,12 +11695,8 @@ async function performAIAction(unit) {
 
 
 
-    let canStillMove = !hasMoved && !actionTaken;
-
-
-    if (unit.canMoveAndAttack && unit.actionsTakenThisTurn < 1 && !hasMoved) canStillMove = true;
-
-
+    let canStillMove = !hasMoved && !actionTaken && !shouldStayInTower;
+    if (unit.canMoveAndAttack && unit.actionsTakenThisTurn < 1 && !hasMoved && !shouldStayInTower) canStillMove = true;
     if (canStillMove && !unit.isNetted) {
 
 
@@ -11651,7 +11706,7 @@ async function performAIAction(unit) {
         if (movementBudget > 0) {
 
 
-            const path = findPathToTarget(unit, targetPlayer.x, targetPlayer.y);
+            // path is already calculated above with obstacle clearing fallback
 
 
             let chosenMove = null;
@@ -12235,7 +12290,22 @@ function getValidMoves(unit, ignoreActionState = false) {
 
 
 
-            const obstacle = getObstacleAt(nextX, nextY); const unitOnCell = getUnitAt(nextX, nextY); let isBlocked = false; if (unitOnCell && unitOnCell.id !== unit.id) isBlocked = true; if (obstacle && obstacle.blocksMove && !obstacle.enterable) isBlocked = true; if (unitInTower) { if (nextX !== unitInTower.x || nextY !== unitInTower.y + 1) isBlocked = true; } else if (obstacle?.enterable) { if (current.y !== nextY + 1 || current.x !== nextX) isBlocked = true; if (obstacle.occupantUnitId && obstacle.occupantUnitId !== unit.id) isBlocked = true; } if (!isBlocked) { moves.push({ x: nextX, y: nextY }); visited.set(key, newDistance); queue.push({ x: nextX, y: nextY, distance: newDistance }); }
+            const obstacle = getObstacleAt(nextX, nextY);
+            const unitOnCell = getUnitAt(nextX, nextY);
+            let isBlocked = false;
+            if (unitOnCell && unitOnCell.id !== unit.id) isBlocked = true;
+            if (obstacle && obstacle.blocksMove && !obstacle.enterable) isBlocked = true;
+
+            // Refactored Tower Logic: Removed 'unitInTower' exit restriction and 'enterable' entry restriction (y+1)
+            if (obstacle?.enterable) {
+                if (obstacle.occupantUnitId && obstacle.occupantUnitId !== unit.id) isBlocked = true;
+            }
+
+            if (!isBlocked) {
+                moves.push({ x: nextX, y: nextY });
+                visited.set(key, newDistance);
+                queue.push({ x: nextX, y: nextY, distance: newDistance });
+            }
 
 
         }
@@ -12409,7 +12479,7 @@ function getValidAttackTargets(unit) {
 
 
 
-function findPathToTarget(unit, targetX, targetY) {
+function findPathToTarget(unit, targetX, targetY, ignoreDestructibles = false) {
 
 
     if (!unit || unit.isFrozen || unit.isNetted || !isUnitAliveAndValid(unit)) return null;
@@ -12472,13 +12542,19 @@ function findPathToTarget(unit, targetX, targetY) {
             if (unitOnCell && !isTargetCell) isWalkable = false;
 
 
-            if (obstacle && obstacle.blocksMove && !obstacle.enterable) isWalkable = false;
+            if (obstacle && obstacle.blocksMove && !obstacle.enterable) {
+                if (ignoreDestructibles && obstacle.destructible && obstacle.canBeAttacked) {
+                    // Ghost pathing: treat destructible obstacles as walkable (with higher cost if we had costs, but here just walkable)
+                    isWalkable = true;
+                } else {
+                    isWalkable = false;
+                }
+            }
 
 
-            if (unitInTower && currentNode.parent === null) { if (nextX !== unitInTower.x || nextY !== unitInTower.y + 1) isWalkable = false; }
+            // REMOVED: if (unitInTower && currentNode.parent === null) { if (nextX !== unitInTower.x || nextY !== unitInTower.y + 1) isWalkable = false; }
 
-
-            else if (obstacle?.enterable) {
+            if (obstacle?.enterable) {
                 // Enemies treat enterable obstacles (towers) as solid walls, UNLESS it is their target destination
                 if (unit.team === 'enemy' && !isTargetCell) isWalkable = false;
                 else {
@@ -13255,17 +13331,8 @@ function purchaseUnit(unitType) {
 
 
     if (unitType === 'wizard' && currentOwned >= 1) {
-
-
         playSfx('error');
-
-
-        showFeedback("Limit 1 wizard!", "feedback-error");
-
-
         return { success: false };
-
-
     }
 
 
@@ -14914,7 +14981,9 @@ function recalculateUnitStats(unit) {
     if (unit.inTower) {
         const tower = obstacles.find(o => o.id === unit.inTower);
         if (tower) {
-            unit.currentRange = unit.baseRange + (tower.rangeBonus || 0);
+            const isMeleeEnemy = unit.team === 'enemy' && (unit.baseRange <= 1 || unit.meleeOnlyAttack);
+            const isRangedUnit = unit.baseRange > 1 && !unit.meleeOnlyAttack && !isMeleeEnemy;
+            unit.currentRange = unit.baseRange + (isRangedUnit ? (tower.rangeBonus || 0) : 0);
         } else {
             unit.currentRange = unit.baseRange;
         }

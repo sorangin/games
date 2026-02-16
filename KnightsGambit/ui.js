@@ -50,7 +50,7 @@ let gameContainer, gameBoardWrapper, gameBoard, gridContent, uiPanel, levelDispl
 
     forestArmorAbilityButton, forestArmorContainer, shopTroopsTabContent,
     customAlertOverlay, customAlertTitle, customAlertMessage, customAlertConfirmButton,
-    accountsOverlay, newProfileOverlay, deleteConfirmOverlay;
+    accountsOverlay, newProfileOverlay, deleteConfirmOverlay, selectedObstacle = null;
 
 // Cheat UI Globals
 
@@ -464,7 +464,7 @@ function renderUnit(unit, parentElement = gridContent) {
 
             if (currentRange > 1 && typeof highlightEnemyRange === 'function') {
 
-                highlightEnemyRange(unit);
+                highlightEnemyRange(unit, true);
 
             }
 
@@ -669,7 +669,6 @@ function showObstacleInfo(obstacle) {
     if (document.getElementById('ability-chain-lightning')) document.getElementById('ability-chain-lightning').classList.add('hidden');
 
     if (document.getElementById('ability-polymorph')) document.getElementById('ability-polymorph').classList.add('hidden');
-
 }
 
 
@@ -1164,6 +1163,10 @@ function getUnitFilterString(unit, includeSelectionEffects = true) {
             currentFilters.push(getFilterValue(hoverVar));
 
         }
+        // Add outline for selected obstacle
+        if (selectedObstacle && selectedObstacle.x === unit.x && selectedObstacle.y === unit.y) {
+            currentFilters.push(getFilterValue('--selected-obstacle-filter-outline'));
+        }
 
         const isSelected = selectedUnit?.id === unit.id;
 
@@ -1432,7 +1435,6 @@ function updateAllUnitVisuals() {
 
 
 function updateObstaclePosition(obstacle) { if (!obstacle?.element) return; obstacle.element.style.setProperty('--obs-x', obstacle.x + 1); obstacle.element.style.setProperty('--obs-y', obstacle.y + 1); if (obstacle.type === 'door') obstacle.element.classList.toggle('vertical', obstacle.isVertical); }
-
 function updateItemPosition(item) {
 
     if (!item?.element) return;
@@ -2060,50 +2062,89 @@ function updateGoldDisplay() {
 
 function updateSpellUI() {
 
-    if (!spellAreaElement) return; const spellData = [{ el: fireballElement, name: 'fireball', unlock: FIREBALL_UNLOCK_LEVEL }, { el: flameWaveElement, name: 'flameWave', unlock: FLAME_WAVE_UNLOCK_LEVEL }, { el: frostNovaElement, name: 'frostNova', unlock: FROST_NOVA_UNLOCK_LEVEL }, { el: healElement, name: 'heal', unlock: HEAL_UNLOCK_LEVEL }]; const hotkeys = ['1', '2', '3', '4'];
+    if (!spellAreaElement) return;
+
+    const spellData = [
+        { el: fireballElement, name: 'fireball', unlock: FIREBALL_UNLOCK_LEVEL },
+        { el: flameWaveElement, name: 'flameWave', unlock: FLAME_WAVE_UNLOCK_LEVEL },
+        { el: frostNovaElement, name: 'frostNova', unlock: FROST_NOVA_UNLOCK_LEVEL },
+        { el: healElement, name: 'heal', unlock: HEAL_UNLOCK_LEVEL }
+    ];
+    const hotkeys = ['1', '2', '3', '4'];
+    let anyUnlocked = false;
 
     spellData.forEach((s, index) => {
 
-        if (!s.el) return; const spellName = s.name; const isPermanentlyUnlocked = spellsUnlocked[spellName] === true; const canUseThisTurn = (spellUses[spellName] === true || unlimitedSpellsCheat); const isSelected = currentSpell === spellName; const hotkey = hotkeys[index]; s.el.className = `spell-icon icon-spell-${spellName}`; const labelSibling = s.el.nextElementSibling; const baseTitle = labelSibling?.classList.contains('spell-label') ? labelSibling.textContent : spellName.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()); let title = baseTitle;
+        if (!s.el) return;
+        const spellName = s.name;
+        // Use global spellsUnlocked if available
+        const isPermanentlyUnlocked = (typeof spellsUnlocked !== 'undefined' && spellsUnlocked[spellName] === true);
+        const canUseThisTurn = (spellUses[spellName] === true || unlimitedSpellsCheat);
+        const isSelected = currentSpell === spellName;
 
-        if (!isPermanentlyUnlocked) { s.el.classList.add('locked'); title = `${baseTitle} (Unlock at Lvl ${s.unlock})`; } else if (!canUseThisTurn) { s.el.classList.add('used'); title = `${baseTitle} (Used)`; } else { s.el.classList.add('available'); if (isSelected) { s.el.classList.add('selected'); title = `CASTING: ${baseTitle} (Esc to Cancel)`; } else { title = baseTitle; } if (unlimitedSpellsCheat) { s.el.classList.add('cheat-available'); title += ` (Cheat Active)`; } } s.el.title = title; const label = s.el.nextElementSibling; if (label?.classList.contains('spell-label')) { if (!isPermanentlyUnlocked) label.style.color = 'var(--color-disabled-text)'; else if (!canUseThisTurn) label.style.color = 'var(--color-text-muted)'; else if (unlimitedSpellsCheat && canUseThisTurn) label.style.color = 'var(--color-green-bright)'; else label.style.color = ''; }
+        // Target parent container for visibility
+        const container = s.el.closest('.spell-container');
+
+        if (isPermanentlyUnlocked) {
+            anyUnlocked = true;
+            if (container) container.style.display = '';
+
+            // Restore base classes including .icon
+            s.el.className = `spell-icon icon icon-spell-${spellName}`;
+
+            const labelSibling = s.el.nextElementSibling;
+            const baseTitle = labelSibling?.classList.contains('spell-label') ? labelSibling.textContent : spellName.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+            let title = baseTitle;
+
+            if (!canUseThisTurn) {
+                s.el.classList.add('used');
+                title = `${baseTitle} (Used)`;
+            } else {
+                s.el.classList.add('available');
+                if (isSelected) {
+                    s.el.classList.add('selected');
+                    title = `CASTING: ${baseTitle} (Esc to Cancel)`;
+                } else {
+                    title = baseTitle;
+                }
+                if (unlimitedSpellsCheat) {
+                    s.el.classList.add('cheat-available');
+                    title += ` (Cheat Active)`;
+                }
+            }
+            s.el.title = title;
+
+            const label = s.el.nextElementSibling;
+            if (label?.classList.contains('spell-label')) {
+                if (!canUseThisTurn) label.style.color = 'var(--color-text-muted)';
+                else if (unlimitedSpellsCheat && canUseThisTurn) label.style.color = 'var(--color-green-bright)';
+                else label.style.color = '';
+            }
+        } else {
+            // Locked: Hide the entire container
+            if (container) container.style.display = 'none';
+        }
 
     });
 
     if (gameBoard) { gameBoard.className = 'game-board'; if (isPanning) gameBoard.classList.add('panning'); if (currentSpell) gameBoard.classList.add(`${currentSpell}-targeting`); }
 
-
-
     if (typeof updateForestArmorButton === 'function') updateForestArmorButton();
-
-
 
     // Hide spell panel if no spells are unlocked and Forest Armor is hidden
 
-    const anySpellUnlocked = Object.values(spellsUnlocked).some(val => val === true);
-
+    // Forest Armor check
     const forestArmorVisible = forestArmorContainer && !forestArmorContainer.classList.contains('hidden') && forestArmorContainer.style.display !== 'none';
 
-
-
     if (spellAreaElement) {
-
-        if (!anySpellUnlocked && !forestArmorVisible) {
-
+        if (!anyUnlocked && !forestArmorVisible) {
             spellAreaElement.classList.add('hidden');
-
             spellAreaElement.style.display = 'none';
-
         } else {
-
             spellAreaElement.classList.remove('hidden');
-
             spellAreaElement.style.display = '';
-
         }
-
     }
-
 }
 
 
@@ -2296,7 +2337,18 @@ function updateUnitInfo(unit) {
 
 
 
-        if (unit.currentRange !== undefined && unit.currentRange > 1) { unitRngDisplay.textContent = `RNG: ${unit.currentRange}`; unitRngDisplay.style.display = 'block'; } else { unitRngDisplay.style.display = 'none'; }
+        if (unit.currentRange !== undefined && unit.currentRange > 1) {
+            unitRngDisplay.textContent = `RNG: ${unit.currentRange}`;
+            unitRngDisplay.style.display = 'block';
+
+            // Apply stat coloring for RNG (Part 3 refinement)
+            unitRngDisplay.classList.remove('stat-boosted', 'stat-debuffed');
+            if (unit.inTower && unit.currentRange > unit.baseRange) {
+                unitRngDisplay.classList.add('stat-boosted');
+            }
+        } else {
+            unitRngDisplay.style.display = 'none';
+        }
 
 
 
@@ -2897,6 +2949,10 @@ function updateUnitInfoDisplay(unit) {
         updateUnitInfo(unit);
 
     }
+    // If the currently selected obstacle is at the same position as the unit, update its info
+    if (selectedObstacle && selectedObstacle.x === unit?.x && selectedObstacle.y === unit?.y) {
+        showObstacleInfo(selectedObstacle);
+    }
 
     // Keep tooltip updated for hover
 
@@ -3138,32 +3194,28 @@ function highlightMovesAndAttacks(unit) {
         const moves = getValidMoves(unit);
 
         moves.forEach(p => {
-
             const cell = getCellElement(p.x, p.y);
-
             if (cell) {
-
                 if (typeof getMoveCost === 'function' && getMoveCost(p.x, p.y) > 1) {
-
                     cell.classList.add('valid-move-slow');
-
                 } else {
-
                     cell.classList.add('valid-move');
-
                 }
-
             }
 
+            // Also highlight the obstacle element itself if it's an enterable tower
+            const obs = getObstacleAt(p.x, p.y);
+            if (obs && obs.enterable && obs.element) {
+                obs.element.classList.add('valid-move');
+            }
         });
 
 
 
         // Highlight enterable towers only if unit can actually enter this turn
 
-        // Tower entry is ONLY from the cell directly below the tower (tower.x, tower.y + 1)
 
-        obstacles.forEach(obs => {
+        if (false) obstacles.forEach(obs => {
 
             if (obs.enterable && !obs.occupantUnitId && isObstacleIntact(obs)) {
 
@@ -3277,15 +3329,16 @@ function highlightMovesAndAttacks(unit) {
 
 
 
-function highlightEnemyRange(unit) {
+function highlightEnemyRange(unit, forceState = null) {
 
     if (!unit) return;
 
     const wasSelected = persistentEnemyRangeUnitIds.has(unit.id);
+    const shouldBeSelected = (forceState !== null) ? forceState : !wasSelected;
 
     persistentEnemyRangeUnitIds.clear(); // Always clear others to prevent stacking
 
-    if (!wasSelected) {
+    if (shouldBeSelected) {
 
         persistentEnemyRangeUnitIds.add(unit.id);
 
@@ -3587,7 +3640,7 @@ function selectUnit(unit) {
 
     let canAct = !levelClearedAwaitingInput && !unit.acted;
 
-    if (levelClearedAwaitingInput) canAct = true; // Allow selection if level is cleared
+    if (levelClearedAwaitingInput) canAct = true; // Allow highlighting if level is cleared
 
     if (unit.canMoveAndAttack && unit.actionsTakenThisTurn < 2) canAct = true;
 
@@ -3604,6 +3657,8 @@ function selectUnit(unit) {
 
 
     if (currentSpell) setActiveSpell(null);
+    // Clear any selected obstacle when a unit is selected
+    selectedObstacle = null;
 
     if (selectedUnit === unit) return;
 
@@ -3643,7 +3698,7 @@ function selectUnit(unit) {
 
         if (currentRange > 1) {
 
-            highlightEnemyRange(unit);
+            highlightEnemyRange(unit, true);
 
         } else {
 
@@ -3702,6 +3757,8 @@ function deselectUnit(playSound = true, keepPersistence = false) {
         if (cell) cell.classList.remove('selected');
 
     }
+    // Clear selected obstacle
+    selectedObstacle = null;
 
     // ALWAYS clear selected-enemy class when deselecting (this is the ONLY place it should be removed)
 
@@ -3720,6 +3777,8 @@ function deselectUnit(playSound = true, keepPersistence = false) {
     clearHighlights(keepPersistence);
 
     if (playSound) playSfx('select');
+
+    selectedObstacle = null;
 
     clearAttackHoverHighlights();
 
@@ -4382,7 +4441,11 @@ async function handleCellClick(event) {
             handleUnitClick(event, unitOnCell); return;
 
         }
-
+    }
+    // If there's a clickable obstacle, let handleObstacleClick handle it.
+    if (obstacle && obstacle.clickable && !currentSpell) {
+        handleObstacleClick(event, obstacle);
+        return;
     }
 
     if (obstacle?.enterable && obstacle.occupantUnitId) {
@@ -4462,6 +4525,10 @@ async function handleCellClick(event) {
 async function handleUnitClick(event, clickedUnit) {
 
     event.stopPropagation();
+
+
+    // Clearing obstacle selection when a unit is clicked
+    selectedObstacle = null;
 
     if (!clickedUnit) return;
 
@@ -4601,7 +4668,7 @@ async function handleUnitClick(event, clickedUnit) {
 
                     if ((clickedUnit.currentRange || clickedUnit.range) > 1 && !clickedUnit.meleeOnlyAttack) {
 
-                        highlightEnemyRange(clickedUnit);
+                        highlightEnemyRange(clickedUnit, true);
 
                     }
 
@@ -4650,66 +4717,49 @@ async function handleUnitClick(event, clickedUnit) {
         }
 
         else if (clickedUnit.team === 'enemy') {
+
+            // Check if already selected (toggle off) BEFORE deselecting
+            const isAlreadySelected = clickedUnit.element && clickedUnit.element.classList.contains('selected-enemy');
+
             // ALWAYS clear any currently selected unit OR existing enemy highlights first
-            deselectUnit(false, false); // Don't play sound for silent switch, clear highlights
+            deselectUnit(false, false);
 
-
-
-            // Check if already selected (toggle off)
-
-            if (clickedUnit.element && clickedUnit.element.classList.contains('selected-enemy')) {
-
-                // Explicitly remove the selection class
-
-                clickedUnit.element.classList.remove('selected-enemy');
-
-                updateUnitVisualState(clickedUnit);
-
-
+            if (isAlreadySelected) {
+                // Was already selected -> Toggle Off
+                // deselectUnit handled the visual clearing already
 
                 if ((clickedUnit.currentRange || clickedUnit.range) > 1 && !clickedUnit.meleeOnlyAttack) {
-
-                    highlightEnemyRange(clickedUnit); // Toggles off the range grid
-
-                } else {
-
-                    clearHighlights(false);
-
+                    // Start fresh range highlight? No, we want to clear it.
+                    // deselectUnit clears highlights usually? No, line 4693 passed false to keepHighlights?
+                    // "deselectUnit(false, false)" -> keepHighlights=false. So it clears highlights.
                 }
 
+                clearHighlights(false);
                 updateUnitInfo(null);
 
+                // Play SFX for deselect? Or just select?
+                // User said "select sfx when you click on enemy units".
+                playSfx('select');
                 return;
-
             }
 
+            // Not already selected -> Select it
 
-
-            // If ranged, toggle range grid persistence
-
+            // If ranged, show range grid persistence
             if ((clickedUnit.currentRange || clickedUnit.range) > 1 && !clickedUnit.meleeOnlyAttack) {
-
-                highlightEnemyRange(clickedUnit);
-
+                highlightEnemyRange(clickedUnit, true);
             } else {
-
-                // If not ranged, we explicitly clear highlights AND persistence
-
                 clearHighlights(false);
-
             }
 
-
-
-            // Highlight enemy unit (apply AFTER clearing)
-
+            // Highlight enemy unit
             if (clickedUnit.element) {
-
                 clickedUnit.element.classList.add('selected-enemy');
-
                 updateUnitVisualState(clickedUnit);
-
             }
+
+            playSfx('select'); // Play SFX on selection
+            updateUnitInfo(clickedUnit);
 
 
 
@@ -4856,7 +4906,7 @@ async function handleObstacleClick(event, clickedObstacle) {
 
         else if (clickedObstacle.enterable && !clickedObstacle.occupantUnitId && !selectedUnit.inTower && (!selectedUnit.acted || levelClearedAwaitingInput) && !selectedUnit.isFrozen && !selectedUnit.isNetted) {
 
-            const entryX = targetX; const entryY = targetY + 1;
+            const entryX = targetX; const entryY = targetY;
 
             if (isCellInBounds(entryX, entryY)) {
 
@@ -4868,8 +4918,6 @@ async function handleObstacleClick(event, clickedObstacle) {
 
                     const unitToEnter = selectedUnit;
 
-                    deselectUnit(false);
-
                     isProcessing = true;
 
                     if (typeof updateTurnDisplay === 'function') updateTurnDisplay();
@@ -4877,6 +4925,13 @@ async function handleObstacleClick(event, clickedObstacle) {
                     try {
 
                         await initiateTowerEntrySequence(unitToEnter, clickedObstacle, path);
+
+                        // Keep selected (Part 4 refinement: Ensure visual highlight persists)
+                        if (isUnitAliveAndValid(unitToEnter)) {
+                            selectedUnit = unitToEnter;
+                            if (typeof highlightMovesAndAttacks === 'function') highlightMovesAndAttacks(selectedUnit);
+                            if (typeof updateUnitInfo === 'function') updateUnitInfo(selectedUnit);
+                        }
 
                     } catch (e) {
 
@@ -4896,17 +4951,15 @@ async function handleObstacleClick(event, clickedObstacle) {
 
                 }
 
-                else { playSfx('error'); showFeedback("Cannot reach.", "feedback-error"); deselectUnit(); return; }
+                else {
+                    // Fallback to selecting the tower if we cannot reach it
+                    deselectUnit(false);
+                    playSfx('select');
+                    showObstacleInfo(clickedObstacle);
+                    return;
+                }
 
             } else { playSfx('error'); showFeedback("Invalid entry.", "feedback-error"); deselectUnit(); return; }
-
-        } else if (clickedObstacle.clickable && (!selectedUnit || selectedUnit.team !== 'player')) {
-
-            // Select the obstacle if it's clickable and we aren't in a state to attack it (or no unit selected)
-
-            playSfx('select');
-
-            showObstacleInfo(clickedObstacle); // Show obstacle info in unit info panel
 
         } else if (!clickedObstacle.blocksMove && currentTurn === 'player' && selectedUnit && !clickedObstacle.canBeAttacked) {
 
@@ -4940,37 +4993,55 @@ async function handleObstacleClick(event, clickedObstacle) {
 
             }
 
-        } else {
-
-            playSfx('error'); // Keep error sound for invalid action
-
-            // Feedback for why the action failed
-
-            if (clickedObstacle.destructible && !isAttackable) showFeedback("Out of range/sight or not attackable.", "feedback-error");
-
-            else if (clickedObstacle.type === 'snowman' && !clickedObstacle.revealed) showFeedback("Get closer or shoot it!", "feedback-error");
-
-            else showFeedback("Cannot interact.", "feedback-error");
-
-
-
-            deselectUnit();
-
-            // After deselecting, show info if applicable (e.g. clicking a tower while a unit is selected but too far away)
-
-            if (clickedObstacle && (clickedObstacle.clickable || clickedObstacle.canBeAttacked)) {
-
-                showObstacleInfo(clickedObstacle);
-
-            }
-
-            return;
-
         }
 
+    }
+    // Universal clickable selection (Part 5 refinement: Independent of unit selection and supports toggling)
+    if (clickedObstacle.clickable) {
+
+        if (selectedObstacle === clickedObstacle) {
+            // Already selected, so deselect (toggle)
+            deselectUnit(true, false);
+            return;
+        }
+
+        // Deselect previous unit or inspected enemy (Part 5 Fix: ensure red border/grid clears)
+        deselectUnit(false, false);
+
+        selectedObstacle = clickedObstacle;
         playSfx('select');
 
+        showObstacleInfo(clickedObstacle);
+        return;
+
+    } else if (currentTurn === 'player' && selectedUnit) {
+
+        playSfx('error'); // Keep error sound for invalid action
+
+        // Feedback for why the action failed
+        if (clickedObstacle.destructible) {
+            const attackTargets = getValidAttackTargets(selectedUnit);
+            const isAttackable = attackTargets.obstacles.includes(clickedObstacle.id);
+            if (!isAttackable) showFeedback("Out of range or sight.", "feedback-error");
+        }
+        else if (clickedObstacle.type === 'snowman' && !clickedObstacle.revealed) showFeedback("Get closer or shoot it!", "feedback-error");
+
     }
+    else showFeedback("Cannot interact.", "feedback-error");
+
+
+
+    deselectUnit();
+
+    // After deselecting, show info if applicable (e.g. clicking a tower while a unit is selected but too far away)
+
+    if (clickedObstacle && (clickedObstacle.clickable || clickedObstacle.canBeAttacked)) {
+
+        showObstacleInfo(clickedObstacle);
+
+    }
+
+    return;
 
 }
 
@@ -5803,7 +5874,10 @@ function hideMenu() {
         });
     }
     updateParUI();
+    updateSpellUI();
 }
+
+
 
 function isMenuOpen() { return menuOverlay?.classList.contains('visible'); }
 
@@ -6704,13 +6778,14 @@ function updateShopDisplay() {
                     if (unitType === 'archer' && highestLevelReached <= (ARCHER_RESCUE_LEVEL + 10)) isLevelRestricted = true;
                     if (unitType === 'champion' && highestLevelReached <= (CHAMPION_RESCUE_LEVEL + 10)) isLevelRestricted = true;
                     if (unitType === 'rogue' && highestLevelReached <= (ROGUE_RESCUE_LEVEL + 10)) isLevelRestricted = true;
+                    if (unitType === 'wizard' && highestLevelReached <= (WIZARD_UNLOCK_LEVEL + 10)) isLevelRestricted = true;
                 }
             }
 
             isLocked = !isRescued;
             item.classList.toggle('locked', isLocked);
 
-            // Still show visual indication for restricted but NOT silhouetted
+            // Visual indication for level-restricted (rescued but can't buy 2nd yet)
             item.classList.toggle('restricted', isLevelRestricted);
 
             canBuy = playerGold >= cost && !isMaxed && isRescued && !isLevelRestricted;
@@ -6718,9 +6793,25 @@ function updateShopDisplay() {
             // Hide cost ONLY for unrescued units
             if (costLine) costLine.style.display = isLocked ? 'none' : '';
 
+            // Store restriction note in dataset for tooltip use
+            if (isLevelRestricted) {
+                let reqLvl = 1;
+                if (unitType === 'archer') reqLvl = ARCHER_RESCUE_LEVEL + 10;
+                if (unitType === 'champion') reqLvl = CHAMPION_RESCUE_LEVEL + 10;
+                if (unitType === 'rogue') reqLvl = ROGUE_RESCUE_LEVEL + 10;
+                item.dataset.restrictionNote = `Requires Level ${reqLvl}`;
+            } else {
+                item.dataset.restrictionNote = '';
+            }
+
+            // Clean up any stale lock text from previous edits
+            const lockText = item.querySelector('.lock-text');
+            if (lockText) lockText.remove();
+
             if (titleElement && UNIT_DATA[unitType]) {
                 const unitName = UNIT_DATA[unitType].name;
-                titleElement.innerHTML = `<span class="shop-icon-container"><span class="shop-item-icon icon icon-unit-${unitType}"></span></span> ${unitName} <span style="white-space: nowrap;">${currentOwnedCount}/${maxCount}</span>`;
+                const limitText = `<span style="white-space: nowrap;">${currentOwnedCount}/${maxCount}</span>`;
+                titleElement.innerHTML = `<span class="shop-icon-container"><span class="shop-item-icon icon icon-unit-${unitType}"></span></span> ${unitName} ${limitText}`;
             }
 
         } else if (itemType === 'unit_upgrade') {
@@ -7145,9 +7236,14 @@ function updateShopDisplay() {
             if (isLocked) {
                 const reqLvl = parseInt(item.dataset.requiredLevel) || (pId === 'thorns' ? 35 : (pId === 'vampiric_aura' ? 50 : (pId === 'evasion' ? 25 : (pId === 'tactical_command' ? (15 * (currentLevel + 1)) : 1))));
                 item.dataset.restrictionNote = `Requires Level ${reqLvl}`;
+                item.classList.add('locked');
             } else {
                 item.dataset.restrictionNote = "";
+                item.classList.remove('locked');
             }
+            // Clean up any stale lock text from previous edits
+            const lockTextP = item.querySelector('.lock-text');
+            if (lockTextP) lockTextP.remove();
 
             canBuy = playerGold >= cost && !isLocked && !isMaxed;
             item.dataset.currentCost = cost;
@@ -7530,11 +7626,9 @@ function updateShopDisplay() {
 
             item.classList.toggle('locked', shouldLock);
 
-            // Silhouette ONLY for unit items (Recruit Units section)
-
-            const shouldShowSilhouette = isLocked && itemType === 'recruit';
-
-            item.classList.toggle('shop-item-locked', shouldShowSilhouette);
+            // Silhouette ONLY for unrescued units (NOT level-restricted ones)
+            const isUnrescuedRecruit = itemType === 'recruit' && isLocked && !item.classList.contains('restricted');
+            item.classList.toggle('shop-item-locked', isUnrescuedRecruit);
 
             item.classList.toggle('maxed', isMaxed);
 
@@ -8514,7 +8608,8 @@ function getTooltipTarget(el) {
         }
 
         // Fall through for generic buttons in shop
-
+    } else if (isMainMenuOpen()) {
+        // Tooltip for main menu items if needed
     } else if (isLevelSelectOpen()) {
 
         const levelDotEl = el?.closest('.level-dot');
@@ -9074,7 +9169,7 @@ function showTooltip(data, type) {
 
                 const hideHpFor = ['crate', 'barrel', 'exploding_barrel', 'snowman'];
 
-                if (obstacle.destructible && !hideHpFor.includes(obstacle.type)) content += `<br>HP: ${obstacle.hp}/${obstacle.maxHp}`; if (obstacle.enterable) { const occupant = obstacle.occupantUnitId ? units.find(u => u.id === obstacle.occupantUnitId && isUnitAliveAndValid(u)) : null; content += `<br>${occupant ? `Occupied by ${occupant.name}` : 'Empty'}`; if (occupant?.baseRange > 1) content += ` (+${obstacle.rangeBonus} RNG)`; if (!occupant && obstacle.hp > 0) content += `<br><span style="color:#cccccc;">(Enter/Exit from below)</span>`; } if (obsConfig.blocksLOS) content += `<br><span style="color:#ffccaa;">Blocks Line of Sight</span>`; if (obstacle.hidesUnit && !obstacle.revealed) content += `<br><span style="color:#aadeff;">Seems suspicious...</span>`; if (obstacle.canBeAttacked) content += `<br><span style="color:#ff4444;">Attackable</span>`; break; case 'shop': const shopItemId = data.dataset.itemId; const shopItemType = data.dataset.type; if (shopItemType === 'recruit') {
+                if (obstacle.destructible && !hideHpFor.includes(obstacle.type)) content += `<br>HP: ${obstacle.hp}/${obstacle.maxHp}`; if (obstacle.enterable) { const occupant = obstacle.occupantUnitId ? units.find(u => u.id === obstacle.occupantUnitId && isUnitAliveAndValid(u)) : null; content += `<br>${occupant ? `Occupied by ${occupant.name}` : 'Empty'}`; if (occupant?.baseRange > 1) content += ` (+${obstacle.rangeBonus} RNG)`; } if (obsConfig.blocksLOS) content += `<br><span style="color:#ffccaa;">Blocks Line of Sight</span>`; if (obstacle.hidesUnit && !obstacle.revealed) content += `<br><span style="color:#aadeff;">Seems suspicious...</span>`; if (obstacle.canBeAttacked) content += `<br><span style="color:#ff4444;">Attackable</span>`; break; case 'shop': const shopItemId = data.dataset.itemId; const shopItemType = data.dataset.type; if (shopItemType === 'recruit') {
 
                     const unitType = data.dataset.unitType; const unitData = UNIT_DATA[unitType]; const shopCost = getRecruitCost(unitType); const owned = playerOwnedUnits[unitType] || 0; const max = parseInt(data.dataset.max) || MAX_OWNED_PER_TYPE;
 
@@ -9096,7 +9191,7 @@ function showTooltip(data, type) {
                                 }
                             } else if (owned >= 1) {
                                 if (unitType === 'wizard') {
-                                    restrictionNote = "Limit 1 Wizard";
+                                    restrictionNote = "";
                                 } else {
                                     const secondUnitReq = reqLvl + 10;
                                     if (highestLevelReached < secondUnitReq) {
@@ -12219,17 +12314,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     });
 
+    // Explicit Restart Button Fix
+    const restartBtn = document.getElementById('restart-button');
+    if (restartBtn) {
+        // Remove any existing listeners by cloning (nuclear option, safe here as it's simple)
+        const newBtn = restartBtn.cloneNode(true);
+        restartBtn.parentNode.replaceChild(newBtn, restartBtn);
+        newBtn.addEventListener('click', () => {
+            if (isGameActive() || isGameOverScreenVisible()) {
+                hideGameOverScreen();
+                initGame(currentLevel);
+                playSfx('select');
+                // Restart music logic if needed
+                stopMusic();
+                selectAndLoadMusic();
+            } else playSfx('error');
+        });
+        // Re-assign generic button reference for other uses if any (global var update)
+        // restartButton = newBtn; // If restartButton is a global let, uncomment. Assuming ID selection mostly.
+    }
 
 
     let firstEverTouch = true;
+    let hasAutoFullscreenTriggered = false;
 
     document.body.addEventListener('touchstart', (e) => {
 
         if (!audioInitialized) initializeAudio();
 
-        if (isMobileDevice() && !isFullscreen()) {
+        if (isMobileDevice() && !isFullscreen() && !hasAutoFullscreenTriggered) {
 
-            if (typeof toggleFullscreen === 'function') toggleFullscreen();
+            if (typeof toggleFullscreen === 'function') {
+                toggleFullscreen();
+                hasAutoFullscreenTriggered = true;
+            }
 
         }
 
@@ -13344,3 +13462,21 @@ function setupButtonTooltips() {
         }
     });
 }
+
+// Global SFX Listener for Buttons
+document.addEventListener('click', (e) => {
+    // Check if the clicked element or any parent is a button or has role="button" or class "btn" or "shop-item" (selectable)
+    const btn = e.target.closest('button, .btn, [role="button"], .shop-item.selectable, .level-node:not(.locked)');
+
+    if (btn) {
+        // Avoid playing if it's disabled
+        if (btn.disabled || btn.classList.contains('disabled') || btn.classList.contains('locked')) return;
+
+        // Play the default select sound
+        // The debounce in playSfx will handle overlaps if the button also calls playSfx('select')
+        playSfx('select');
+    }
+}, true); // Capture phase to insure it catches events even if propagation stopped? No, actually bubbling is fine, but true (capture) ensures we hear it before stopPropagation might kill it? 
+// However, stopPropagation usually prevents PARENTS from hearing. Capture happens down.
+// Let's use bubbling (false) to be safe for normal UI behavior, or true if we really want to catch everything.
+// True (capture) is safer against `e.stopPropagation()` in button handlers if we want the sound to *always* play.

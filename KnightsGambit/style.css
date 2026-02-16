@@ -2054,8 +2054,8 @@ body {
 .skill-icon {
     position: relative;
     display: inline-block;
-    width: clamp(40px, 7vmin, 50px);
-    height: clamp(40px, 7vmin, 50px);
+    width: clamp(40px, 7vmin, 50px) !important;
+    height: clamp(40px, 7vmin, 50px) !important;
     border: 2px solid var(--color-iron-black);
     border-radius: 4px;
     background-color: var(--color-iron-medium);
@@ -2179,71 +2179,72 @@ body {
 }
 
 /* Spell Icons - Consolidated Spritesheet Definitions */
-.icon-spell-fireball {
+/* Spell Icons - Consolidated Spritesheet Definitions - Increased Specificity */
+.spell-icon.icon-spell-fireball {
     background-image: url('./sprites/projectiles.png') !important;
     background-size: 300% 100% !important;
     background-position: 100% 0%;
     background-repeat: no-repeat;
 }
 
-.icon-spell-flameWave,
-.icon-spell-frostNova,
-.icon-spell-heal,
-.icon-spell-arcaneJolt,
-.icon-spell-polymorph,
-.icon-ability-quickStrike,
-.icon-skill-tacticalcommand,
-.icon-skill-loothoarder,
-.icon-skill-evasion,
-.icon-skill-thorns,
-.icon-skill-vampiricaura {
+.spell-icon.icon-spell-flameWave,
+.spell-icon.icon-spell-frostNova,
+.spell-icon.icon-spell-heal,
+.spell-icon.icon-spell-arcaneJolt,
+.spell-icon.icon-spell-polymorph,
+.spell-icon.icon-ability-quickStrike,
+.spell-icon.icon-skill-tacticalcommand,
+.spell-icon.icon-skill-loothoarder,
+.spell-icon.icon-skill-evasion,
+.spell-icon.icon-skill-thorns,
+.spell-icon.icon-skill-vampiricaura {
     background-image: url('./sprites/skills.png') !important;
     background-size: 500% 300% !important;
     background-repeat: no-repeat;
 }
 
-.icon-spell-flameWave {
+.spell-icon.icon-spell-flameWave {
     background-position: 0% 0%;
 }
 
-.icon-spell-frostNova {
+.spell-icon.icon-spell-frostNova {
     background-position: 25% 0%;
 }
 
-.icon-spell-heal {
+.spell-icon.icon-spell-heal {
     background-position: 50% 0%;
 }
 
-.icon-spell-arcaneJolt {
+.spell-icon.icon-spell-arcaneJolt {
     background-position: 75% 0%;
 }
 
-.icon-spell-polymorph {
-    background-position: 100% 0% !important;
-    background-repeat: no-repeat !important;
+.spell-icon.icon-spell-polymorph {
+    background-position: 100% 0%;
 }
 
-.icon-ability-quickStrike {
+/* Ability Icons */
+.spell-icon.icon-ability-quickStrike {
     background-position: 0% 50%;
 }
 
-.icon-skill-tacticalcommand {
+.spell-icon.icon-skill-tacticalcommand {
     background-position: 25% 50%;
 }
 
-.icon-skill-loothoarder {
+.spell-icon.icon-skill-loothoarder {
     background-position: 50% 50%;
 }
 
-.icon-skill-evasion {
+.spell-icon.icon-skill-evasion {
     background-position: 75% 50%;
 }
 
-.icon-skill-thorns {
+.spell-icon.icon-skill-thorns {
     background-position: 100% 50%;
 }
 
-.icon-skill-vampiricaura {
+.spell-icon.icon-skill-vampiricaura {
     background-position: 0% 100%;
 }
 
@@ -2733,6 +2734,12 @@ button:disabled,
     width: clamp(64px, 12vmin, 120px) !important;
     height: clamp(64px, 12vmin, 120px) !important;
     filter: drop-shadow(2px 2px 4px var(--color-gold-dark));
+}
+
+.shop-content .shop-section-header {
+    text-align: left !important;
+    padding-left: 10px;
+    margin-bottom: 5px;
 }
 
 .icon {
@@ -4383,6 +4390,13 @@ span.icon[class*="icon-skill-"] {
     cursor: not-allowed !important;
 }
 
+/* Level-restricted but rescued units: faded/grey, NO silhouette */
+.shop-item.restricted {
+    opacity: 0.45;
+    filter: grayscale(80%) contrast(0.75);
+    cursor: not-allowed !important;
+}
+
 .shop-item.maxed {
     opacity: 0.6;
     background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.6));
@@ -5667,6 +5681,7 @@ p.shop-item-resistance {
     inset: 0;
     pointer-events: none;
     z-index: 5;
+    background-color: rgba(255, 0, 0, 0.15);
     /* Borders will be applied here by modifier classes */
 }
 
