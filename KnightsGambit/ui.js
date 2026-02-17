@@ -12428,9 +12428,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             }
 
+            // Don't show tooltips for actionable elements — their click handler takes priority
+            const tappedTooltipEl = e.target.closest('[data-tooltip-text]');
+            if (tappedTooltipEl) {
+                hideTooltip();
+                return;
+            }
+
             const { type, targetElement, targetData } = getTooltipTarget(e.target);
 
-            if (targetElement && targetData) {
+            // Skip 'simple' tooltips on mobile — these are button labels meant for desktop hover
+            if (targetElement && targetData && type !== 'simple') {
 
                 showTooltip(targetData, type);
 
@@ -13425,6 +13433,8 @@ function navigateShopTab(direction) {
 }
 
 function setupButtonTooltips() {
+    // Button tooltips are for desktop hover only — skip on mobile to avoid lingering tooltips on tap
+    if (isMobileDevice()) return;
     const buttons = [
         { id: 'back-to-main-menu-button', text: 'Back to Main Menu' },
         { id: 'level-select-shop-button', text: 'Barracks' },
@@ -13488,6 +13498,9 @@ document.addEventListener('click', (e) => {
     if (btn) {
         // Avoid playing if it's disabled
         if (btn.disabled || btn.classList.contains('disabled') || btn.classList.contains('locked')) return;
+
+        // On mobile, dismiss any lingering tooltip when a button is tapped
+        if (isMobileDevice()) hideTooltip();
 
         // Play the default select sound
         // The debounce in playSfx will handle overlaps if the button also calls playSfx('select')
