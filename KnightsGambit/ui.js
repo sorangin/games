@@ -6167,8 +6167,6 @@ function switchShopTab(tab) {
 
     if (tab === 'armory') {
 
-        // Check unlock condition: Must BEAT level 60 (so highestLevelReached > 60)
-
         if (highestLevelReached <= 60) {
 
             playSfx('error');
@@ -9169,7 +9167,12 @@ function showTooltip(data, type) {
 
                 const hideHpFor = ['crate', 'barrel', 'exploding_barrel', 'snowman'];
 
-                if (obstacle.destructible && !hideHpFor.includes(obstacle.type)) content += `<br>HP: ${obstacle.hp}/${obstacle.maxHp}`; if (obstacle.enterable) { const occupant = obstacle.occupantUnitId ? units.find(u => u.id === obstacle.occupantUnitId && isUnitAliveAndValid(u)) : null; content += `<br>${occupant ? `Occupied by ${occupant.name}` : 'Empty'}`; if (occupant?.baseRange > 1) content += ` (+${obstacle.rangeBonus} RNG)`; } if (obsConfig.blocksLOS) content += `<br><span style="color:#ffccaa;">Blocks Line of Sight</span>`; if (obstacle.hidesUnit && !obstacle.revealed) content += `<br><span style="color:#aadeff;">Seems suspicious...</span>`; if (obstacle.canBeAttacked) content += `<br><span style="color:#ff4444;">Attackable</span>`; break; case 'shop': const shopItemId = data.dataset.itemId; const shopItemType = data.dataset.type; if (shopItemType === 'recruit') {
+                if (obstacle.destructible && !hideHpFor.includes(obstacle.type)) content += `<br>HP: ${obstacle.hp}/${obstacle.maxHp}`; if (obstacle.enterable) { const occupant = obstacle.occupantUnitId ? units.find(u => u.id === obstacle.occupantUnitId && isUnitAliveAndValid(u)) : null; content += `<br>${occupant ? `Occupied by ${occupant.name}` : 'Empty'}`; if (occupant?.baseRange > 1) content += ` (+${obstacle.rangeBonus} RNG)`; } if (obsConfig.blocksLOS) content += `<br><span style="color:#ffccaa;">Blocks Line of Sight</span>`; if (obstacle.hidesUnit && !obstacle.revealed) content += `<br><span style="color:#aadeff;">Seems suspicious...</span>`; if (obstacle.canBeAttacked) content += `<br><span style="color:#ff4444;">Attackable</span>`; break;
+            case 'shop':
+                const shopItemId = data.dataset.itemId;
+                const shopItemType = data.dataset.type;
+                restrictionNote = data.dataset.restrictionNote || "";
+                if (shopItemType === 'recruit') {
 
                     const unitType = data.dataset.unitType; const unitData = UNIT_DATA[unitType]; const shopCost = getRecruitCost(unitType); const owned = playerOwnedUnits[unitType] || 0; const max = parseInt(data.dataset.max) || MAX_OWNED_PER_TYPE;
 
@@ -9732,7 +9735,7 @@ function showTooltip(data, type) {
 
                 content = `<span style="color:var(--color-gold-light); font-weight:bold;">Armory</span> <span class="hotkey-highlight">(A)</span><br><span style="color:#ffffff;">Upgrade unit stats and unlock powerful passives.</span>`;
 
-                if (!isArmoryUnlocked) content += `<br><span style="color:#ff4444;">Beat Level 60 to Unlock.</span>`;
+                if (!isArmoryUnlocked) content += `<br><span style="color:#ff4444;">Requires Level 60</span>`;
 
                 break;
 

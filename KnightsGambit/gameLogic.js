@@ -559,10 +559,13 @@ function calculateGridDimensions(level) {
 
 
     currentGridCols = BASE_GRID_COLS + Math.floor(levelFactor / 2) + (levelFactor % 2);
-
-
     currentGridRows = BASE_GRID_ROWS + Math.floor(levelFactor / 2);
 
+    if (level > 60) {
+        // Randomize from large to small (8x10 to 15x15)
+        currentGridCols = Math.floor(Math.random() * (15 - 8 + 1)) + 8;
+        currentGridRows = Math.floor(Math.random() * (15 - 10 + 1)) + 10;
+    }
 
     currentGridCols = Math.max(BASE_GRID_COLS, Math.min(currentGridCols, 15));
 
@@ -3360,6 +3363,11 @@ function spawnCages(occupied, validSpawnMaxY) {
     else if (currentLevel === CHAMPION_RESCUE_LEVEL) { cageType = 'cage_champion'; unitInside = 'champion'; }
     else if (currentLevel === ROGUE_RESCUE_LEVEL) { cageType = 'cage_rogue'; unitInside = 'rogue'; }
     else if (currentLevel === WIZARD_UNLOCK_LEVEL) { cageType = 'cage_wizard'; unitInside = 'wizard'; }
+
+    if (unitInside && playerOwnedUnits[unitInside] > 0) {
+        cageType = null;
+        unitInside = null;
+    }
 
     if (cageType) {
         // Find a valid spot for the cage
@@ -12438,6 +12446,9 @@ function getValidAttackTargets(unit) {
 
 
         if (target.canBeAttacked && isObstacleIntact(target) && !targets.obstacles.includes(target.id)) {
+
+            // Enemies should never attack Caged units
+            if (unit.team === 'enemy' && target.type && target.type.startsWith('cage_')) continue;
 
 
             // Empty towers cannot be attacked
