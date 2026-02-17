@@ -12428,6 +12428,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             }
 
+            // Don't show tooltips for actionable elements — their click handler takes priority
+            const tappedTooltipEl = e.target.closest('[data-tooltip-text]');
+            if (tappedTooltipEl) {
+                hideTooltip();
+                return;
+            }
+
             const { type, targetElement, targetData } = getTooltipTarget(e.target);
 
             if (targetElement && targetData) {
@@ -13425,6 +13432,8 @@ function navigateShopTab(direction) {
 }
 
 function setupButtonTooltips() {
+    // Button tooltips are for desktop hover only — skip on mobile to avoid lingering tooltips on tap
+    if (isMobileDevice()) return;
     const buttons = [
         { id: 'back-to-main-menu-button', text: 'Back to Main Menu' },
         { id: 'level-select-shop-button', text: 'Barracks' },
