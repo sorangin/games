@@ -5713,7 +5713,7 @@ function handleKeyDown(event) {
 
 function isAnyOverlayVisible(excludeMainMenu = false) { return isGameOverScreenVisible() || isMenuOpen() || isLeaderboardOpen() || isLevelSelectOpen() || isShopOpen() || isLevelCompleteOpen() || isChooseTroopsScreenOpen() || isSettingsOpen() || isAchievementsOpen() || isNamePromptOpen() || isAccountsOpen() || (!excludeMainMenu && isMainMenuOpen()); }
 
-function hideAllOverlays() { const overlays = [mainMenu, gameOverScreen, menuOverlay, leaderboardOverlay, levelSelectScreen, shopScreen, levelCompleteScreen, chooseTroopsScreen, settingsOverlay, achievementsOverlay, namePromptOverlay, accountsOverlay, newProfileOverlay, deleteConfirmOverlay]; overlays.forEach(o => { o?.classList.add('hidden'); o?.classList.remove('visible'); }); gameBoardWrapper?.classList.toggle('active', isGameActive() && !isAnyOverlayVisible()); startTooltipUpdater(); updateParUI(); }
+function hideAllOverlays() { hideTooltip(); const overlays = [mainMenu, gameOverScreen, menuOverlay, leaderboardOverlay, levelSelectScreen, shopScreen, levelCompleteScreen, chooseTroopsScreen, settingsOverlay, achievementsOverlay, namePromptOverlay, accountsOverlay, newProfileOverlay, deleteConfirmOverlay]; overlays.forEach(o => { o?.classList.add('hidden'); o?.classList.remove('visible'); }); gameBoardWrapper?.classList.toggle('active', isGameActive() && !isAnyOverlayVisible()); startTooltipUpdater(); updateParUI(); }
 
 function hideUnitInfo() { if (unitInfo) { unitInfo.classList.remove('visible'); unitInfo.style.display = 'none'; } }
 

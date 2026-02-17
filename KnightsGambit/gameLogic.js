@@ -561,6 +561,16 @@ function calculateGridDimensions(level) {
     currentGridCols = BASE_GRID_COLS + Math.floor(levelFactor / 2) + (levelFactor % 2);
     currentGridRows = BASE_GRID_ROWS + Math.floor(levelFactor / 2);
 
+    // Levels 16-60: Add progressive random size variability
+    if (level >= 16 && level <= 60) {
+        const progress = (level - 16) / (60 - 16); // 0.0 at level 16 → 1.0 at level 60
+        const maxVariance = Math.floor(1 + progress * 3); // ±1 at level 16 → ±4 at level 60
+        const colOffset = Math.floor(Math.random() * (maxVariance * 2 + 1)) - maxVariance;
+        const rowOffset = Math.floor(Math.random() * (maxVariance * 2 + 1)) - maxVariance;
+        currentGridCols += colOffset;
+        currentGridRows += rowOffset;
+    }
+
     if (level > 60) {
         // Randomize from large to small (8x10 to 15x15)
         currentGridCols = Math.floor(Math.random() * (15 - 8 + 1)) + 8;
