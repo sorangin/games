@@ -4907,8 +4907,9 @@ p.shop-item-resistance {
     #ui-panel {
         width: 100%;
         border-left: none;
-        border-top: 6px solid var(--color-wood-darkest);
-        border-image: linear-gradient(to right, #6d5b4b, #3b2e1e 90%) 1;
+        border-top: none;
+        border-image: none;
+        padding-top: 0;
         min-height: 150px;
         max-height: 55vh;
         flex-grow: 1;
@@ -5183,11 +5184,25 @@ p.shop-item-resistance {
 }
 
 #shop-screen .shop-content {
-    max-width: 98%;
-    width: 98%;
-    height: 98vh;
-    max-height: 98vh;
+    max-width: 100%;
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
     border: none !important;
+    display: flex;
+    flex-direction: column;
+    padding: 0 !important;
+}
+
+#shop-screen .overlay-scroll-container {
+    padding: 5px !important;
+    padding-bottom: 0 !important;
+}
+
+#shop-items-container {
+    margin-bottom: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
 }
 
 #shop-screen .overlay-scroll-container.troops-mode-v2 {
@@ -8136,4 +8151,48 @@ p.shop-item-resistance {
 
 .icon.icon-shop.icon-skill-goldmagnet {
     background: url('./sprites/skills.png') 25% 100% / 500% 300% no-repeat !important;
+}
+
+/* Mobile View Controls Adjustments */
+@media (max-width: 768px) {
+    #fill-width-button {
+        display: none !important;
+    }
+
+    .view-controls-bar {
+        bottom: 5px !important;
+        right: 5px !important;
+        gap: 5px !important;
+        align-items: flex-end !important;
+    }
+
+    #default-view-button {
+        width: 40px !important;
+        height: 40px !important;
+        min-width: 40px !important;
+        max-width: 40px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border-radius: 6px !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        aspect-ratio: 1 / 1 !important;
+        flex: 0 0 40px !important;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3) !important;
+        align-self: flex-end !important;
+    }
+
+    #default-view-button.hidden {
+        display: none !important;
+    }
+
+    #default-view-button .icon-icons {
+        width: 100% !important;
+        height: 100% !important;
+        background-size: 500% 500% !important;
+        margin: 0 !important;
+        font-size: 0 !important;
+        /* Hide any font-based sizing issues */
+    }
 }

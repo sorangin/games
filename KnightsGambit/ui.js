@@ -83,7 +83,10 @@ const MIN_ZOOM = 0.5;
 
 const MAX_ZOOM = 3.0;
 
-let isPanning = false; let panStartX = 0; let panStartY = 0;
+let isPanning = false;
+let panStartX = 0;
+let panStartY = 0;
+let isViewManuallyReset = false; // Latch for reset view button
 
 let gridStartPanX = 0; let gridStartPanY = 0;
 
@@ -3847,6 +3850,7 @@ function applyZoomAndPan() {
 
 
 function handleZoom(event) {
+    isViewManuallyReset = false; // User interaction clears the latch
 
     event.preventDefault();
 
@@ -3928,6 +3932,7 @@ function handlePinchMove(event) {
 
     if (event.touches.length === 2 && isPanning) {
 
+        isViewManuallyReset = false; // User interaction clears the latch
         event.preventDefault();
 
         const t1 = event.touches[0]; const t2 = event.touches[1];
@@ -3972,7 +3977,7 @@ function handlePanStart(event) {
 
     if (event.button !== 0 || event.target.closest('.unit,.item,.obstacle,.ui-button,button,a,.spell-icon,#default-view-button') || isAnyOverlayVisible()) { isPanning = false; return; }
 
-    event.preventDefault(); isPanning = true;
+    event.preventDefault(); isPanning = true; isViewManuallyReset = false; // User interaction clears the latch
 
     panStartX = event.clientX; panStartY = event.clientY;
 
@@ -4008,7 +4013,7 @@ function handlePanEnd(event) {
 
 }
 
-function handlePanStartTouch(event) { if (event.touches.length !== 1 || event.target.closest('.unit,.item,.obstacle,.ui-button,button,a,.spell-icon,#default-view-button') || isAnyOverlayVisible()) { isPanning = false; return; } const touch = event.touches[0]; isPanning = true; panStartX = touch.clientX; panStartY = touch.clientY; gridStartPanX = gridContentOffsetX; gridStartPanY = gridContentOffsetY; document.addEventListener('touchmove', handlePanMoveTouch, { passive: false, capture: true }); document.addEventListener('touchend', handlePanEndTouch, { once: true, capture: true }); document.addEventListener('touchcancel', handlePanEndTouch, { once: true, capture: true }); }
+function handlePanStartTouch(event) { if (event.touches.length !== 1 || event.target.closest('.unit,.item,.obstacle,.ui-button,button,a,.spell-icon,#default-view-button') || isAnyOverlayVisible()) { isPanning = false; return; } const touch = event.touches[0]; isPanning = true; isViewManuallyReset = false; panStartX = touch.clientX; panStartY = touch.clientY; gridStartPanX = gridContentOffsetX; gridStartPanY = gridContentOffsetY; document.addEventListener('touchmove', handlePanMoveTouch, { passive: false, capture: true }); document.addEventListener('touchend', handlePanEndTouch, { once: true, capture: true }); document.addEventListener('touchcancel', handlePanEndTouch, { once: true, capture: true }); }
 
 function handlePanMoveTouch(event) { if (!isPanning || event.touches.length !== 1) { handlePanEndTouch(event); return; } event.preventDefault(); gameBoard.classList.add('panning'); const touch = event.touches[0]; gridContentOffsetX = gridStartPanX + (touch.clientX - panStartX); gridContentOffsetY = gridStartPanY + (touch.clientY - panStartY); hideTooltip(); applyZoomAndPan(); }
 
@@ -4084,7 +4089,7 @@ function isDefaultView() {
 
     const defaultOffsetX = (boardWidth - gridWidth * defaultZoom) / 2; const defaultOffsetY = (boardHeight - gridHeight * defaultZoom) / 2;
 
-    const zoomThreshold = 0.01; const offsetThreshold = 2;
+    const zoomThreshold = 0.1; const offsetThreshold = 10;
 
     const isZoomDefault = Math.abs(currentZoom - defaultZoom) < zoomThreshold; const isOffsetXDefault = Math.abs(gridContentOffsetX - defaultOffsetX) < offsetThreshold; const isOffsetYDefault = Math.abs(gridContentOffsetY - defaultOffsetY) < offsetThreshold;
 
@@ -4096,9 +4101,14 @@ function isDefaultView() {
 
 function updateDefaultViewButtonVisibility() {
 
-    const hideHomeButton = isDefaultView();
-
-    if (defaultViewButton) defaultViewButton.classList.toggle('hidden', hideHomeButton);
+    if (defaultViewButton) {
+        if (isViewManuallyReset) {
+            defaultViewButton.classList.add('hidden');
+        } else {
+            const hideHomeButton = isDefaultView();
+            defaultViewButton.classList.toggle('hidden', hideHomeButton);
+        }
+    }
 
     // Fill-width button: show when not at fill-width zoom (check if current zoom matches fill-width zoom)
 
@@ -4120,6 +4130,9 @@ function updateDefaultViewButtonVisibility() {
 
 function centerView(immediate = false) {
 
+    isViewManuallyReset = true; // Set latch
+    if (defaultViewButton) defaultViewButton.classList.add('hidden');
+
     if (!gameBoard || !gridContent) return; calculateCellSize();
 
     const boardWidth = gameBoard.clientWidth; const boardHeight = gameBoard.clientHeight; if (boardWidth <= 0 || boardHeight <= 0 || currentCellSize <= 0) return;
@@ -4140,6 +4153,7 @@ function centerView(immediate = false) {
 
 function fillWidthView(immediate = false) {
 
+    isViewManuallyReset = false; // "Fit to Width" is a non-default state, so clear the latch
     if (!gameBoard || !gridContent) return; calculateCellSize();
 
     const boardWidth = gameBoard.clientWidth; const boardHeight = gameBoard.clientHeight; if (boardWidth <= 0 || boardHeight <= 0 || currentCellSize <= 0) return;
