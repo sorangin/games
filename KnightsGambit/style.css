@@ -5897,8 +5897,6 @@ p.shop-item-resistance {
     font-size: 1.5rem;
 }
 
-}
-
 #leaderboard-list li {
     padding: 11px 16px;
     font-size: clamp(1.2rem, 3.2vmin, 1.5rem);
